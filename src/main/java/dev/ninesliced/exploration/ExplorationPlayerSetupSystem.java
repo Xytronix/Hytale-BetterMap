@@ -1,0 +1,56 @@
+package dev.ninesliced.exploration;
+
+import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.ninesliced.BetterMap;
+
+import javax.annotation.Nonnull;
+
+public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
+    
+    @Nonnull
+    private final ComponentType<EntityStore, ExplorationComponent> explorationComponentType;
+    @Nonnull
+    private final ComponentType<EntityStore, Player> playerComponentType;
+    @Nonnull
+    private final Query<EntityStore> query;
+
+    public ExplorationPlayerSetupSystem() {
+        this.explorationComponentType = BetterMap.get().getExplorationComponentType();
+        this.playerComponentType = Player.getComponentType();
+        this.query = Query.and(playerComponentType);
+    }
+
+    @Nonnull
+    @Override
+    public Query<EntityStore> getQuery() {
+        return this.query;
+    }
+
+    @Override
+    public void onEntityAdded(
+            @Nonnull Ref<EntityStore> ref, 
+            @Nonnull AddReason reason, 
+            @Nonnull Store<EntityStore> store, 
+            @Nonnull CommandBuffer<EntityStore> commandBuffer
+    ) {
+        commandBuffer.ensureComponent(ref, this.explorationComponentType);
+    }
+
+    @Override
+    public void onEntityRemove(
+            @Nonnull Ref<EntityStore> ref, 
+            @Nonnull RemoveReason reason, 
+            @Nonnull Store<EntityStore> store, 
+            @Nonnull CommandBuffer<EntityStore> commandBuffer
+    ) {
+    }
+}

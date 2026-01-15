@@ -1,0 +1,20 @@
+{
+  "Group": "dev.ninesliced",
+  "Name": "BetterMap",
+  "Version": "1.0.0",
+  "Description": "A Hytale server plugin that enhances the in-game map with a saved exploration feature, allowing players to retain their explored areas across sessions.",
+  "Authors": [
+    {
+      "Name": "Paralaxe",
+      "Email": "paralaxepvp@gmail.com",
+      "Url": "https://ninesliced.com"
+    }
+  ],
+  "Website": "https://ninesliced.com",
+  "ServerVersion": "*",
+  "Dependencies": {},
+  "OptionalDependencies": {},
+  "DisabledByDefault": false,
+  "IncludesAssetPack": false,
+  "Main": "dev.ninesliced.BetterMap"
+}
