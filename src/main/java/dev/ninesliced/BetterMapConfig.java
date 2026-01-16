@@ -18,6 +18,8 @@ public class BetterMapConfig {
     private int explorationRadius = 16;
     private int updateRateMs = 500;
     private MapQuality mapQuality = MapQuality.MEDIUM;
+    private float minScale = 10.0f;
+    private float maxScale = 256.0f;
 
     private transient Path configPath;
 
@@ -77,11 +79,22 @@ public class BetterMapConfig {
                 if (loaded != null) {
                     this.explorationRadius = loaded.explorationRadius;
                     this.updateRateMs = loaded.updateRateMs;
+
+                    if (jsonObject.has("minScale")) {
+                        this.minScale = loaded.minScale;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("maxScale")) {
+                        this.maxScale = loaded.maxScale;
+                    } else {
+                        needsSave = true;
+                    }
                     
                     if (jsonObject.has("mapQuality")) {
                         this.mapQuality = loaded.mapQuality;
                     } else {
-                        this.mapQuality = MapQuality.MEDIUM;
                         needsSave = true;
                     }
                     
@@ -124,5 +137,23 @@ public class BetterMapConfig {
 
     public MapQuality getMapQuality() {
         return mapQuality;
+    }
+
+    public float getMinScale() {
+        return minScale;
+    }
+
+    public void setMinScale(float minScale) {
+        this.minScale = minScale;
+        save();
+    }
+
+    public float getMaxScale() {
+        return maxScale;
+    }
+
+    public void setMaxScale(float maxScale) {
+        this.maxScale = maxScale;
+        save();
     }
 }

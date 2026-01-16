@@ -24,6 +24,9 @@ public class ExplorationEventListener {
             Player player = event.getPlayer();
             String playerName = player.getDisplayName();
 
+            // Ensure map settings (zoom) are applied on join
+            WorldMapHook.sendMapSettingsToPlayer(player);
+
             if (playerWorlds.containsKey(playerName)) {
                 LOGGER.info("[DEBUG] Player " + playerName + " already tracked, skipping PlayerReadyEvent");
                 return;
