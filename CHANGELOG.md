@@ -7,6 +7,10 @@
 * **Dynamic Chunk Loading:** Fixed the "Blue Map" issue and crashes caused by memory overflows. The mod now dynamically loads discovered chunks nearest to the player and unloads further ones to optimize memory usage.
 * **Map Quality Settings:** Introduced a new `mapQuality` setting to balance visual fidelity and performance.
 * **Options:** `LOW`, `MEDIUM`, `HIGH` (Default is `MEDIUM`).
+* **Map Quality details:**
+  - `LOW`: Loads up to 30 000 chunks with 8x8 images.
+  - `MEDIUM`: Loads up to 10 000 chunks with 16x16 images.
+  - `HIGH`: Loads up to 3 000 chunks with 32x32 images.
 * **Performance Note:** `HIGH` quality increases texture resolution but drastically limits the number of chunks loaded simultaneously to prevent Memory Overflow errors.
 
 
@@ -23,8 +27,8 @@ The `config.json` has been updated with new parameters:
 {
   "explorationRadius": 16,
   "updateRateMs": 500,
-  "mapQuality": "MEDIUM",
-  "minScale": 10.0,
+  "mapQuality": "MEDIUM", // Load 10000 chunks with 16x16 images
+  "minScale": 10.0, // Base zoom out is 32.0
   "maxScale": 256.0,
   "debug": false
 }

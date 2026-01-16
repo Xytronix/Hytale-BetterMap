@@ -16,9 +16,13 @@ By default, the Hytale in-game map is fleeting. It only displays a small circula
 * **Dynamic Chunk Loading (Optimization):** We have fixed the "Blue Map" crashes and memory overflow issues. The plugin now intelligently manages memory by loading only the explored chunks nearest to the player and unloading distant ones as you move.
 * **Map Quality Settings:** Choose between `LOW`, `MEDIUM`, or `HIGH` quality to balance visual fidelity with performance.
 * *Note: `HIGH` quality offers better visuals but drastically limits the number of chunks loaded to prevent memory errors.*
-
+* **Map Quality details:**
+  - `LOW`: Loads up to 30 000 chunks with 8x8 images.
+  - `MEDIUM`: Loads up to 10 000 chunks with 16x16 images.
+  - `HIGH`: Loads up to 3 000 chunks with 32x32 images.
 
 * **Customizable Zoom:** You are no longer locked to the default zoom. Set your own Minimum (zoom out) and Maximum (zoom in) scales.
+
 * **Debug Mode:** Toggle console logging on or off to keep your server logs clean.
 
 ## Commands & Permissions
