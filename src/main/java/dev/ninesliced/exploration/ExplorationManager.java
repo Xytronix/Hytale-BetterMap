@@ -1,9 +1,10 @@
 package dev.ninesliced.exploration;
 
 import com.hypixel.hytale.server.core.entity.entities.Player;
+
+import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
 
 public class ExplorationManager {
     private static final Logger LOGGER = Logger.getLogger(ExplorationManager.class.getName());
@@ -27,6 +28,11 @@ public class ExplorationManager {
             INSTANCE = new ExplorationManager();
         }
         return INSTANCE;
+    }
+
+    @Nonnull
+    public static ConfigBuilder config() {
+        return new ConfigBuilder();
     }
 
     public synchronized void initialize() {
@@ -108,9 +114,8 @@ public class ExplorationManager {
         }
     }
 
-    @Nonnull
-    public static ConfigBuilder config() {
-        return new ConfigBuilder();
+    public int getMaxStoredChunksPerPlayer() {
+        return maxStoredChunksPerPlayer;
     }
 
     public void setMaxStoredChunksPerPlayer(int max) {
@@ -118,9 +123,17 @@ public class ExplorationManager {
         LOGGER.info("Max stored chunks per player set to: " + max);
     }
 
+    public float getExplorationUpdateRate() {
+        return explorationUpdateRate;
+    }
+
     public void setExplorationUpdateRate(float seconds) {
         this.explorationUpdateRate = Math.max(0.1f, seconds);
         LOGGER.info("Exploration update rate set to: " + explorationUpdateRate + " seconds");
+    }
+
+    public boolean isPersistenceEnabled() {
+        return persistenceEnabled;
     }
 
     public void setPersistenceEnabled(boolean enabled) {
@@ -128,25 +141,22 @@ public class ExplorationManager {
         LOGGER.info("Persistence " + (enabled ? "enabled" : "disabled"));
     }
 
+    public String getPersistencePath() {
+        return persistencePath;
+    }
+
     public void setPersistencePath(@Nonnull String path) {
         this.persistencePath = path;
         LOGGER.info("Persistence path set to: " + path);
     }
 
-    public int getMaxStoredChunksPerPlayer() {
-        return maxStoredChunksPerPlayer;
-    }
-
-    public float getExplorationUpdateRate() {
-        return explorationUpdateRate;
-    }
-
-    public boolean isPersistenceEnabled() {
-        return persistenceEnabled;
-    }
-
-    public String getPersistencePath() {
-        return persistencePath;
+    @Override
+    public String toString() {
+        return String.format(
+                "ExplorationManager{initialized=%s, maxChunksPerPlayer=%d, updateRate=%.2fs, persistence=%s}",
+                initialized, maxStoredChunksPerPlayer, explorationUpdateRate,
+                persistenceEnabled ? "enabled@" + persistencePath : "disabled"
+        );
     }
 
     public static class ConfigBuilder {
@@ -177,14 +187,5 @@ public class ExplorationManager {
             manager.initialize();
             return manager;
         }
-    }
-
-    @Override
-    public String toString() {
-        return String.format(
-                "ExplorationManager{initialized=%s, maxChunksPerPlayer=%d, updateRate=%.2fs, persistence=%s}",
-                initialized, maxStoredChunksPerPlayer, explorationUpdateRate,
-                persistenceEnabled ? "enabled@" + persistencePath : "disabled"
-        );
     }
 }

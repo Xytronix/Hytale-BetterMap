@@ -3,14 +3,13 @@ package dev.ninesliced.commands;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.universe.Universe;
 import dev.ninesliced.BetterMapConfig;
+import dev.ninesliced.exploration.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
-import com.hypixel.hytale.server.core.universe.Universe;
-import dev.ninesliced.exploration.WorldMapHook;
-
-import java.awt.Color;
+import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
 public class ReloadCommand extends AbstractCommand {
@@ -48,7 +47,7 @@ public class ReloadCommand extends AbstractCommand {
 
         BetterMapConfig config = BetterMapConfig.getInstance();
         context.sendMessage(Message.raw("Map Quality: ").color(Color.YELLOW).insert(Message.raw(config.getMapQuality().name()).color(Color.WHITE)));
-        
+
         if (config.getMapQuality() != config.getActiveMapQuality()) {
             context.sendMessage(Message.raw("WARNING: Map Quality change pending restart (Active: " + config.getActiveMapQuality().name() + ")").color(Color.RED));
         }

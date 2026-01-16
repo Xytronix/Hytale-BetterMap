@@ -9,13 +9,12 @@ import java.util.Set;
  * Maintains the boundaries of discovered territory and allows for persistent map growth.
  */
 public class MapExpansionManager {
-    
+
+    private final ExploredChunksTracker exploredChunks;
     private int minChunkX = Integer.MAX_VALUE;
     private int maxChunkX = Integer.MIN_VALUE;
     private int minChunkZ = Integer.MAX_VALUE;
     private int maxChunkZ = Integer.MIN_VALUE;
-    
-    private final ExploredChunksTracker exploredChunks;
 
     public MapExpansionManager(@Nonnull ExploredChunksTracker exploredChunks) {
         this.exploredChunks = exploredChunks;
@@ -26,17 +25,17 @@ public class MapExpansionManager {
      */
     public void updateBoundaries(int playerChunkX, int playerChunkZ, int viewRadius) {
         Set<Long> newChunks = ChunkUtil.getChunksInCircularArea(playerChunkX, playerChunkZ, viewRadius);
-        
+
         for (long chunkIndex : newChunks) {
             int chunkX = ChunkUtil.indexToChunkX(chunkIndex);
             int chunkZ = ChunkUtil.indexToChunkZ(chunkIndex);
-            
+
             minChunkX = Math.min(minChunkX, chunkX);
             maxChunkX = Math.max(maxChunkX, chunkX);
             minChunkZ = Math.min(minChunkZ, chunkZ);
             maxChunkZ = Math.max(maxChunkZ, chunkZ);
         }
-        
+
         exploredChunks.markChunksExplored(newChunks);
     }
 

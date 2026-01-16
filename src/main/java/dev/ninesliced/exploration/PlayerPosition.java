@@ -1,6 +1,7 @@
 package dev.ninesliced.exploration;
 
 import com.hypixel.hytale.math.vector.Vector3d;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -10,7 +11,7 @@ public class PlayerPosition {
     private final double x;
     private final double y;
     private final double z;
-    
+
     public PlayerPosition(double x, double y, double z) {
         this.x = x;
         this.y = y;
@@ -69,7 +70,7 @@ public class PlayerPosition {
 
     @Override
     public String toString() {
-        return String.format("PlayerPosition{%.1f, %.1f, %.1f} [Chunk: %d, %d]", 
+        return String.format("PlayerPosition{%.1f, %.1f, %.1f} [Chunk: %d, %d]",
                 x, y, z, getChunkX(), getChunkZ());
     }
 }

@@ -1,11 +1,10 @@
 package dev.ninesliced;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import java.io.*;
+import com.google.gson.*;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
@@ -26,20 +25,6 @@ public class BetterMapConfig {
     private transient Path configPath;
     private transient MapQuality activeMapQuality;
 
-    public enum MapQuality {
-        LOW(0.25f, 30000),
-        MEDIUM(0.5f, 10000),
-        HIGH(1.0f, 3000);
-
-        public final float scale;
-        public final int maxChunks;
-
-        MapQuality(float scale, int maxChunks) {
-            this.scale = scale;
-            this.maxChunks = maxChunks;
-        }
-    }
-
     public BetterMapConfig() {
     }
 
@@ -53,18 +38,18 @@ public class BetterMapConfig {
     public void initialize(Path rootPath) {
         Path configDir = rootPath.resolve("mods").resolve("BetterMap");
         this.configPath = configDir.resolve("config.json");
-        
+
         try {
             if (!Files.exists(configDir)) {
                 Files.createDirectories(configDir);
             }
-            
+
             if (Files.exists(configPath)) {
                 load();
             } else {
                 save();
             }
-            
+
             // Set active quality after initial load
             this.activeMapQuality = this.mapQuality;
         } catch (IOException e) {
@@ -75,11 +60,11 @@ public class BetterMapConfig {
     public void load() {
         try (Reader reader = Files.newBufferedReader(configPath)) {
             JsonElement element = JsonParser.parseReader(reader);
-            
+
             if (element.isJsonObject()) {
                 JsonObject jsonObject = element.getAsJsonObject();
                 BetterMapConfig loaded = GSON.fromJson(element, BetterMapConfig.class);
-                
+
                 boolean needsSave = false;
 
                 if (loaded != null) {
@@ -97,7 +82,7 @@ public class BetterMapConfig {
                     } else {
                         needsSave = true;
                     }
-                    
+
                     if (jsonObject.has("mapQuality")) {
                         this.mapQuality = loaded.mapQuality;
                     } else {
@@ -109,11 +94,11 @@ public class BetterMapConfig {
                     } else {
                         needsSave = true;
                     }
-                    
+
                     if (needsSave) {
                         save();
                     }
-                    
+
                     updateLoggers();
                     LOGGER.info("Configuration loaded from " + configPath);
                 }
@@ -128,12 +113,12 @@ public class BetterMapConfig {
 
     private void updateLoggers() {
         Level level = debug ? Level.ALL : Level.OFF;
-        
+
         setLoggerLevel("dev.ninesliced", level);
-        
+
         setLoggerLevel("dev.ninesliced.commands", level);
         setLoggerLevel("dev.ninesliced.exploration", level);
-        
+
         setLoggerLevel("dev.ninesliced.exploration.ExplorationEventListener", level);
         setLoggerLevel("dev.ninesliced.exploration.WorldMapHook", level);
         setLoggerLevel("dev.ninesliced.exploration.ExplorationPersistence", level);
@@ -152,7 +137,7 @@ public class BetterMapConfig {
             LOGGER.severe("Failed to save configuration: " + e.getMessage());
         }
     }
-    
+
     public void reload() {
         if (configPath != null && Files.exists(configPath)) {
             load();
@@ -162,7 +147,7 @@ public class BetterMapConfig {
     public int getExplorationRadius() {
         return explorationRadius;
     }
-    
+
     public int getUpdateRateMs() {
         return updateRateMs;
     }
@@ -170,13 +155,18 @@ public class BetterMapConfig {
     public MapQuality getMapQuality() {
         return mapQuality;
     }
-    
+
     public MapQuality getActiveMapQuality() {
         return activeMapQuality != null ? activeMapQuality : mapQuality;
     }
 
     public float getMinScale() {
         return minScale;
+    }
+
+    public void setMinScale(float minScale) {
+        this.minScale = minScale;
+        save();
     }
 
     public boolean isDebug() {
@@ -189,11 +179,6 @@ public class BetterMapConfig {
         save();
     }
 
-    public void setMinScale(float minScale) {
-        this.minScale = minScale;
-        save();
-    }
-
     public float getMaxScale() {
         return maxScale;
     }
@@ -201,5 +186,19 @@ public class BetterMapConfig {
     public void setMaxScale(float maxScale) {
         this.maxScale = maxScale;
         save();
+    }
+
+    public enum MapQuality {
+        LOW(0.25f, 30000),
+        MEDIUM(0.5f, 10000),
+        HIGH(1.0f, 3000);
+
+        public final float scale;
+        public final int maxChunks;
+
+        MapQuality(float scale, int maxChunks) {
+            this.scale = scale;
+            this.maxChunks = maxChunks;
+        }
     }
 }

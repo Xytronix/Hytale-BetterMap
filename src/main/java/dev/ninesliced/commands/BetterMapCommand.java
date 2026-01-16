@@ -5,11 +5,11 @@ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import dev.ninesliced.BetterMapConfig;
 
-import java.awt.*;
-import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.awt.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 public class BetterMapCommand extends AbstractCommand {
     private static final Logger LOGGER = Logger.getLogger(BetterMapCommand.class.getName());

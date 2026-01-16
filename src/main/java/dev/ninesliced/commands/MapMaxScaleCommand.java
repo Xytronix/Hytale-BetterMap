@@ -12,13 +12,13 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.BetterMapConfig;
 import dev.ninesliced.exploration.WorldMapHook;
 
-import java.awt.Color;
-import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.awt.*;
+import java.util.concurrent.CompletableFuture;
 
 public class MapMaxScaleCommand extends AbstractCommand {
-    private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Max zoom value", (ArgumentType)ArgTypes.FLOAT);
+    private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Max zoom value", (ArgumentType) ArgTypes.FLOAT);
 
     public MapMaxScaleCommand() {
         super("max", "Set max map zoom scale (higher = zoom in closer)");
@@ -37,7 +37,7 @@ public class MapMaxScaleCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
         try {
-            Float newMax = (Float)context.get(this.zoomValueArg);
+            Float newMax = (Float) context.get(this.zoomValueArg);
             if (newMax.floatValue() <= 0.0f) {
                 context.sendMessage(Message.raw("Max scale must be greater than 0").color(Color.RED));
                 return CompletableFuture.completedFuture(null);
@@ -51,8 +51,8 @@ public class MapMaxScaleCommand extends AbstractCommand {
             // Update config
             BetterMapConfig config = BetterMapConfig.getInstance();
             if (newMax <= config.getMinScale()) {
-                 context.sendMessage(Message.raw("Max scale must be greater than min scale (" + config.getMinScale() + ")").color(Color.RED));
-                 return CompletableFuture.completedFuture(null);
+                context.sendMessage(Message.raw("Max scale must be greater than min scale (" + config.getMinScale() + ")").color(Color.RED));
+                return CompletableFuture.completedFuture(null);
             }
 
             config.setMaxScale(newMax);
@@ -63,8 +63,7 @@ public class MapMaxScaleCommand extends AbstractCommand {
 
             context.sendMessage(Message.raw("Map max scale set to: ").color(Color.GREEN).insert(Message.raw(String.valueOf(newMax)).color(Color.YELLOW)));
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             context.sendMessage(Message.raw("Error: " + e.getMessage()).color(Color.RED));
             e.printStackTrace();
         }
@@ -75,10 +74,9 @@ public class MapMaxScaleCommand extends AbstractCommand {
         try {
             CommandSender sender = context.sender();
             if (sender instanceof Player) {
-                return ((Player)sender).getWorld();
+                return ((Player) sender).getWorld();
             }
-        }
-        catch (Exception exception) {
+        } catch (Exception exception) {
         }
         return null;
     }

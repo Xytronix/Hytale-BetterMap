@@ -1,11 +1,6 @@
 package dev.ninesliced.exploration;
 
-import com.hypixel.hytale.component.AddReason;
-import com.hypixel.hytale.component.CommandBuffer;
-import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
-import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.*;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -15,7 +10,7 @@ import dev.ninesliced.BetterMap;
 import javax.annotation.Nonnull;
 
 public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
-    
+
     @Nonnull
     private final ComponentType<EntityStore, ExplorationComponent> explorationComponentType;
     @Nonnull
@@ -37,9 +32,9 @@ public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
 
     @Override
     public void onEntityAdded(
-            @Nonnull Ref<EntityStore> ref, 
-            @Nonnull AddReason reason, 
-            @Nonnull Store<EntityStore> store, 
+            @Nonnull Ref<EntityStore> ref,
+            @Nonnull AddReason reason,
+            @Nonnull Store<EntityStore> store,
             @Nonnull CommandBuffer<EntityStore> commandBuffer
     ) {
         commandBuffer.ensureComponent(ref, this.explorationComponentType);
@@ -47,9 +42,9 @@ public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
 
     @Override
     public void onEntityRemove(
-            @Nonnull Ref<EntityStore> ref, 
-            @Nonnull RemoveReason reason, 
-            @Nonnull Store<EntityStore> store, 
+            @Nonnull Ref<EntityStore> ref,
+            @Nonnull RemoveReason reason,
+            @Nonnull Store<EntityStore> store,
             @Nonnull CommandBuffer<EntityStore> commandBuffer
     ) {
     }

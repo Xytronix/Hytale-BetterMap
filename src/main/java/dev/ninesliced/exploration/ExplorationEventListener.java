@@ -1,19 +1,20 @@
 package dev.ninesliced.exploration;
 
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import java.util.logging.Logger;
+
 import javax.annotation.Nonnull;
+import java.util.logging.Logger;
 
 public class ExplorationEventListener {
     private static final Logger LOGGER = Logger.getLogger(ExplorationEventListener.class.getName());
@@ -160,22 +161,22 @@ public class ExplorationEventListener {
                         WorldMapHook.hookWorldMapResolution(newWorld);
 
                         WorldMapTracker finalTracker = tracker;
-                    ExplorationTicker.getInstance().scheduleUpdate(() -> {
-                        LOGGER.info("[DEBUG] Scheduled immediate update executing for " + playerName);
-                        TransformComponent tc = holder.getComponent(TransformComponent.getComponentType());
-                        if (tc != null) {
-                            var pos = tc.getPosition();
-                            WorldMapHook.updateExplorationState(player, finalTracker, pos.x, pos.z);
-                        } else {
-                            LOGGER.warning("[DEBUG] TransformComponent expected but null for immediate update");
-                        }
+                        ExplorationTicker.getInstance().scheduleUpdate(() -> {
+                            LOGGER.info("[DEBUG] Scheduled immediate update executing for " + playerName);
+                            TransformComponent tc = holder.getComponent(TransformComponent.getComponentType());
+                            if (tc != null) {
+                                var pos = tc.getPosition();
+                                WorldMapHook.updateExplorationState(player, finalTracker, pos.x, pos.z);
+                            } else {
+                                LOGGER.warning("[DEBUG] TransformComponent expected but null for immediate update");
+                            }
 
-                        try {
-                            ReflectionHelper.setFieldValueRecursive(finalTracker, "updateTimer", 0.0f);
-                        } catch (Exception e) {
-                            LOGGER.warning("[DEBUG] Could not reset updateTimer: " + e.getMessage());
-                        }
-                    });
+                            try {
+                                ReflectionHelper.setFieldValueRecursive(finalTracker, "updateTimer", 0.0f);
+                            } catch (Exception e) {
+                                LOGGER.warning("[DEBUG] Could not reset updateTimer: " + e.getMessage());
+                            }
+                        });
                     }
                 }
 

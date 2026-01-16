@@ -4,20 +4,16 @@ import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapSettings;
-import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapSettings;
 import dev.ninesliced.BetterMapConfig;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Logger;
+
 import javax.annotation.Nonnull;
+import java.util.*;
+import java.util.logging.Logger;
 
 public class WorldMapHook {
     private static final Logger LOGGER = Logger.getLogger(WorldMapHook.class.getName());
@@ -112,10 +108,10 @@ public class WorldMapHook {
             // Use configured quality
             BetterMapConfig.MapQuality quality = BetterMapConfig.getInstance().getActiveMapQuality();
             ReflectionHelper.setFieldValueRecursive(settings, "imageScale", quality.scale);
-            
+
             // Clear cache to force regenerate with new resolution
             manager.clearImages();
-            
+
             LOGGER.info("Modified WorldMapSettings imageScale to " + quality.scale + " (" + quality + " quality) for world: " + world.getName());
         } catch (Exception e) {
             LOGGER.warning("Failed to hook WorldMap resolution: " + e.getMessage());
@@ -189,14 +185,86 @@ public class WorldMapHook {
             loaded.removeAll(toUnload);
 
             UpdateWorldMap packet = new UpdateWorldMap(
-                unloadPackets.toArray(new MapChunk[0]),
-                null,
-                null
+                    unloadPackets.toArray(new MapChunk[0]),
+                    null,
+                    null
             );
             player.getPlayerConnection().write((Packet) packet);
 
         } catch (Exception e) {
             LOGGER.warning("Failed to manage loaded chunks: " + e.getMessage());
+        }
+    }
+
+    private static void forceTrackerUpdate(@Nonnull Player player, @Nonnull WorldMapTracker tracker, double x, double z) {
+        try {
+            Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
+            if (spiralIterator instanceof RestrictedSpiralIterator) {
+                RestrictedSpiralIterator restrictedIterator = (RestrictedSpiralIterator) spiralIterator;
+
+                // Use MAP chunk coordinates (>> 5 for block -> map chunk)
+                int chunkX = (int) Math.floor(x) >> 5;
+                int chunkZ = (int) Math.floor(z) >> 5;
+
+                restrictedIterator.init(chunkX, chunkZ, 0, 999);
+            }
+
+            ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
+        } catch (Exception e) {
+            LOGGER.warning("[DEBUG] Failed to force tracker update: " + e.getMessage());
+        }
+    }
+
+    public static void updateWorldMapConfigs(@Nonnull World world) {
+        try {
+            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
+            UpdateWorldMapSettings packet = (UpdateWorldMapSettings) ReflectionHelper.getFieldValue(settings, "settingsPacket");
+            BetterMapConfig config = BetterMapConfig.getInstance();
+
+            if (packet != null) {
+                packet.minScale = config.getMinScale();
+                packet.maxScale = config.getMaxScale();
+            }
+
+            // Also try to set fields on the settings object directly if they exist
+            // This ensures if the packet is regenerated it uses these values
+            ReflectionHelper.setFieldValueRecursive(settings, "minScale", config.getMinScale());
+            ReflectionHelper.setFieldValueRecursive(settings, "maxScale", config.getMaxScale());
+
+        } catch (Exception e) {
+            LOGGER.warning("Failed to update world map configs: " + e.getMessage());
+        }
+    }
+
+    public static void broadcastMapSettings(@Nonnull World world) {
+        try {
+            // Attempt to call mapManager.sendSettings() which likely broadcasts
+            Object mapManager = world.getWorldMapManager();
+            java.lang.reflect.Method sendSettings = mapManager.getClass().getMethod("sendSettings");
+            sendSettings.invoke(mapManager);
+        } catch (Exception e) {
+            // Fallback: iterate players if we can't invoke method
+            // But we don't have easy access to player list here without Universe
+            LOGGER.fine("Could not invoke mapManager.sendSettings(): " + e.getMessage());
+        }
+    }
+
+    public static void sendMapSettingsToPlayer(@Nonnull Player player) {
+        try {
+            World world = player.getWorld();
+            if (world == null) return;
+
+            updateWorldMapConfigs(world);
+
+            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
+            UpdateWorldMapSettings packet = (UpdateWorldMapSettings) ReflectionHelper.getFieldValue(settings, "settingsPacket");
+
+            if (packet != null) {
+                player.getPlayerConnection().write((Packet) packet);
+                LOGGER.fine("Sent custom map settings to " + player.getDisplayName());
+            }
+        } catch (Exception e) {
+            LOGGER.warning("Failed to send map settings to player: " + e.getMessage());
         }
     }
 
@@ -329,7 +397,7 @@ public class WorldMapHook {
 
                         if (!toRemovePackets.isEmpty()) {
                             UpdateWorldMap packet = new UpdateWorldMap(toRemovePackets.toArray(new MapChunk[0]), null, null);
-                            tracker.getPlayer().getPlayerConnection().write((Packet)packet);
+                            tracker.getPlayer().getPlayerConnection().write((Packet) packet);
                         }
                     }
                 }
@@ -368,78 +436,6 @@ public class WorldMapHook {
                 return currentGoalRadius;
             }
             return currentRadius;
-        }
-    }
-
-    private static void forceTrackerUpdate(@Nonnull Player player, @Nonnull WorldMapTracker tracker, double x, double z) {
-        try {
-            Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
-            if (spiralIterator instanceof RestrictedSpiralIterator) {
-                RestrictedSpiralIterator restrictedIterator = (RestrictedSpiralIterator) spiralIterator;
-
-                // Use MAP chunk coordinates (>> 5 for block -> map chunk)
-                int chunkX = (int)Math.floor(x) >> 5;
-                int chunkZ = (int)Math.floor(z) >> 5;
-
-                restrictedIterator.init(chunkX, chunkZ, 0, 999);
-            }
-
-            ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
-        } catch (Exception e) {
-            LOGGER.warning("[DEBUG] Failed to force tracker update: " + e.getMessage());
-        }
-    }
-
-    public static void updateWorldMapConfigs(@Nonnull World world) {
-        try {
-            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
-            UpdateWorldMapSettings packet = (UpdateWorldMapSettings) ReflectionHelper.getFieldValue(settings, "settingsPacket");
-            BetterMapConfig config = BetterMapConfig.getInstance();
-
-            if (packet != null) {
-                packet.minScale = config.getMinScale();
-                packet.maxScale = config.getMaxScale();
-            }
-
-            // Also try to set fields on the settings object directly if they exist
-            // This ensures if the packet is regenerated it uses these values
-            ReflectionHelper.setFieldValueRecursive(settings, "minScale", config.getMinScale());
-            ReflectionHelper.setFieldValueRecursive(settings, "maxScale", config.getMaxScale());
-
-        } catch (Exception e) {
-            LOGGER.warning("Failed to update world map configs: " + e.getMessage());
-        }
-    }
-
-    public static void broadcastMapSettings(@Nonnull World world) {
-        try {
-            // Attempt to call mapManager.sendSettings() which likely broadcasts
-            Object mapManager = world.getWorldMapManager();
-            java.lang.reflect.Method sendSettings = mapManager.getClass().getMethod("sendSettings");
-            sendSettings.invoke(mapManager);
-        } catch (Exception e) {
-            // Fallback: iterate players if we can't invoke method
-            // But we don't have easy access to player list here without Universe
-            LOGGER.fine("Could not invoke mapManager.sendSettings(): " + e.getMessage());
-        }
-    }
-
-    public static void sendMapSettingsToPlayer(@Nonnull Player player) {
-        try {
-            World world = player.getWorld();
-            if (world == null) return;
-
-            updateWorldMapConfigs(world);
-
-            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
-            UpdateWorldMapSettings packet = (UpdateWorldMapSettings) ReflectionHelper.getFieldValue(settings, "settingsPacket");
-
-            if (packet != null) {
-                player.getPlayerConnection().write((Packet) packet);
-                LOGGER.fine("Sent custom map settings to " + player.getDisplayName());
-            }
-        } catch (Exception e) {
-            LOGGER.warning("Failed to send map settings to player: " + e.getMessage());
         }
     }
 }

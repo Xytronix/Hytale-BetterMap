@@ -1,12 +1,12 @@
 package dev.ninesliced.exploration;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.Set;
-import java.util.HashSet;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Tracks which chunks have been explored by the player.
@@ -88,7 +88,7 @@ public class ExploredChunksTracker {
     @Nonnull
     public Set<Long> getExploredChunks() {
         if (persistentComponent != null) {
-             return new HashSet<>(persistentComponent.getExploredChunks());
+            return new HashSet<>(persistentComponent.getExploredChunks());
         }
 
         lock.readLock().lock();

@@ -1,17 +1,17 @@
 package dev.ninesliced.exploration;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Utility class for reflection operations needed to modify map behavior.
  * Provides safe reflection access with error handling and logging.
  */
 public class ReflectionHelper {
-    
+
     private static final Logger LOGGER = Logger.getLogger(ReflectionHelper.class.getName());
 
     /**

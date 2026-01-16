@@ -8,13 +8,13 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
 import dev.ninesliced.BetterMapConfig;
 
-import java.awt.Color;
-import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.awt.*;
+import java.util.concurrent.CompletableFuture;
 
 public class DebugCommand extends AbstractCommand {
-    private final RequiredArg<Boolean> debugValueArg = (RequiredArg<Boolean>) this.withRequiredArg("value", "Enable/Disable debug logs", (ArgumentType)ArgTypes.BOOLEAN);
+    private final RequiredArg<Boolean> debugValueArg = (RequiredArg<Boolean>) this.withRequiredArg("value", "Enable/Disable debug logs", (ArgumentType) ArgTypes.BOOLEAN);
 
     public DebugCommand() {
         super("debug", "Toggle debug logging");
@@ -29,15 +29,15 @@ public class DebugCommand extends AbstractCommand {
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
         try {
-            Boolean newDebug = (Boolean)context.get(this.debugValueArg);
-            
+            Boolean newDebug = (Boolean) context.get(this.debugValueArg);
+
             BetterMapConfig config = BetterMapConfig.getInstance();
             config.setDebug(newDebug);
 
             context.sendMessage(Message.raw("BetterMap debug mode set to: " + newDebug).color(Color.GREEN));
-            
+
         } catch (Exception e) {
-             context.sendMessage(Message.raw("Error setting debug mode: " + e.getMessage()).color(Color.RED));
+            context.sendMessage(Message.raw("Error setting debug mode: " + e.getMessage()).color(Color.RED));
         }
 
         return CompletableFuture.completedFuture(null);

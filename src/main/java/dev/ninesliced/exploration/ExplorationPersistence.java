@@ -1,25 +1,28 @@
 package dev.ninesliced.exploration;
 
 import com.hypixel.hytale.server.core.entity.entities.Player;
+
+import javax.annotation.Nonnull;
 import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
 
 public class ExplorationPersistence {
 
     private static final Logger LOGGER = Logger.getLogger(ExplorationPersistence.class.getName());
     private static final int DATA_VERSION = 1;
-    
+
     private final Path storageDir;
 
     public ExplorationPersistence() {
         Path serverRoot = Paths.get(".").toAbsolutePath().normalize();
         this.storageDir = serverRoot.resolve("mods").resolve("BetterMap").resolve("Data");
-        
+
         LOGGER.info("Exploration storage root directory: " + this.storageDir.toString());
         try {
             if (!Files.exists(storageDir)) {
@@ -36,7 +39,7 @@ public class ExplorationPersistence {
 
         Path worldDir = storageDir.resolve(worldName);
         Path file = worldDir.resolve(playerUUID.toString() + ".bin");
-        
+
         if (!Files.exists(file)) {
             return;
         }
@@ -49,21 +52,21 @@ public class ExplorationPersistence {
 
             int count = in.readInt();
             Set<Long> loadedChunks = new HashSet<>(count);
-            
+
             for (int i = 0; i < count; i++) {
                 loadedChunks.add(in.readLong());
             }
 
             ExplorationTracker.PlayerExplorationData data = ExplorationTracker.getInstance().getOrCreatePlayerData(player);
             data.getExploredChunks().markChunksExplored(loadedChunks);
-            
+
             for (long chunkIdx : loadedChunks) {
                 int x = ChunkUtil.indexToChunkX(chunkIdx);
                 int z = ChunkUtil.indexToChunkZ(chunkIdx);
 
-                data.getMapExpansion().updateBoundaries(x, z, 0); 
+                data.getMapExpansion().updateBoundaries(x, z, 0);
             }
-            
+
             LOGGER.info("Loaded " + count + " explored chunks for " + player.getDisplayName() + " in world " + worldName);
 
         } catch (IOException e) {
@@ -74,7 +77,7 @@ public class ExplorationPersistence {
     public void save(@Nonnull Player player) {
         save(player.getDisplayName(), player.getUuid(), player.getWorld().getName());
     }
-    
+
     public void save(String playerName, UUID playerUUID, @Nonnull String worldName) {
         if (playerUUID == null) {
             LOGGER.warning("Cannot save data: Player UUID is null for " + playerName);
@@ -87,7 +90,7 @@ public class ExplorationPersistence {
         }
 
         Set<Long> chunks = data.getExploredChunks().getExploredChunks();
-        
+
         Path worldDir = storageDir.resolve(worldName);
         try {
             if (!Files.exists(worldDir)) {
@@ -104,7 +107,7 @@ public class ExplorationPersistence {
         try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(file)))) {
             out.writeInt(DATA_VERSION);
             out.writeInt(chunks.size());
-            
+
             for (Long chunk : chunks) {
                 out.writeLong(chunk);
             }

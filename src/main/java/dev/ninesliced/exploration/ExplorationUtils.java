@@ -1,17 +1,17 @@
 package dev.ninesliced.exploration;
 
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
-import java.util.logging.Logger;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.logging.Logger;
 
 /**
  * Provides utility methods for exploration management and statistics.
  * Useful for querying and managing exploration state.
  */
 public class ExplorationUtils {
-    
+
     private static final Logger LOGGER = Logger.getLogger(ExplorationUtils.class.getName());
 
     /**
@@ -83,9 +83,9 @@ public class ExplorationUtils {
 
         return String.format(
                 "Exploration Stats for %s:%n" +
-                "  Chunks Explored: %d%n" +
-                "  Total Map Area: %d chunks (%.1f blocks)%n" +
-                "  Boundaries: %s",
+                        "  Chunks Explored: %d%n" +
+                        "  Total Map Area: %d chunks (%.1f blocks)%n" +
+                        "  Boundaries: %s",
                 player.getDisplayName(),
                 chunkCount,
                 totalArea,

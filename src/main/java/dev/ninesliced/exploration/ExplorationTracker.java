@@ -1,10 +1,11 @@
 package dev.ninesliced.exploration;
 
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ExplorationTracker {
     private static final ExplorationTracker INSTANCE = new ExplorationTracker();

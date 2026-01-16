@@ -12,13 +12,13 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.BetterMapConfig;
 import dev.ninesliced.exploration.WorldMapHook;
 
-import java.awt.Color;
-import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.awt.*;
+import java.util.concurrent.CompletableFuture;
 
 public class MapMinScaleCommand extends AbstractCommand {
-    private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Min zoom value", (ArgumentType)ArgTypes.FLOAT);
+    private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Min zoom value", (ArgumentType) ArgTypes.FLOAT);
 
     public MapMinScaleCommand() {
         super("min", "Set min map zoom scale (lower = zoom out further)");
@@ -37,7 +37,7 @@ public class MapMinScaleCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
         try {
-            Float newMin = (Float)context.get(this.zoomValueArg);
+            Float newMin = (Float) context.get(this.zoomValueArg);
             if (newMin.floatValue() < 2.0f) {
                 context.sendMessage(Message.raw("Min scale must be greater or equals to 2").color(Color.RED));
                 return CompletableFuture.completedFuture(null);
@@ -51,8 +51,8 @@ public class MapMinScaleCommand extends AbstractCommand {
             // Update config
             BetterMapConfig config = BetterMapConfig.getInstance();
             if (newMin >= config.getMaxScale()) {
-                 context.sendMessage(Message.raw("Min scale must be less than max scale (" + config.getMaxScale() + ")").color(Color.RED));
-                 return CompletableFuture.completedFuture(null);
+                context.sendMessage(Message.raw("Min scale must be less than max scale (" + config.getMaxScale() + ")").color(Color.RED));
+                return CompletableFuture.completedFuture(null);
             }
 
             config.setMinScale(newMin);
@@ -63,8 +63,7 @@ public class MapMinScaleCommand extends AbstractCommand {
 
             context.sendMessage(Message.raw("Map min scale set to: ").color(Color.GREEN).insert(Message.raw(String.valueOf(newMin)).color(Color.YELLOW)));
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             context.sendMessage(Message.raw("Error: " + e.getMessage()).color(Color.RED));
             e.printStackTrace();
         }
@@ -75,10 +74,9 @@ public class MapMinScaleCommand extends AbstractCommand {
         try {
             CommandSender sender = context.sender();
             if (sender instanceof Player) {
-                return ((Player)sender).getWorld();
+                return ((Player) sender).getWorld();
             }
-        }
-        catch (Exception exception) {
+        } catch (Exception exception) {
         }
         return null;
     }

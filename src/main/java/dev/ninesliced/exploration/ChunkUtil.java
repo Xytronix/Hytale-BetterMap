@@ -1,8 +1,8 @@
 package dev.ninesliced.exploration;
 
+import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
-import javax.annotation.Nonnull;
 
 public class ChunkUtil {
     private static final int CHUNK_SIZE = 16;
