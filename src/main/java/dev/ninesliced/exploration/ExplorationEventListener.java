@@ -66,13 +66,10 @@ public class ExplorationEventListener {
         LOGGER.info("[DEBUG] DrainPlayerFromWorldEvent FIRED!");
         try {
             Holder<EntityStore> holder = event.getHolder();
-            LOGGER.info("[DEBUG] Got holder: " + holder);
 
             PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
-            LOGGER.info("[DEBUG] Got PlayerRef: " + (playerRef != null ? playerRef.getUsername() : "null"));
 
             Player player = playerRef.getComponent(Player.getComponentType());
-            LOGGER.info("[DEBUG] Got Player: " + (player != null ? player.getDisplayName() : "null"));
 
             if (player != null) {
                 World world = event.getWorld();
@@ -183,7 +180,6 @@ public class ExplorationEventListener {
                 }
 
                 playerWorlds.put(playerName, newWorldName);
-                LOGGER.info("[DEBUG] Updated world tracking for " + playerName + ": " + newWorldName);
             }
         } catch (Exception e) {
             LOGGER.warning("[DEBUG] Error in AddPlayerToWorldEvent: " + e.getMessage());

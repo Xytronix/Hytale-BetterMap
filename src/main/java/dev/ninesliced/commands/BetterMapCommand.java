@@ -21,6 +21,7 @@ public class BetterMapCommand extends AbstractCommand {
         this.addSubCommand(new MapMinScaleCommand());
         this.addSubCommand(new MapMaxScaleCommand());
         this.addSubCommand(new ReloadCommand());
+        this.addSubCommand(new DebugCommand());
     }
 
     @Override
@@ -38,6 +39,7 @@ public class BetterMapCommand extends AbstractCommand {
         context.sendMessage(Message.raw("Min Scale: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(config.getMinScale())).color(Color.WHITE)));
         context.sendMessage(Message.raw("Max Scale: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(config.getMaxScale())).color(Color.WHITE)));
         context.sendMessage(Message.raw("Map Quality: ").color(Color.YELLOW).insert(Message.raw(config.getMapQuality().name()).color(Color.WHITE)));
+        context.sendMessage(Message.raw("Debug Mode: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(config.isDebug())).color(Color.WHITE)));
         context.sendMessage(Message.raw("NOTE: Players must rejoin the server for map quality changes to take effect."));
 
         return CompletableFuture.completedFuture(null);

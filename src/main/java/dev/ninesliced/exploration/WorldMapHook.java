@@ -382,7 +382,6 @@ public class WorldMapHook {
                 int chunkZ = (int)Math.floor(z) >> 5;
 
                 restrictedIterator.init(chunkX, chunkZ, 0, 999);
-                LOGGER.info("[DEBUG] Forced tracker update for " + player.getDisplayName());
             }
 
             ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);

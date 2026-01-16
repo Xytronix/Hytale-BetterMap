@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class BetterMapConfig {
@@ -20,6 +21,7 @@ public class BetterMapConfig {
     private MapQuality mapQuality = MapQuality.MEDIUM;
     private float minScale = 10.0f;
     private float maxScale = 256.0f;
+    private boolean debug = false;
 
     private transient Path configPath;
 
@@ -97,11 +99,18 @@ public class BetterMapConfig {
                     } else {
                         needsSave = true;
                     }
+
+                    if (jsonObject.has("debug")) {
+                        this.debug = loaded.debug;
+                    } else {
+                        needsSave = true;
+                    }
                     
                     if (needsSave) {
                         save();
                     }
                     
+                    updateLoggers();
                     LOGGER.info("Configuration loaded from " + configPath);
                 }
             }
@@ -109,7 +118,26 @@ public class BetterMapConfig {
             LOGGER.severe("Failed to load configuration: " + e.getMessage());
             // Fail safe
             this.mapQuality = MapQuality.MEDIUM;
+            updateLoggers();
         }
+    }
+
+    private void updateLoggers() {
+        Level level = debug ? Level.ALL : Level.OFF;
+        
+        setLoggerLevel("dev.ninesliced", level);
+        
+        setLoggerLevel("dev.ninesliced.commands", level);
+        setLoggerLevel("dev.ninesliced.exploration", level);
+        
+        setLoggerLevel("dev.ninesliced.exploration.ExplorationEventListener", level);
+        setLoggerLevel("dev.ninesliced.exploration.WorldMapHook", level);
+        setLoggerLevel("dev.ninesliced.exploration.ExplorationPersistence", level);
+    }
+
+    private void setLoggerLevel(String loggerName, Level level) {
+        Logger logger = Logger.getLogger(loggerName);
+        logger.setLevel(level);
     }
 
     public void save() {
@@ -141,6 +169,16 @@ public class BetterMapConfig {
 
     public float getMinScale() {
         return minScale;
+    }
+
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+        updateLoggers();
+        save();
     }
 
     public void setMinScale(float minScale) {
