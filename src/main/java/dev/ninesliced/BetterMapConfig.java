@@ -24,6 +24,7 @@ public class BetterMapConfig {
     private boolean debug = false;
 
     private transient Path configPath;
+    private transient MapQuality activeMapQuality;
 
     public enum MapQuality {
         LOW(0.25f, 30000),
@@ -63,6 +64,9 @@ public class BetterMapConfig {
             } else {
                 save();
             }
+            
+            // Set active quality after initial load
+            this.activeMapQuality = this.mapQuality;
         } catch (IOException e) {
             LOGGER.severe("Failed to initialize configuration: " + e.getMessage());
         }
@@ -165,6 +169,10 @@ public class BetterMapConfig {
 
     public MapQuality getMapQuality() {
         return mapQuality;
+    }
+    
+    public MapQuality getActiveMapQuality() {
+        return activeMapQuality != null ? activeMapQuality : mapQuality;
     }
 
     public float getMinScale() {

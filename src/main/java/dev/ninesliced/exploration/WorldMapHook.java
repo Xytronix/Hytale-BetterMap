@@ -110,7 +110,7 @@ public class WorldMapHook {
             if (settings == null) return;
 
             // Use configured quality
-            BetterMapConfig.MapQuality quality = BetterMapConfig.getInstance().getMapQuality();
+            BetterMapConfig.MapQuality quality = BetterMapConfig.getInstance().getActiveMapQuality();
             ReflectionHelper.setFieldValueRecursive(settings, "imageScale", quality.scale);
             
             // Clear cache to force regenerate with new resolution
@@ -278,7 +278,7 @@ public class WorldMapHook {
             }));
 
             // Keep only the closest chunks, reserving space for boundaries
-            int maxChunks = BetterMapConfig.getInstance().getMapQuality().maxChunks;
+            int maxChunks = BetterMapConfig.getInstance().getActiveMapQuality().maxChunks;
             int searchLimit = maxChunks - boundaryChunks.size();
             if (searchLimit < 0) searchLimit = 0;
 

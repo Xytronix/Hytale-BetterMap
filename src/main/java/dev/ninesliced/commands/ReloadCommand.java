@@ -46,6 +46,15 @@ public class ReloadCommand extends AbstractCommand {
         context.sendMessage(Message.raw("Min Scale: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(BetterMapConfig.getInstance().getMinScale())).color(Color.WHITE)));
         context.sendMessage(Message.raw("Max Scale: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(BetterMapConfig.getInstance().getMaxScale())).color(Color.WHITE)));
 
+        BetterMapConfig config = BetterMapConfig.getInstance();
+        context.sendMessage(Message.raw("Map Quality: ").color(Color.YELLOW).insert(Message.raw(config.getMapQuality().name()).color(Color.WHITE)));
+        
+        if (config.getMapQuality() != config.getActiveMapQuality()) {
+            context.sendMessage(Message.raw("WARNING: Map Quality change pending restart (Active: " + config.getActiveMapQuality().name() + ")").color(Color.RED));
+        }
+
+        context.sendMessage(Message.raw("NOTE: The server must be restarted for map quality changes to take effect."));
+
         return CompletableFuture.completedFuture(null);
     }
 }

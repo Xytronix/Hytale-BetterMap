@@ -40,7 +40,7 @@ public class BetterMapCommand extends AbstractCommand {
         context.sendMessage(Message.raw("Max Scale: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(config.getMaxScale())).color(Color.WHITE)));
         context.sendMessage(Message.raw("Map Quality: ").color(Color.YELLOW).insert(Message.raw(config.getMapQuality().name()).color(Color.WHITE)));
         context.sendMessage(Message.raw("Debug Mode: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(config.isDebug())).color(Color.WHITE)));
-        context.sendMessage(Message.raw("NOTE: Players must rejoin the server for map quality changes to take effect."));
+        context.sendMessage(Message.raw("NOTE: The server must be restarted for map quality changes to take effect."));
 
         return CompletableFuture.completedFuture(null);
     }
