@@ -17,9 +17,15 @@ import javax.annotation.Nullable;
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Command to set the maximum map scale (zoom in level).
+ */
 public class MapMaxScaleCommand extends AbstractCommand {
     private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Max zoom value", (ArgumentType) ArgTypes.FLOAT);
 
+    /**
+     * Constructs the MapMaxScale command.
+     */
     public MapMaxScaleCommand() {
         super("max", "Set max map zoom scale (higher = zoom in closer)");
     }
@@ -29,6 +35,12 @@ public class MapMaxScaleCommand extends AbstractCommand {
         return "command.bettermap.max";
     }
 
+    /**
+     * Executes the max scale command, validating and updating the configuration.
+     *
+     * @param context The command execution context.
+     * @return A future that completes when execution is finished.
+     */
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
@@ -68,6 +80,12 @@ public class MapMaxScaleCommand extends AbstractCommand {
         return CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Helper method to find the world associated with the command sender.
+     *
+     * @param context The command context.
+     * @return The world the sender is in, or null if not applicable.
+     */
     private World findWorld(CommandContext context) {
         try {
             CommandSender sender = context.sender();

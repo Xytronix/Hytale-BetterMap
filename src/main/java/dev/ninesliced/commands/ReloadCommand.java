@@ -12,7 +12,13 @@ import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Command to reload the BetterMap configuration.
+ */
 public class ReloadCommand extends AbstractCommand {
+    /**
+     * Constructs the Reload command.
+     */
     protected ReloadCommand() {
         super("reload", "Reload BetterMap configuration");
     }
@@ -22,6 +28,12 @@ public class ReloadCommand extends AbstractCommand {
         return "command.bettermap.reload";
     }
 
+    /**
+     * Executes the reload command, applying new configuration and updating worlds.
+     *
+     * @param context The command execution context.
+     * @return A future that completes when execution is finished.
+     */
     @NullableDecl
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext context) {

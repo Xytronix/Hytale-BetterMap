@@ -10,8 +10,15 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 
 import javax.annotation.Nonnull;
 
+/**
+ * Component that stores the exploration data for a player.
+ * It tracks which chunks have been explored.
+ */
 public class ExplorationComponent implements Component<EntityStore> {
 
+    /**
+     * Codec for serializing and deserializing the ExplorationComponent.
+     */
     public static final BuilderCodec<ExplorationComponent> CODEC = BuilderCodec.builder(ExplorationComponent.class, ExplorationComponent::new)
             .append(
                     new KeyedCodec<>("ExploredChunks", new LongArrayCodec()),
@@ -29,21 +36,45 @@ public class ExplorationComponent implements Component<EntityStore> {
 
     private LongSet exploredChunks = new LongOpenHashSet();
 
+    /**
+     * Constructs a new ExplorationComponent.
+     */
     public ExplorationComponent() {
     }
 
+    /**
+     * Gets the set of explored chunk indices.
+     *
+     * @return The set of explored chunk indices.
+     */
     public LongSet getExploredChunks() {
         return exploredChunks;
     }
 
+    /**
+     * Marks a chunk as explored.
+     *
+     * @param chunkIndex The index of the chunk to mark as explored.
+     */
     public void addExploredChunk(long chunkIndex) {
         exploredChunks.add(chunkIndex);
     }
 
+    /**
+     * Checks if a chunk is explored.
+     *
+     * @param chunkIndex The index of the chunk.
+     * @return True if the chunk is explored, false otherwise.
+     */
     public boolean isExplored(long chunkIndex) {
         return exploredChunks.contains(chunkIndex);
     }
 
+    /**
+     * Creates a clone of this component.
+     *
+     * @return A deep copy of the component.
+     */
     @Nonnull
     @Override
     public Component<EntityStore> clone() {

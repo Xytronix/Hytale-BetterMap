@@ -8,6 +8,10 @@ import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+/**
+ * Singleton manager responsible for the lifecycle of the exploration system.
+ * Handles initialization, configuration, and player data persistence.
+ */
 public class ExplorationManager {
     private static final Logger LOGGER = Logger.getLogger(ExplorationManager.class.getName());
     private static ExplorationManager INSTANCE;
@@ -24,6 +28,11 @@ public class ExplorationManager {
     private ExplorationManager() {
     }
 
+    /**
+     * Gets the singleton instance.
+     *
+     * @return The instance.
+     */
     @Nonnull
     public static synchronized ExplorationManager getInstance() {
         if (INSTANCE == null) {
@@ -32,11 +41,19 @@ public class ExplorationManager {
         return INSTANCE;
     }
 
+    /**
+     * Creates a new config builder.
+     *
+     * @return A new ConfigBuilder.
+     */
     @Nonnull
     public static ConfigBuilder config() {
         return new ConfigBuilder();
     }
 
+    /**
+     * Initializes the exploration system.
+     */
     public synchronized void initialize() {
         if (initialized) {
             LOGGER.info("Exploration system already initialized");
@@ -60,34 +77,65 @@ public class ExplorationManager {
         }
     }
 
+    /**
+     * Checks if the manager is initialized.
+     *
+     * @return True if initialized.
+     */
     public boolean isInitialized() {
         return initialized;
     }
 
+    /**
+     * Loads player data for their current world.
+     *
+     * @param player The player.
+     */
     public void loadPlayerData(@Nonnull Player player) {
         if (player.getWorld() != null) {
             loadPlayerData(player, player.getWorld().getName());
         }
     }
 
+    /**
+     * Loads player data for a specific world.
+     *
+     * @param player    The player.
+     * @param worldName The world name.
+     */
     public void loadPlayerData(@Nonnull Player player, @Nonnull String worldName) {
         if (persistenceEnabled && persistence != null) {
             persistence.load(player, worldName);
         }
     }
 
+    /**
+     * Saves player data for their current world.
+     *
+     * @param player The player.
+     */
     public void savePlayerData(@Nonnull Player player) {
         if (persistenceEnabled && persistence != null) {
             persistence.save(player);
         }
     }
 
+    /**
+     * Saves player data for a specific world.
+     *
+     * @param playerName The player's name.
+     * @param playerUUID The player's UUID.
+     * @param worldName  The world name.
+     */
     public void savePlayerData(String playerName, UUID playerUUID, String worldName) {
         if (persistenceEnabled && persistence != null) {
             persistence.save(playerName, playerUUID, worldName);
         }
     }
 
+    /**
+     * Shuts down the system and clears trackers.
+     */
     public synchronized void shutdown() {
         try {
             LOGGER.info("Shutting down Exploration System...");
@@ -98,6 +146,11 @@ public class ExplorationManager {
         }
     }
 
+    /**
+     * Registers a player for tracking.
+     *
+     * @param player The player.
+     */
     public void registerPlayer(@Nonnull Player player) {
         try {
             ExplorationTracker.getInstance().getOrCreatePlayerData(player);
@@ -107,6 +160,11 @@ public class ExplorationManager {
         }
     }
 
+    /**
+     * Unregisters a player from tracking.
+     *
+     * @param player The player.
+     */
     public void unregisterPlayer(@Nonnull Player player) {
         try {
             ExplorationTracker.getInstance().removePlayerData(player);
@@ -116,37 +174,77 @@ public class ExplorationManager {
         }
     }
 
+    /**
+     * Gets the max stored chunks per player.
+     *
+     * @return The limit.
+     */
     public int getMaxStoredChunksPerPlayer() {
         return maxStoredChunksPerPlayer;
     }
 
+    /**
+     * Sets the max stored chunks per player.
+     *
+     * @param max The limit.
+     */
     public void setMaxStoredChunksPerPlayer(int max) {
         this.maxStoredChunksPerPlayer = max;
         LOGGER.info("Max stored chunks per player set to: " + max);
     }
 
+    /**
+     * Gets the update rate for exploration checks.
+     *
+     * @return The rate in seconds.
+     */
     public float getExplorationUpdateRate() {
         return explorationUpdateRate;
     }
 
+    /**
+     * Sets the update rate.
+     *
+     * @param seconds The rate in seconds.
+     */
     public void setExplorationUpdateRate(float seconds) {
         this.explorationUpdateRate = Math.max(0.1f, seconds);
         LOGGER.info("Exploration update rate set to: " + explorationUpdateRate + " seconds");
     }
 
+    /**
+     * Checks if persistence is enabled.
+     *
+     * @return True if enabled.
+     */
     public boolean isPersistenceEnabled() {
         return persistenceEnabled;
     }
 
+    /**
+     * Enables or disables persistence.
+     *
+     * @param enabled The new state.
+     */
     public void setPersistenceEnabled(boolean enabled) {
         this.persistenceEnabled = enabled;
         LOGGER.info("Persistence " + (enabled ? "enabled" : "disabled"));
     }
 
+    /**
+     * Gets the path for persistence data.
+     *
+     * @return The path.
+     */
     public String getPersistencePath() {
         return persistencePath;
     }
 
+    /**
+     * Sets the persistence path.
+     *
+     * @param path The new path.
+     */
     public void setPersistencePath(@Nonnull String path) {
         this.persistencePath = path;
         LOGGER.info("Persistence path set to: " + path);
@@ -161,30 +259,61 @@ public class ExplorationManager {
         );
     }
 
+    /**
+     * Builder for ExplorationManager configuration.
+     */
     public static class ConfigBuilder {
         private final ExplorationManager manager = getInstance();
 
+        /**
+         * Sets the max chunks limitation.
+         *
+         * @param max Max chunks.
+         * @return The builder.
+         */
         public ConfigBuilder maxChunksPerPlayer(int max) {
             manager.setMaxStoredChunksPerPlayer(max);
             return this;
         }
 
+        /**
+         * Sets the update rate.
+         *
+         * @param seconds Rate in seconds.
+         * @return The builder.
+         */
         public ConfigBuilder updateRate(float seconds) {
             manager.setExplorationUpdateRate(seconds);
             return this;
         }
 
+        /**
+         * Enables persistence at the given path.
+         *
+         * @param path The path.
+         * @return The builder.
+         */
         public ConfigBuilder enablePersistence(String path) {
             manager.setPersistencePath(path);
             manager.setPersistenceEnabled(true);
             return this;
         }
 
+        /**
+         * Disables persistence.
+         *
+         * @return The builder.
+         */
         public ConfigBuilder disablePersistence() {
             manager.setPersistenceEnabled(false);
             return this;
         }
 
+        /**
+         * Builds (initializes) the manager.
+         *
+         * @return The initialized manager.
+         */
         public ExplorationManager build() {
             manager.initialize();
             return manager;

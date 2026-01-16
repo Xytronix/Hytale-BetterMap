@@ -10,11 +10,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * Thread-safe tracker for the set of explored chunks.
+ * Uses a persistent component if available, otherwise falls back to memory storage.
+ */
 public class ExploredChunksTracker {
     private final Set<Long> memoryExploredChunks;
     private final ExplorationComponent persistentComponent;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
+    /**
+     * Creates a new tracker.
+     *
+     * @param component The persistent component to use (can be null).
+     */
     public ExploredChunksTracker(@Nullable ExplorationComponent component) {
         this.persistentComponent = component;
         if (component == null) {
@@ -24,6 +33,11 @@ public class ExploredChunksTracker {
         }
     }
 
+    /**
+     * Marks a single chunk as explored.
+     *
+     * @param chunkIndex The chunk index to mark.
+     */
     public void markChunkExplored(long chunkIndex) {
         if (persistentComponent != null) {
             persistentComponent.addExploredChunk(chunkIndex);
@@ -38,6 +52,11 @@ public class ExploredChunksTracker {
         }
     }
 
+    /**
+     * Marks multiple chunks as explored.
+     *
+     * @param chunkIndices The set of chunk indices.
+     */
     public void markChunksExplored(@Nonnull Set<Long> chunkIndices) {
         if (persistentComponent != null) {
             for (Long chunk : chunkIndices) {
@@ -54,6 +73,12 @@ public class ExploredChunksTracker {
         }
     }
 
+    /**
+     * Checks if a chunk has been explored.
+     *
+     * @param chunkIndex The chunk index.
+     * @return True if explored.
+     */
     public boolean isChunkExplored(long chunkIndex) {
         if (persistentComponent != null) {
             return persistentComponent.isExplored(chunkIndex);
@@ -67,6 +92,11 @@ public class ExploredChunksTracker {
         }
     }
 
+    /**
+     * Gets a copy of all explored chunk indices.
+     *
+     * @return Set of all explored chunk indices.
+     */
     @Nonnull
     public Set<Long> getExploredChunks() {
         if (persistentComponent != null) {
@@ -81,6 +111,11 @@ public class ExploredChunksTracker {
         }
     }
 
+    /**
+     * Gets the count of explored chunks.
+     *
+     * @return The number of explored chunks.
+     */
     public int getExploredCount() {
         if (persistentComponent != null) {
             return persistentComponent.getExploredChunks().size();
@@ -94,6 +129,9 @@ public class ExploredChunksTracker {
         }
     }
 
+    /**
+     * Clears all explored chunks data.
+     */
     public void clear() {
         if (persistentComponent != null) {
             persistentComponent.getExploredChunks().clear();

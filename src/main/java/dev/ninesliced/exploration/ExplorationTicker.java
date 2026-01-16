@@ -16,6 +16,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+/**
+ * Ticker service that updates exploration status for players periodically.
+ */
 public class ExplorationTicker {
     private static final Logger LOGGER = Logger.getLogger(ExplorationTicker.class.getName());
     private static ExplorationTicker INSTANCE;
@@ -25,6 +28,11 @@ public class ExplorationTicker {
     private ExplorationTicker() {
     }
 
+    /**
+     * Gets the singleton instance of the ticker.
+     *
+     * @return The ticker instance.
+     */
     @Nonnull
     public static ExplorationTicker getInstance() {
         if (INSTANCE == null) {
@@ -33,6 +41,9 @@ public class ExplorationTicker {
         return INSTANCE;
     }
 
+    /**
+     * Starts the scheduled ticker task.
+     */
     public void start() {
         if (isRunning) {
             return;
@@ -42,6 +53,11 @@ public class ExplorationTicker {
         LOGGER.info("Exploration Ticker started.");
     }
 
+    /**
+     * Schedules a one-off task to run on the ticker thread.
+     *
+     * @param task The task to run.
+     */
     public void scheduleUpdate(Runnable task) {
         if (!isRunning) {
             return;
@@ -49,6 +65,9 @@ public class ExplorationTicker {
         scheduler.schedule(task, 50, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Stops the ticker and shuts down the scheduler.
+     */
     public void stop() {
         isRunning = false;
         scheduler.shutdown();

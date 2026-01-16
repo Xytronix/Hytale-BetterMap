@@ -20,9 +20,18 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.logging.Logger;
 
+/**
+ * Hooks into the Hytale WorldMap system to provide custom exploration behavior.
+ */
 public class WorldMapHook {
     private static final Logger LOGGER = Logger.getLogger(WorldMapHook.class.getName());
 
+    /**
+     * Injects a custom RestrictedSpiralIterator into the player's world map tracker.
+     *
+     * @param player  The player.
+     * @param tracker The world map tracker.
+     */
     public static void hookPlayerMapTracker(@Nonnull Player player, @Nonnull WorldMapTracker tracker) {
         try {
             ReflectionHelper.setFieldValueRecursive(tracker, "viewRadiusOverride", 999);
@@ -44,6 +53,12 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Removes the custom hooks from the player's tracker, attempting to clean up.
+     *
+     * @param player  The player.
+     * @param tracker The tracker.
+     */
     public static void unhookPlayerMapTracker(@Nonnull Player player, @Nonnull WorldMapTracker tracker) {
         try {
             Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
@@ -82,6 +97,12 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Restores the vanilla CircleSpiralIterator to the tracker.
+     *
+     * @param player  The player.
+     * @param tracker The tracker.
+     */
     public static void restoreVanillaMapTracker(@Nonnull Player player, @Nonnull WorldMapTracker tracker) {
         try {
             Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
@@ -99,6 +120,11 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Adjusts world map settings (resolution/scale) for the given world based on configuration.
+     *
+     * @param world The world.
+     */
     public static void hookWorldMapResolution(@Nonnull com.hypixel.hytale.server.core.universe.world.World world) {
         try {
             LOGGER.info("Hooking WorldMap resolution for world: " + world.getName());
@@ -120,6 +146,14 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Updates the exploration state for a player, updating boundaries and forcing a tracker update if moved.
+     *
+     * @param player  The player.
+     * @param tracker The tracker.
+     * @param x       Player X.
+     * @param z       Player Z.
+     */
     public static void updateExplorationState(@Nonnull Player player, @Nonnull WorldMapTracker tracker, double x, double z) {
         try {
             ExplorationTracker explorationTracker = ExplorationTracker.getInstance();
@@ -225,6 +259,11 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Updates world map configuration settings on the server side.
+     *
+     * @param world The world.
+     */
     public static void updateWorldMapConfigs(@Nonnull World world) {
         try {
             WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
@@ -244,6 +283,11 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Triggers the broadcast of map settings to clients in the world.
+     *
+     * @param world The world.
+     */
     public static void broadcastMapSettings(@Nonnull World world) {
         try {
             Object mapManager = world.getWorldMapManager();
@@ -254,6 +298,11 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Sends custom map settings packet to a specific player.
+     *
+     * @param player The player.
+     */
     public static void sendMapSettingsToPlayer(@Nonnull Player player) {
         try {
             World world = player.getWorld();
@@ -273,6 +322,9 @@ public class WorldMapHook {
         }
     }
 
+    /**
+     * Custom iterator that only returns chunks that have been explored or are within the persistent boundaries.
+     */
     public static class RestrictedSpiralIterator extends CircleSpiralIterator {
         private final ExplorationTracker.PlayerExplorationData data;
         private final WorldMapTracker tracker;
@@ -290,10 +342,18 @@ public class WorldMapHook {
             this.tracker = tracker;
         }
 
+        /**
+         * Stops the iterator.
+         */
         public void stop() {
             this.stopped = true;
         }
 
+        /**
+         * Gets the list of target chunks being iterated.
+         *
+         * @return List of chunk indices.
+         */
         public List<Long> getTargetMapChunks() {
             return targetMapChunks;
         }

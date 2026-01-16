@@ -17,9 +17,15 @@ import javax.annotation.Nullable;
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Command to set the minimum map scale (zoom out level).
+ */
 public class MapMinScaleCommand extends AbstractCommand {
     private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Min zoom value", (ArgumentType) ArgTypes.FLOAT);
 
+    /**
+     * Constructs the MapMinScale command.
+     */
     public MapMinScaleCommand() {
         super("min", "Set min map zoom scale (lower = zoom out further)");
     }
@@ -29,6 +35,12 @@ public class MapMinScaleCommand extends AbstractCommand {
         return "command.bettermap.min";
     }
 
+    /**
+     * Executes the min scale command, validating and updating the configuration.
+     *
+     * @param context The command execution context.
+     * @return A future that completes when execution is finished.
+     */
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
@@ -68,6 +80,12 @@ public class MapMinScaleCommand extends AbstractCommand {
         return CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Helper method to find the world associated with the command sender.
+     *
+     * @param context The command context.
+     * @return The world the sender is in, or null if not applicable.
+     */
     private World findWorld(CommandContext context) {
         try {
             CommandSender sender = context.sender();

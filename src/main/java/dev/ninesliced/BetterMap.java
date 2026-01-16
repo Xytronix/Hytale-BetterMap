@@ -16,24 +16,47 @@ import dev.ninesliced.managers.ExplorationManager;
 import javax.annotation.Nonnull;
 import java.util.logging.Logger;
 
+/**
+ * Main class for the BetterMap mod.
+ * Handles initialization, component registration, and event setup.
+ */
 public class BetterMap extends JavaPlugin {
 
     private static final Logger LOGGER = Logger.getLogger(BetterMap.class.getName());
     private static BetterMap instance;
     private ComponentType<EntityStore, ExplorationComponent> explorationComponentType;
 
+    /**
+     * Constructor for the BetterMap plugin.
+     *
+     * @param init Plugin initialization context.
+     */
     public BetterMap(@Nonnull JavaPluginInit init) {
         super(init);
     }
 
+    /**
+     * Gets the singleton instance of the BetterMap plugin.
+     *
+     * @return The active BetterMap instance.
+     */
     public static BetterMap get() {
         return instance;
     }
 
+    /**
+     * Gets the component type for exploration data.
+     *
+     * @return The registered ExplorationComponent type.
+     */
     public ComponentType<EntityStore, ExplorationComponent> getExplorationComponentType() {
         return explorationComponentType;
     }
 
+    /**
+     * Performs the setup logic for the plugin.
+     * Registers components, systems, commands, and event listeners.
+     */
     @Override
     protected void setup() {
         instance = this;

@@ -10,6 +10,9 @@ import dev.ninesliced.components.ExplorationComponent;
 
 import javax.annotation.Nonnull;
 
+/**
+ * specific System that attaches the ExplorationComponent to players.
+ */
 public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
 
     @Nonnull
@@ -19,6 +22,9 @@ public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
     @Nonnull
     private final Query<EntityStore> query;
 
+    /**
+     * Constructs the setup system.
+     */
     public ExplorationPlayerSetupSystem() {
         this.explorationComponentType = BetterMap.get().getExplorationComponentType();
         this.playerComponentType = Player.getComponentType();
@@ -31,6 +37,14 @@ public class ExplorationPlayerSetupSystem extends RefSystem<EntityStore> {
         return this.query;
     }
 
+    /**
+     * Called when a player entity is added. Ensures they have the ExplorationComponent.
+     *
+     * @param ref           The entity reference.
+     * @param reason        Reason for addition.
+     * @param store         The entity store.
+     * @param commandBuffer The command buffer.
+     */
     @Override
     public void onEntityAdded(
             @Nonnull Ref<EntityStore> ref,

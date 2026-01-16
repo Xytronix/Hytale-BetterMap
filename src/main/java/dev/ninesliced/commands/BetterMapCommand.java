@@ -11,9 +11,16 @@ import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
+/**
+ * Main command for the BetterMap mod.
+ * Provides subcommands for managing map settings.
+ */
 public class BetterMapCommand extends AbstractCommand {
     private static final Logger LOGGER = Logger.getLogger(BetterMapCommand.class.getName());
 
+    /**
+     * Constructs the BetterMap command and registers subcommands.
+     */
     public BetterMapCommand() {
         super("bettermap", "Manage BetterMap plugin");
         this.addAliases("bm", "map");
@@ -29,6 +36,12 @@ public class BetterMapCommand extends AbstractCommand {
         return "command.bettermap";
     }
 
+    /**
+     * Executes the command logic, displaying current settings.
+     *
+     * @param context The command execution context.
+     * @return A future that completes when execution is finished.
+     */
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {

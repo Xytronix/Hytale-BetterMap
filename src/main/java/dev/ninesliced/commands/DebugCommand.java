@@ -13,9 +13,15 @@ import javax.annotation.Nullable;
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Command to toggle debug logging for the BetterMap mod.
+ */
 public class DebugCommand extends AbstractCommand {
     private final RequiredArg<Boolean> debugValueArg = (RequiredArg<Boolean>) this.withRequiredArg("value", "Enable/Disable debug logs", (ArgumentType) ArgTypes.BOOLEAN);
 
+    /**
+     * Constructs the Debug command.
+     */
     public DebugCommand() {
         super("debug", "Toggle debug logging");
     }
@@ -25,6 +31,12 @@ public class DebugCommand extends AbstractCommand {
         return "command.bettermap.debug";
     }
 
+    /**
+     * Executes the debug command, updating the configuration.
+     *
+     * @param context The command execution context.
+     * @return A future that completes when execution is finished.
+     */
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {

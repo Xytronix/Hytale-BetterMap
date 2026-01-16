@@ -17,6 +17,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+/**
+ * Handles persistence of exploration data to disk.
+ */
 public class ExplorationPersistence {
 
     private static final Logger LOGGER = Logger.getLogger(ExplorationPersistence.class.getName());
@@ -24,6 +27,9 @@ public class ExplorationPersistence {
 
     private final Path storageDir;
 
+    /**
+     * Initializes the persistence manager, setting up the storage directory.
+     */
     public ExplorationPersistence() {
         Path serverRoot = Paths.get(".").toAbsolutePath().normalize();
         this.storageDir = serverRoot.resolve("mods").resolve("BetterMap").resolve("Data");
@@ -38,6 +44,12 @@ public class ExplorationPersistence {
         }
     }
 
+    /**
+     * Loads exploration data for a player in a specific world.
+     *
+     * @param player    The player to load data for.
+     * @param worldName The name of the world to load data from.
+     */
     public void load(@Nonnull Player player, @Nonnull String worldName) {
         Ref<EntityStore> ref = player.getReference();
         if (ref == null || !ref.isValid()) return;
@@ -82,16 +94,28 @@ public class ExplorationPersistence {
         }
     }
 
+    /**
+     * Saves exploration data for a player in their current world.
+     *
+     * @param player The player to save data for.
+     */
     public void save(@Nonnull Player player) {
         Ref<EntityStore> ref = player.getReference();
         if (ref != null && ref.isValid()) {
             UUIDComponent uuidComp = ref.getStore().getComponent(ref, UUIDComponent.getComponentType());
-            if (uuidComp != null) {
+            if (uuidComp != null && player.getWorld() != null) {
                 save(player.getDisplayName(), uuidComp.getUuid(), player.getWorld().getName());
             }
         }
     }
 
+    /**
+     * Saves exploration data specifically given player details and world name.
+     *
+     * @param playerName The name of the player.
+     * @param playerUUID The UUID of the player.
+     * @param worldName  The name of the world.
+     */
     public void save(String playerName, UUID playerUUID, @Nonnull String worldName) {
         if (playerUUID == null) {
             LOGGER.warning("Cannot save data: Player UUID is null for " + playerName);

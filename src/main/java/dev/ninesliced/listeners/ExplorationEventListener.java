@@ -22,10 +22,20 @@ import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+/**
+ * Listener class for handling player connection and world transitions events.
+ * Responsible for initializing and saving exploration data.
+ */
 public class ExplorationEventListener {
     private static final Logger LOGGER = Logger.getLogger(ExplorationEventListener.class.getName());
     private static final java.util.Map<String, String> playerWorlds = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /**
+     * Handles the PlayerReadyEvent.
+     * Initializes tracking if the player joins the default world.
+     *
+     * @param event The event.
+     */
     public static void onPlayerReady(@Nonnull PlayerReadyEvent event) {
         try {
             Player player = event.getPlayer();
@@ -68,6 +78,12 @@ public class ExplorationEventListener {
         }
     }
 
+    /**
+     * Handles the DrainPlayerFromWorldEvent.
+     * Saves data and cleans up tracking when a player leaves a world.
+     *
+     * @param event The event.
+     */
     public static void onPlayerLeaveWorld(@Nonnull DrainPlayerFromWorldEvent event) {
         LOGGER.info("[DEBUG] DrainPlayerFromWorldEvent FIRED!");
         try {
@@ -108,6 +124,12 @@ public class ExplorationEventListener {
         }
     }
 
+    /**
+     * Handles the AddPlayerToWorldEvent.
+     * Manages world transitions, saving old data and loading new data if applicable.
+     *
+     * @param event The event.
+     */
     public static void onPlayerJoinWorld(@Nonnull AddPlayerToWorldEvent event) {
         LOGGER.info("[DEBUG] AddPlayerToWorldEvent FIRED!");
         try {
@@ -195,6 +217,12 @@ public class ExplorationEventListener {
         }
     }
 
+    /**
+     * Handles the PlayerDisconnectEvent.
+     * Ensures final data save on disconnect.
+     *
+     * @param event The event.
+     */
     public static void onPlayerQuit(@Nonnull PlayerDisconnectEvent event) {
         LOGGER.info("[DEBUG] PlayerDisconnectEvent FIRED!");
         try {
