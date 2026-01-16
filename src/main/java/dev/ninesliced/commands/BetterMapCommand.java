@@ -29,6 +29,7 @@ public class BetterMapCommand extends AbstractCommand {
         this.addSubCommand(new MapMaxScaleCommand());
         this.addSubCommand(new ReloadCommand());
         this.addSubCommand(new DebugCommand());
+        this.addSubCommand(new MapQualityCommand());
     }
 
     @Override

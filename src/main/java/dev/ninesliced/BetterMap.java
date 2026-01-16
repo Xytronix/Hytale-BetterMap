@@ -1,6 +1,8 @@
 package dev.ninesliced;
 
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
+import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
@@ -14,6 +16,8 @@ import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
 
 import javax.annotation.Nonnull;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 /**
@@ -72,7 +76,7 @@ public class BetterMap extends JavaPlugin {
             this.getEntityStoreRegistry().registerSystem(new ExplorationPlayerSetupSystem());
             LOGGER.info("Exploration Setup System: REGISTERED");
 
-            java.nio.file.Path serverRoot = java.nio.file.Paths.get(".").toAbsolutePath().normalize();
+            Path serverRoot = Paths.get(".").toAbsolutePath().normalize();
             BetterMapConfig.getInstance().initialize(serverRoot);
 
             ExplorationManager.config()
@@ -91,9 +95,9 @@ public class BetterMap extends JavaPlugin {
             this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, ExplorationEventListener::onPlayerReady);
             this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, ExplorationEventListener::onPlayerQuit);
 
-            this.getEventRegistry().registerGlobal(com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent.class, ExplorationEventListener::onPlayerJoinWorld);
+            this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, ExplorationEventListener::onPlayerJoinWorld);
 
-            this.getEventRegistry().registerGlobal(com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent.class, ExplorationEventListener::onPlayerLeaveWorld);
+            this.getEventRegistry().registerGlobal(DrainPlayerFromWorldEvent.class, ExplorationEventListener::onPlayerLeaveWorld);
             LOGGER.info("Exploration Events: REGISTERED");
 
             LOGGER.info("========================================");

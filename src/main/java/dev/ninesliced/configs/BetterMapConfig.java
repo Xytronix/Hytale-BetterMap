@@ -266,6 +266,16 @@ public class BetterMapConfig {
     }
 
     /**
+     * Sets the exploration radius and saves the config.
+     *
+     * @param mapQuality The new map quality
+     */
+    public void setQuality(MapQuality mapQuality) {
+        this.mapQuality = mapQuality;
+        save();
+    }
+
+    /**
      * Enum representing different map quality settings.
      */
     public enum MapQuality {

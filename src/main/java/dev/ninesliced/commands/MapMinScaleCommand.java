@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
  * Command to set the minimum map scale (zoom out level).
  */
 public class MapMinScaleCommand extends AbstractCommand {
-    private final RequiredArg<Float> zoomValueArg = (RequiredArg<Float>) this.withRequiredArg("value", "Min zoom value", (ArgumentType) ArgTypes.FLOAT);
+    private final RequiredArg<Float> zoomValueArg = this.withRequiredArg("value", "Min zoom value", ArgTypes.FLOAT);
 
     /**
      * Constructs the MapMinScale command.
@@ -49,8 +49,8 @@ public class MapMinScaleCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
         try {
-            Float newMin = (Float) context.get(this.zoomValueArg);
-            if (newMin.floatValue() < 2.0f) {
+            Float newMin = context.get(this.zoomValueArg);
+            if (newMin < 2.0f) {
                 context.sendMessage(Message.raw("Min scale must be greater or equals to 2").color(Color.RED));
                 return CompletableFuture.completedFuture(null);
             }
