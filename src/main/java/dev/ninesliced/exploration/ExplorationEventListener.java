@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
@@ -157,16 +158,22 @@ public class ExplorationEventListener {
                         WorldMapHook.hookPlayerMapTracker(player, tracker);
 
                         WorldMapTracker finalTracker = tracker;
-                        dev.ninesliced.exploration.ExplorationTicker.getInstance().scheduleUpdate(() -> {
-                            LOGGER.info("[DEBUG] Scheduled immediate update executing for " + playerName);
-                            WorldMapHook.updateExplorationState(player, finalTracker);
+                    ExplorationTicker.getInstance().scheduleUpdate(() -> {
+                        LOGGER.info("[DEBUG] Scheduled immediate update executing for " + playerName);
+                        TransformComponent tc = holder.getComponent(TransformComponent.getComponentType());
+                        if (tc != null) {
+                            var pos = tc.getPosition();
+                            WorldMapHook.updateExplorationState(player, finalTracker, pos.x, pos.z);
+                        } else {
+                            LOGGER.warning("[DEBUG] TransformComponent expected but null for immediate update");
+                        }
 
-                            try {
-                                ReflectionHelper.setFieldValueRecursive(finalTracker, "updateTimer", 0.0f);
-                            } catch (Exception e) {
-                                LOGGER.warning("[DEBUG] Could not reset updateTimer: " + e.getMessage());
-                            }
-                        });
+                        try {
+                            ReflectionHelper.setFieldValueRecursive(finalTracker, "updateTimer", 0.0f);
+                        } catch (Exception e) {
+                            LOGGER.warning("[DEBUG] Could not reset updateTimer: " + e.getMessage());
+                        }
+                    });
                     }
                 }
 

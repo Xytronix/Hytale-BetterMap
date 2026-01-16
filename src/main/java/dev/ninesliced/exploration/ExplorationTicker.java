@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +46,7 @@ public class ExplorationTicker {
         }
         scheduler.schedule(task, 50, TimeUnit.MILLISECONDS);
     }
-    
+
     public void stop() {
         isRunning = false;
         scheduler.shutdown();
@@ -90,7 +91,11 @@ public class ExplorationTicker {
 
                                 WorldMapTracker tracker = player.getWorldMapTracker();
                                 if (tracker != null) {
-                                    WorldMapHook.updateExplorationState(player, tracker);
+                                    TransformComponent tc = playerRef.getStore().getComponent(playerRef, TransformComponent.getComponentType());
+                                    if (tc != null) {
+                                        var pos = tc.getPosition();
+                                        WorldMapHook.updateExplorationState(player, tracker, pos.x, pos.z);
+                                    }
                                 } else {
                                     LOGGER.warning("WorldMapTracker is null for " + player.getDisplayName());
                                 }

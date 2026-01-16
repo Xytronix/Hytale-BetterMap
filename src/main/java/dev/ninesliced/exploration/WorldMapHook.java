@@ -84,7 +84,7 @@ public class WorldMapHook {
         }
     }
 
-    public static void updateExplorationState(@Nonnull Player player, @Nonnull WorldMapTracker tracker) {
+    public static void updateExplorationState(@Nonnull Player player, @Nonnull WorldMapTracker tracker, double x, double z) {
         try {
             ExplorationTracker explorationTracker = ExplorationTracker.getInstance();
             ExplorationTracker.PlayerExplorationData explorationData = explorationTracker.getPlayerData(player);
@@ -93,21 +93,6 @@ public class WorldMapHook {
                 LOGGER.info("[DEBUG] No exploration data for " + player.getDisplayName() + " in updateExplorationState");
                 return;
             }
-
-            Object transformComponent = ReflectionHelper.getFieldValueRecursive(tracker, "transformComponent");
-            if (transformComponent == null) {
-                LOGGER.warning("[DEBUG] transformComponent is NULL!");
-                return;
-            }
-
-            Object position = ReflectionHelper.getFieldValueRecursive(transformComponent, "position");
-            if (position == null) {
-                LOGGER.warning("[DEBUG] position is NULL!");
-                return;
-            }
-
-            double x = (double) ReflectionHelper.getFieldValue(position, "x");
-            double z = (double) ReflectionHelper.getFieldValue(position, "z");
 
             int playerChunkX = ChunkUtil.blockToChunkCoord(x);
             int playerChunkZ = ChunkUtil.blockToChunkCoord(z);
@@ -120,7 +105,7 @@ public class WorldMapHook {
                 explorationData.getMapExpansion().updateBoundaries(playerChunkX, playerChunkZ, explorationRadius);
                 explorationData.setLastChunkPosition(playerChunkX, playerChunkZ);
 
-                forceTrackerUpdate(player, tracker);
+                forceTrackerUpdate(player, tracker, x, z);
             }
         } catch (Exception e) {
             LOGGER.warning("[DEBUG] Exception in updateExplorationState: " + e.getMessage());
@@ -193,26 +178,17 @@ public class WorldMapHook {
         }
     }
 
-    private static void forceTrackerUpdate(@Nonnull Player player, @Nonnull WorldMapTracker tracker) {
+    private static void forceTrackerUpdate(@Nonnull Player player, @Nonnull WorldMapTracker tracker, double x, double z) {
         try {
             Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
             if (spiralIterator instanceof RestrictedSpiralIterator) {
                 RestrictedSpiralIterator restrictedIterator = (RestrictedSpiralIterator) spiralIterator;
 
-                Object transformComponent = ReflectionHelper.getFieldValueRecursive(tracker, "transformComponent");
-                if (transformComponent != null) {
-                    Object position = ReflectionHelper.getFieldValueRecursive(transformComponent, "position");
-                    if (position != null) {
-                        double x = (double) ReflectionHelper.getFieldValue(position, "x");
-                        double z = (double) ReflectionHelper.getFieldValue(position, "z");
+                int chunkX = ChunkUtil.blockToChunkCoord(x);
+                int chunkZ = ChunkUtil.blockToChunkCoord(z);
 
-                        int chunkX = ChunkUtil.blockToChunkCoord(x);
-                        int chunkZ = ChunkUtil.blockToChunkCoord(z);
-
-                        restrictedIterator.init(chunkX, chunkZ, 0, 999);
-                        LOGGER.info("[DEBUG] Forced tracker update for " + player.getDisplayName());
-                    }
-                }
+                restrictedIterator.init(chunkX, chunkZ, 0, 999);
+                LOGGER.info("[DEBUG] Forced tracker update for " + player.getDisplayName());
             }
 
             ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
