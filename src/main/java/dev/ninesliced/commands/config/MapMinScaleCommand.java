@@ -25,12 +25,12 @@ public class MapMinScaleCommand extends AbstractCommand {
      * Constructs the MapMinScale command.
      */
     public MapMinScaleCommand() {
-        super("min", "Set min map zoom scale (lower = zoom out further)");
+        super("minscale", "Set min map zoom scale (lower = zoom out further)");
     }
 
     @Override
     protected String generatePermissionNode() {
-        return "min";
+        return "minscale";
     }
 
     /**

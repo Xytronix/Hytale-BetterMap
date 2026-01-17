@@ -47,6 +47,8 @@ You can also manually set the maximum number of loaded chunks via `/bm config ma
 
 The command system has been updated to separate standard player features from administrative configuration.
 
+You can either do `/op add <player>` to give full access or assign specific permissions as needed using `/perm group add Adventure <permission>`.
+
 ### Player Commands
 
 **Permission:** `dev.ninesliced.bettermap.command.base`

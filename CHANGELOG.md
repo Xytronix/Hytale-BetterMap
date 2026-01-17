@@ -61,7 +61,7 @@
 ```
 
 **Commands & Permissions**
-Permissions have been restructured.
+Permissions have been restructured. You can either do `/op add <player>` to give full access or assign specific permissions as needed using `/perm group add Adventure <permission>`.
 
 * **Basic User Permission:** `dev.ninesliced.bettermap.command.base`
 * Allows access to the main command, personal settings, and waypoint creation.
@@ -135,14 +135,14 @@ The `config.json` was updated in this version:
 * **Permission:** `command.bettermap`
 
 
-* `/bettermap min <value>`
+* `/bettermap minscale <value>`
 * **Description:** Sets the minimum map zoom scale (lower value = zoom out further). Must be greater than 2.0.
-* **Permission:** `command.bettermap.min`
+* **Permission:** `command.bettermap.minscale`
 
 
-* `/bettermap max <value>`
+* `/bettermap maxscale <value>`
 * **Description:** Sets the maximum map zoom scale (higher value = zoom in closer).
-* **Permission:** `command.bettermap.max`
+* **Permission:** `command.bettermap.maxscale`
 
 
 * `/bettermap debug <true/false>`

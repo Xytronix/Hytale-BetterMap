@@ -221,6 +221,19 @@ public class BetterMapConfig {
         setLoggerLevel("dev.ninesliced.listeners.ExplorationEventListener", level);
         setLoggerLevel("dev.ninesliced.utils.WorldMapHook", level);
         setLoggerLevel("dev.ninesliced.configs.ExplorationPersistence", level);
+        setLoggerLevel("dev.ninesliced.managers.PlayerConfigManager", level);
+        setLoggerLevel("dev.ninesliced.managers.ExplorationManager", level);
+        setLoggerLevel("dev.ninesliced.managers.WaypointManager", level);
+        setLoggerLevel("dev.ninesliced.managers.MapPrivacyManager", level);
+        setLoggerLevel("dev.ninesliced.managers.PlayerRadarManager", level);
+        setLoggerLevel("dev.ninesliced.providers.LocationHudProvider", level);
+        setLoggerLevel("dev.ninesliced.systems.LocationSystem", level);
+        setLoggerLevel("dev.ninesliced.components.ExplorationComponent", level);
+        setLoggerLevel("dev.ninesliced.exploration.ExplorationData", level);
+        setLoggerLevel("dev.ninesliced.exploration.ExplorationPersistenceHandler", level);
+        setLoggerLevel("dev.ninesliced.exploration.ExplorationSyncHandler", level);
+        setLoggerLevel("dev.ninesliced.exploration.WaypointData", level);
+        setLoggerLevel("dev.ninesliced.exploration.RadarSystem", level);
     }
 
     private void setLoggerLevel(String loggerName, Level level) {
