@@ -50,4 +50,3 @@ public class PlayerConfig {
         this.playerUuid = playerUuid;
     }
 }
-

@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.exploration.*;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.utils.ReflectionHelper;
 import dev.ninesliced.utils.WorldMapHook;
 
@@ -72,6 +73,8 @@ public class ExplorationEventListener {
                 WorldMapTracker tracker = player.getWorldMapTracker();
                 WorldMapHook.hookPlayerMapTracker(player, tracker);
                 WorldMapHook.hookWorldMapResolution(world);
+
+                PlayerRadarManager.getInstance().registerForPlayer(player);
 
                 LOGGER.info("Exploration tracking initialized for player: " + playerName);
             } else {
@@ -186,6 +189,8 @@ public class ExplorationEventListener {
                     LOGGER.info("[DEBUG] Hooking tracker for world " + newWorldName);
                     WorldMapHook.hookPlayerMapTracker(player, tracker);
                     WorldMapHook.hookWorldMapResolution(newWorld);
+
+                    PlayerRadarManager.getInstance().registerForWorld(newWorld);
 
                     ExplorationTicker.getInstance().scheduleUpdate(() -> {
                         LOGGER.info("[DEBUG] Scheduled immediate update executing for " + playerName);

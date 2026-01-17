@@ -29,6 +29,8 @@ public class ConfigCommand extends AbstractCommand {
         this.addSubCommand(new LocationCommand());
         this.addSubCommand(new ShareAllExplorationCommand());
         this.addSubCommand(new MaxChunksToLoadCommand());
+        this.addSubCommand(new RadarToggleCommand());
+        this.addSubCommand(new RadarRangeCommand());
     }
 
     @Override

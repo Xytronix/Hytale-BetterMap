@@ -16,6 +16,7 @@ import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.providers.LocationHudProvider;
 import dev.ninesliced.systems.LocationSystem;
 
@@ -120,6 +121,9 @@ public class BetterMap extends JavaPlugin {
             this.getEntityStoreRegistry().registerSystem(new LocationSystem());
             LOGGER.info("Location Display: INITIALIZED");
 
+            PlayerRadarManager.getInstance();
+            LOGGER.info("Player Radar: INITIALIZED");
+
             this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, ExplorationEventListener::onPlayerReady);
             this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, ExplorationEventListener::onPlayerQuit);
 
@@ -146,6 +150,7 @@ public class BetterMap extends JavaPlugin {
         if (this.locationHudProvider != null) {
             this.locationHudProvider.cleanup();
         }
+        PlayerRadarManager.getInstance().cleanup();
         super.shutdown();
     }
 }

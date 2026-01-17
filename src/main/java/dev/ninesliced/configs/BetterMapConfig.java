@@ -28,6 +28,8 @@ public class BetterMapConfig {
     private boolean locationEnabled = true;
     private boolean shareAllExploration = false;
     private int maxChunksToLoad = 10000;
+    private boolean radarEnabled = true;
+    private int radarRange = -1;
 
     private transient Path configPath;
     private transient Path configDir;
@@ -154,6 +156,18 @@ public class BetterMapConfig {
                         LOGGER.warning("maxChunksToLoad exceeded limit for " + this.mapQuality + " quality. Clamped to " + this.maxChunksToLoad);
                     }
 
+                    if (jsonObject.has("radarEnabled")) {
+                        this.radarEnabled = loaded.radarEnabled;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("radarRange")) {
+                        this.radarRange = loaded.radarRange;
+                    } else {
+                        needsSave = true;
+                    }
+
                     if (needsSave) {
                         save();
                     }
@@ -257,7 +271,7 @@ public class BetterMapConfig {
     }
 
     /**
-     * Gets the 
+     * Gets the
      * Gets the minimum map scale.
      *
      * @return The minimum scale.
@@ -387,6 +401,44 @@ public class BetterMapConfig {
      */
     public void setMaxChunksToLoad(int maxChunksToLoad) {
         this.maxChunksToLoad = maxChunksToLoad;
+        save();
+    }
+
+    /**
+     * Checks if player radar is enabled by default.
+     *
+     * @return True if radar is enabled by default.
+     */
+    public boolean isRadarEnabled() {
+        return radarEnabled;
+    }
+
+    /**
+     * Sets the default radar enabled state.
+     *
+     * @param radarEnabled True to enable radar by default.
+     */
+    public void setRadarEnabled(boolean radarEnabled) {
+        this.radarEnabled = radarEnabled;
+        save();
+    }
+
+    /**
+     * Gets the default radar range in blocks.
+     *
+     * @return The default radar range, or -1 for infinite.
+     */
+    public int getRadarRange() {
+        return radarRange;
+    }
+
+    /**
+     * Sets the default radar range.
+     *
+     * @param radarRange The default radar range in blocks, or -1 for infinite.
+     */
+    public void setRadarRange(int radarRange) {
+        this.radarRange = radarRange;
         save();
     }
 
