@@ -34,6 +34,7 @@ public class BetterMapConfig {
     private boolean radarEnabled = true;
     private int radarRange = -1;
     private boolean hidePlayersOnMap = false;
+    private int autoSaveInterval = 5;
     private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
 
     private transient Path configPath;
@@ -179,6 +180,12 @@ public class BetterMapConfig {
                         needsSave = true;
                     }
 
+                    if (jsonObject.has("autoSaveInterval")) {
+                        this.autoSaveInterval = loaded.autoSaveInterval;
+                    } else {
+                        needsSave = true;
+                    }
+
                     if (jsonObject.has("allowedWorlds") && loaded.allowedWorlds != null) {
                         this.allowedWorlds = loaded.allowedWorlds;
                     } else {
@@ -304,6 +311,25 @@ public class BetterMapConfig {
      */
     public void setMinScale(float minScale) {
         this.minScale = minScale;
+        save();
+    }
+
+    /**
+     * Gets the auto-save interval in minutes.
+     *
+     * @return The interval in minutes.
+     */
+    public int getAutoSaveInterval() {
+        return autoSaveInterval;
+    }
+
+    /**
+     * Sets the auto-save interval in minutes.
+     *
+     * @param autoSaveInterval The new interval.
+     */
+    public void setAutoSaveInterval(int autoSaveInterval) {
+        this.autoSaveInterval = autoSaveInterval;
         save();
     }
 

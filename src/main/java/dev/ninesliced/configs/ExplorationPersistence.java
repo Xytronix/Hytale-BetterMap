@@ -1,9 +1,12 @@
 package dev.ninesliced.configs;
 
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.utils.ChunkUtil;
@@ -109,6 +112,42 @@ public class ExplorationPersistence {
     }
 
     /**
+     * Saves exploration data for all players in the server.
+     */
+    public void saveAllPlayers() {
+        Universe universe = Universe.get();
+        if (universe == null) return;
+
+        universe.getWorlds().values().forEach(world -> {
+            try {
+                world.execute(() -> {
+                    LOGGER.info("Saving exploration data for world: " + world.getName());
+                    world.getPlayerRefs().forEach(playerRef -> {
+                        LOGGER.info(" - Saving player: " + playerRef);
+                        Player player = playerRef.getComponent(Player.getComponentType());
+                        if (player != null) {
+                            String playerName = player.getDisplayName();
+                            UUID uuid = ((CommandSender) player).getUuid();
+                            String worldName = world.getName();
+
+                            ExplorationTracker.PlayerExplorationData data = ExplorationTracker.getInstance().getPlayerData(playerName);
+                            if (data != null && uuid != null) {
+                                Set<Long> chunks = data.getExploredChunks().getExploredChunks();
+                                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> 
+                                    save(playerName, uuid, worldName, chunks)
+                                );
+                                LOGGER.info("Saved exploration data for player: " + playerName);
+                            }
+                        }
+                    });
+                });
+            } catch (Exception e) {
+                // Ignore errors when scheduling (e.g. world shutting down)
+            }
+        });
+    }
+
+    /**
      * Saves exploration data specifically given player details and world name.
      *
      * @param playerName The name of the player.
@@ -126,8 +165,10 @@ public class ExplorationPersistence {
             return;
         }
 
-        Set<Long> chunks = data.getExploredChunks().getExploredChunks();
+        save(playerName, playerUUID, worldName, data.getExploredChunks().getExploredChunks());
+    }
 
+    public void save(String playerName, UUID playerUUID, @Nonnull String worldName, Set<Long> chunks) {
         Path worldDir = storageDir.resolve(worldName);
         try {
             if (!Files.exists(worldDir)) {

@@ -8,12 +8,18 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ExplorationPersistence;
 import dev.ninesliced.exploration.ExplorationTracker;
+import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.listeners.ExplorationEventListener;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Singleton manager responsible for the lifecycle of the exploration system.
@@ -31,6 +37,9 @@ public class ExplorationManager {
     private ExplorationPersistence persistence;
 
     private String persistencePath = "universe/exploration_data";
+
+    private final ScheduledExecutorService autoSaveScheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> autoSaveTask;
 
     private ExplorationManager() {
     }
@@ -75,6 +84,8 @@ public class ExplorationManager {
             LOGGER.info("- Exploration Tracker: " + ExplorationTracker.class.getSimpleName());
             LOGGER.info("- Update Rate: " + explorationUpdateRate + " seconds");
             LOGGER.info("- Persistence: " + (persistenceEnabled ? "ENABLED" : "DISABLED"));
+
+            startAutoSave();
 
             initialized = true;
             LOGGER.info("Exploration System initialized successfully");
@@ -180,11 +191,47 @@ public class ExplorationManager {
     public synchronized void shutdown() {
         try {
             LOGGER.info("Shutting down Exploration System...");
+            stopAutoSave();
+            autoSaveScheduler.shutdown();
             ExplorationTracker.getInstance().clear();
             LOGGER.info("Exploration System shutdown complete");
         } catch (Exception e) {
             LOGGER.severe("Error during exploration system shutdown: " + e.getMessage());
         }
+    }
+
+    /**
+     * Starts the auto-save task.
+     */
+    public synchronized void startAutoSave() {
+        stopAutoSave();
+        int interval = BetterMapConfig.getInstance().getAutoSaveInterval();
+        if (interval > 0) {
+            autoSaveTask = autoSaveScheduler.scheduleAtFixedRate(this::autoSave, interval, interval, TimeUnit.MINUTES);
+            LOGGER.info("Auto-save scheduled every " + interval + " minutes.");
+        } else {
+            LOGGER.info("Auto-save is disabled (interval <= 0).");
+        }
+    }
+
+    /**
+     * Stops the auto-save task.
+     */
+    public synchronized void stopAutoSave() {
+        if (autoSaveTask != null) {
+            autoSaveTask.cancel(false);
+            autoSaveTask = null;
+        }
+    }
+
+    /**
+     * Performs the auto-save operation for all players.
+     */
+    private void autoSave() {
+        if (!persistenceEnabled) return;
+
+        persistence.saveAllPlayers();
+        LOGGER.info("Auto-saved exploration data for all players.");
     }
 
     /**

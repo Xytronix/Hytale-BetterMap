@@ -34,6 +34,7 @@ public class ConfigCommand extends AbstractCommand {
         this.addSubCommand(new HidePlayersCommand());
         this.addSubCommand(new TrackWorldCommand());
         this.addSubCommand(new UntrackWorldCommand());
+        this.addSubCommand(new AutoSaveIntervalCommand());
     }
 
     @Override

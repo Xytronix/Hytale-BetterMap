@@ -73,6 +73,10 @@ public class WaypointManager {
         } else {
             savePersonalMarker(player, world, marker);
         }
+        
+        // Force reload of this player's waypoints on next access
+        UUID playerUuid = ((CommandSender) player).getUuid();
+        loadedPlayers.remove(playerUuid);
     }
 
     public static boolean removeWaypoint(@Nonnull Player player, @Nonnull String idOrName) {
@@ -87,7 +91,12 @@ public class WaypointManager {
         }
 
         if (isGlobalId(target.id)) {
-            return removeGlobalMarker(target.id, world.getName(), player);
+            boolean result = removeGlobalMarker(target.id, world.getName(), player);
+            if (result) {
+                UUID playerUuid = ((CommandSender) player).getUuid();
+                loadedPlayers.remove(playerUuid);
+            }
+            return result;
         }
 
         PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
@@ -113,6 +122,8 @@ public class WaypointManager {
         if (found) {
             perWorldData.setWorldMapMarkers(newMarkerList.toArray(new MapMarker[0]));
             persistPersonal(player, world.getName(), newMarkerList);
+            UUID playerUuid = ((CommandSender) player).getUuid();
+            loadedPlayers.remove(playerUuid);
         }
         return found;
     }
@@ -124,7 +135,12 @@ public class WaypointManager {
         ensureLoaded(player, world);
 
         if (isGlobalId(id)) {
-            return updateGlobalMarker(id, newName, newIcon, newTransform, world.getName(), player);
+            boolean result = updateGlobalMarker(id, newName, newIcon, newTransform, world.getName(), player);
+            if (result) {
+                UUID playerUuid = ((CommandSender) player).getUuid();
+                loadedPlayers.remove(playerUuid);
+            }
+            return result;
         }
 
         PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
@@ -153,6 +169,8 @@ public class WaypointManager {
 
         perWorldData.setWorldMapMarkers(rebuilt.toArray(new MapMarker[0]));
         persistPersonal(player, world.getName(), rebuilt);
+        UUID playerUuid = ((CommandSender) player).getUuid();
+        loadedPlayers.remove(playerUuid);
         return true;
     }
 
@@ -320,6 +338,21 @@ public class WaypointManager {
         }
         mutable.add(converted);
         persistence.saveGlobal(mutable);
+
+        for (PlayerRef playerRef : world.getPlayerRefs()) {
+            Holder<EntityStore> holder = playerRef.getHolder();
+            if (holder == null) continue;
+            Player p = holder.getComponent(Player.getComponentType());
+            if (p == null) continue;
+
+            refreshPlayerMarkers(p);
+        }
+    }
+
+    public static void refreshAllPlayersMarkers(@Nonnull World world) {
+        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) {
+            return;
+        }
 
         for (PlayerRef playerRef : world.getPlayerRefs()) {
             Holder<EntityStore> holder = playerRef.getHolder();

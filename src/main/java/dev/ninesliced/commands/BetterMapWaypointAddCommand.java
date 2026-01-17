@@ -17,6 +17,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
+import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.utils.PermissionsUtil;
+
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -71,12 +74,12 @@ public class BetterMapWaypointAddCommand extends AbstractPlayerCommand {
         Transform transform = PositionUtil.toTransformPacket(new com.hypixel.hytale.math.vector.Transform(transformComponent.getPosition()));
 
         boolean makeGlobal = Boolean.TRUE.equals(this.globalArg.get(context));
-        if (makeGlobal && !dev.ninesliced.utils.PermissionsUtil.canUseGlobalWaypoints(player)) {
+        if (makeGlobal && !PermissionsUtil.canUseGlobalWaypoints(player)) {
             context.sendMessage(Message.raw("You don't have permission to create global waypoints. Creating a personal waypoint instead."));
             makeGlobal = false;
         }
 
-        dev.ninesliced.managers.WaypointManager.addWaypoint(player, name, icon, transform, makeGlobal);
+        WaypointManager.addWaypoint(player, name, icon, transform, makeGlobal);
         String scope = makeGlobal ? "global" : "personal";
         context.sendMessage(Message.raw("Added " + scope + " waypoint '" + name + "' at your location!"));
     }

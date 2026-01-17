@@ -201,7 +201,8 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     WaypointManager.addWaypoint(player, newName, selectedColor, packetTransform, wantsGlobal);
                 }
                 
-                player.getPageManager().openCustomPage(ref, store, new WaypointMenuPage(this.playerRef));
+                WaypointMenuPage menuPage = new WaypointMenuPage(this.playerRef);
+                player.getPageManager().openCustomPage(ref, store, menuPage);
                 break;
         }
     }
