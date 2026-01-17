@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
@@ -85,7 +86,10 @@ public class ExplorationTicker {
 
         universe.getWorlds().values().forEach(world -> {
             try {
-                world.execute(() -> updateWorldPlayers(world));
+                world.execute(() -> {
+                    updateWorldPlayers(world);
+                    PlayerRadarManager.getInstance().updateRadarData(world);
+                });
             } catch (IllegalThreadStateException its) {
                 LOGGER.fine("[DEBUG] Skipping world update; world not accepting tasks: " + world.getName());
             }

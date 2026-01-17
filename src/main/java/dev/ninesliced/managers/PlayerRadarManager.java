@@ -1,13 +1,22 @@
 package dev.ninesliced.managers;
 
+import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.providers.PlayerRadarProvider;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -23,6 +32,7 @@ public class PlayerRadarManager {
     private static PlayerRadarManager instance;
 
     private final Set<String> registeredWorlds = new HashSet<>();
+    private final Map<String, List<RadarData>> worldRadarCache = new ConcurrentHashMap<>();
     private final PlayerRadarProvider radarProvider;
 
     private PlayerRadarManager() {
@@ -48,6 +58,45 @@ public class PlayerRadarManager {
      */
     public PlayerRadarProvider getRadarProvider() {
         return radarProvider;
+    }
+
+    /**
+     * Updates the radar data cache for the given world.
+     * Must be called from the main world thread.
+     *
+     * @param world The world to update.
+     */
+    public void updateRadarData(@Nonnull World world) {
+        List<RadarData> radarDataList = new ArrayList<>();
+
+        try {
+            for (PlayerRef playerRef : world.getPlayerRefs()) {
+                Transform transform = playerRef.getTransform();
+                Vector3d pos = transform.getPosition();
+
+                RadarData data = new RadarData(
+                        playerRef.getUuid().toString(),
+                        playerRef.getUsername(),
+                        new Vector3d(pos.x, pos.y, pos.z), // Clone to be safe
+                        transform.getRotation()
+                );
+
+                radarDataList.add(data);
+            }
+        } catch (Exception _) {}
+
+        worldRadarCache.put(world.getName(), radarDataList);
+    }
+
+    /**
+     * Gets the cached radar data for a world.
+     * Safe to call from any thread.
+     *
+     * @param worldName The name of the world.
+     * @return List of radar data.
+     */
+    public List<RadarData> getRadarData(String worldName) {
+        return worldRadarCache.getOrDefault(worldName, Collections.emptyList());
     }
 
     /**
@@ -117,5 +166,22 @@ public class PlayerRadarManager {
     public void cleanup() {
         registeredWorlds.clear();
         LOGGER.info("PlayerRadarManager cleaned up");
+    }
+
+    /**
+     * Data class for caching player radar information.
+     */
+    public static class RadarData {
+        public final String uuid;
+        public final String name;
+        public final Vector3d position;
+        public final Vector3f rotation;
+
+        public RadarData(String uuid, String name, Vector3d position, Vector3f rotation) {
+            this.uuid = uuid;
+            this.name = name;
+            this.position = position;
+            this.rotation = rotation;
+        }
     }
 }

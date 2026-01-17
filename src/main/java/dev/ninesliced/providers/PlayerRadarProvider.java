@@ -1,8 +1,5 @@
 package dev.ninesliced.providers;
 
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.Direction;
@@ -11,15 +8,14 @@ import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.managers.PlayerRadarManager;
+import dev.ninesliced.managers.PlayerRadarManager.RadarData;
 
-import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -42,7 +38,6 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
                        int viewRadius, int chunkX, int chunkZ) {
         try {
             Player viewingPlayer = tracker.getPlayer();
-
             UUID viewerUuid = ((CommandSender) viewingPlayer).getUuid();
 
             BetterMapConfig config = BetterMapConfig.getInstance();
@@ -50,29 +45,30 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
+            List<RadarData> radarDataList = PlayerRadarManager.getInstance().getRadarData(world.getName());
+
+            RadarData viewerData = null;
+            for (RadarData data : radarDataList) {
+                if (data.uuid.equals(viewerUuid.toString())) {
+                    viewerData = data;
+                    break;
+                }
+            }
+
+            if (viewerData == null) return;
+            Vector3d viewerPos = viewerData.position;
+
             int radarRange = config.getRadarRange();
             boolean infiniteRange = radarRange < 0;
             int rangeSquared = infiniteRange ? Integer.MAX_VALUE : radarRange * radarRange;
 
-            Store<EntityStore> store = world.getEntityStore().getStore();
-            Ref<EntityStore> ref = viewingPlayer.getReference();
-            if (ref == null || !ref.isValid()) return;
-            TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-            if (transformComponent == null) return;
-
-            Vector3d viewerPos = transformComponent.getPosition();
-
-            for (PlayerRef otherPlayerRef : world.getPlayerRefs()) {
-                if (otherPlayerRef.getUuid().equals(viewerUuid)) {
+            for (RadarData otherData : radarDataList) {
+                if (otherData.uuid.equals(viewerUuid.toString())) {
                     continue;
                 }
 
                 try {
-                    Transform otherTransform = otherPlayerRef.getTransform();
-                    if (otherTransform == null) continue;
-
-                    Vector3d otherPos = otherTransform.getPosition();
-                    if (otherPos == null) continue;
+                    Vector3d otherPos = otherData.position;
 
                     double dx = otherPos.x - viewerPos.x;
                     double dy = otherPos.y - viewerPos.y;
@@ -84,10 +80,10 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
                     }
 
                     int distance = (int) Math.sqrt(distanceSquared);
-                    String markerId = MARKER_PREFIX + otherPlayerRef.getUuid().toString();
-                    String markerName = otherPlayerRef.getUsername() + " (" + distance + "m)";
+                    String markerId = MARKER_PREFIX + otherData.uuid;
+                    String markerName = otherData.name + " (" + distance + "m)";
 
-                    MapMarker marker = createPlayerMarker(markerId, markerName, otherPos, otherTransform.getRotation());
+                    MapMarker marker = createPlayerMarker(markerId, markerName, otherPos, otherData.rotation);
                     tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
                 } catch (Exception e) {
                     // Silently ignore individual player marker failures
