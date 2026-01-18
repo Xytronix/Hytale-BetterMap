@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import javax.annotation.Nonnull;
@@ -37,6 +38,11 @@ public class BetterMapWaypointTeleportCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
+
+        if (!BetterMapConfig.getInstance().isAllowWaypointTeleports()) {
+            context.sendMessage(Message.raw("Waypoint teleports are disabled on this server."));
+            return;
+        }
 
         if (!PermissionsUtil.canTeleport(player)) {
             context.sendMessage(Message.raw("You don't have permission to teleport to waypoints."));

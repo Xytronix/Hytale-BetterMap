@@ -18,6 +18,8 @@ import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.managers.PlayerRadarManager;
+import dev.ninesliced.managers.WarpPrivacyManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.providers.LocationHudProvider;
 import dev.ninesliced.systems.LocationSystem;
 
@@ -100,6 +102,12 @@ public class BetterMap extends JavaPlugin {
 
             MapPrivacyManager.getInstance().initialize();
             LOGGER.info("MapPrivacyManager: INITIALIZED");
+
+            WarpPrivacyManager.getInstance().initialize();
+            LOGGER.info("WarpPrivacyManager: INITIALIZED");
+
+            PoiPrivacyManager.getInstance().initialize();
+            LOGGER.info("PoiPrivacyManager: INITIALIZED");
 
             Path configDir = BetterMapConfig.getInstance().getConfigDirectory();
             if (configDir == null) {

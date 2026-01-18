@@ -34,6 +34,13 @@ public class BetterMapConfig {
     private boolean radarEnabled = true;
     private int radarRange = -1;
     private boolean hidePlayersOnMap = false;
+    private boolean hideOtherWarpsOnMap = false;
+    private boolean hideUnexploredWarpsOnMap = true;
+    private boolean allowWaypointTeleports = true;
+    private boolean allowMapMarkerTeleports = true;
+    private boolean hideAllPoiOnMap = false;
+    private boolean hideUnexploredPoiOnMap = true;
+    private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
     private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
 
@@ -180,6 +187,46 @@ public class BetterMapConfig {
                         needsSave = true;
                     }
 
+                    if (jsonObject.has("hideOtherWarpsOnMap")) {
+                        this.hideOtherWarpsOnMap = loaded.hideOtherWarpsOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hideUnexploredWarpsOnMap")) {
+                        this.hideUnexploredWarpsOnMap = loaded.hideUnexploredWarpsOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+                    if (jsonObject.has("allowWaypointTeleports")) {
+                        this.allowWaypointTeleports = loaded.allowWaypointTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("allowMapMarkerTeleports")) {
+                        this.allowMapMarkerTeleports = loaded.allowMapMarkerTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hideAllPoiOnMap")) {
+                        this.hideAllPoiOnMap = loaded.hideAllPoiOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hideUnexploredPoiOnMap")) {
+                        this.hideUnexploredPoiOnMap = loaded.hideUnexploredPoiOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hiddenPoiNames") && loaded.hiddenPoiNames != null) {
+                        this.hiddenPoiNames = loaded.hiddenPoiNames;
+                    } else {
+                        needsSave = true;
+                    }
                     if (jsonObject.has("autoSaveInterval")) {
                         this.autoSaveInterval = loaded.autoSaveInterval;
                     } else {
@@ -225,8 +272,12 @@ public class BetterMapConfig {
         setLoggerLevel("dev.ninesliced.managers.ExplorationManager", level);
         setLoggerLevel("dev.ninesliced.managers.WaypointManager", level);
         setLoggerLevel("dev.ninesliced.managers.MapPrivacyManager", level);
+        setLoggerLevel("dev.ninesliced.managers.WarpPrivacyManager", level);
+        setLoggerLevel("dev.ninesliced.managers.PoiPrivacyManager", level);
         setLoggerLevel("dev.ninesliced.managers.PlayerRadarManager", level);
         setLoggerLevel("dev.ninesliced.providers.LocationHudProvider", level);
+        setLoggerLevel("dev.ninesliced.providers.WarpPrivacyProvider", level);
+        setLoggerLevel("dev.ninesliced.providers.PoiPrivacyProvider", level);
         setLoggerLevel("dev.ninesliced.systems.LocationSystem", level);
         setLoggerLevel("dev.ninesliced.components.ExplorationComponent", level);
         setLoggerLevel("dev.ninesliced.exploration.ExplorationData", level);
@@ -489,12 +540,145 @@ public class BetterMapConfig {
     }
 
     /**
+     * Checks if other players' warps should be hidden on the map.
+     *
+     * @return True if other players' warps are hidden.
+     */
+    public boolean isHideOtherWarpsOnMap() {
+        return hideOtherWarpsOnMap;
+    }
+
+    /**
+     * Checks if warps in unexplored regions should be hidden on the map.
+     *
+     * @return True if warps in unexplored regions are hidden.
+     */
+    public boolean isHideUnexploredWarpsOnMap() {
+        return hideUnexploredWarpsOnMap;
+    }
+
+    /**
+     * Checks if waypoint teleports are allowed.
+     *
+     * @return True if waypoint teleports are allowed.
+     */
+    public boolean isAllowWaypointTeleports() {
+        return allowWaypointTeleports;
+    }
+
+    /**
+     * Checks if map marker teleports (POIs/warps) are allowed.
+     *
+     * @return True if map marker teleports are allowed.
+     */
+    public boolean isAllowMapMarkerTeleports() {
+        return allowMapMarkerTeleports;
+    }
+
+    /**
+     * Checks if all POI markers should be hidden on the map.
+     *
+     * @return True if all POIs are hidden.
+     */
+    public boolean isHideAllPoiOnMap() {
+        return hideAllPoiOnMap;
+    }
+
+    /**
+     * Checks if POI markers in unexplored regions should be hidden on the map.
+     *
+     * @return True if POIs in unexplored regions are hidden.
+     */
+    public boolean isHideUnexploredPoiOnMap() {
+        return hideUnexploredPoiOnMap;
+    }
+
+    /**
+     * Gets the list of POI names to hide on the map.
+     *
+     * @return The list of hidden POI names.
+     */
+    public List<String> getHiddenPoiNames() {
+        return hiddenPoiNames;
+    }
+
+    /**
      * Sets whether players should be hidden on the map.
      *
      * @param hidePlayersOnMap True to hide players.
      */
     public void setHidePlayersOnMap(boolean hidePlayersOnMap) {
         this.hidePlayersOnMap = hidePlayersOnMap;
+        save();
+    }
+
+    /**
+     * Sets whether other players' warps should be hidden on the map.
+     *
+     * @param hideOtherWarpsOnMap True to hide other players' warps.
+     */
+    public void setHideOtherWarpsOnMap(boolean hideOtherWarpsOnMap) {
+        this.hideOtherWarpsOnMap = hideOtherWarpsOnMap;
+        save();
+    }
+
+    /**
+     * Sets whether warps in unexplored regions should be hidden on the map.
+     *
+     * @param hideUnexploredWarpsOnMap True to hide warps in unexplored regions.
+     */
+    public void setHideUnexploredWarpsOnMap(boolean hideUnexploredWarpsOnMap) {
+        this.hideUnexploredWarpsOnMap = hideUnexploredWarpsOnMap;
+        save();
+    }
+
+    /**
+     * Sets whether waypoint teleports are allowed.
+     *
+     * @param allowWaypointTeleports True to allow waypoint teleports.
+     */
+    public void setAllowWaypointTeleports(boolean allowWaypointTeleports) {
+        this.allowWaypointTeleports = allowWaypointTeleports;
+        save();
+    }
+
+    /**
+     * Sets whether map marker teleports (POIs/warps) are allowed.
+     *
+     * @param allowMapMarkerTeleports True to allow map marker teleports.
+     */
+    public void setAllowMapMarkerTeleports(boolean allowMapMarkerTeleports) {
+        this.allowMapMarkerTeleports = allowMapMarkerTeleports;
+        save();
+    }
+
+    /**
+     * Sets whether all POI markers should be hidden on the map.
+     *
+     * @param hideAllPoiOnMap True to hide all POIs.
+     */
+    public void setHideAllPoiOnMap(boolean hideAllPoiOnMap) {
+        this.hideAllPoiOnMap = hideAllPoiOnMap;
+        save();
+    }
+
+    /**
+     * Sets whether POI markers in unexplored regions should be hidden on the map.
+     *
+     * @param hideUnexploredPoiOnMap True to hide POIs in unexplored regions.
+     */
+    public void setHideUnexploredPoiOnMap(boolean hideUnexploredPoiOnMap) {
+        this.hideUnexploredPoiOnMap = hideUnexploredPoiOnMap;
+        save();
+    }
+
+    /**
+     * Sets the list of POI names to hide on the map.
+     *
+     * @param hiddenPoiNames The new list.
+     */
+    public void setHiddenPoiNames(List<String> hiddenPoiNames) {
+        this.hiddenPoiNames = hiddenPoiNames != null ? hiddenPoiNames : new ArrayList<>();
         save();
     }
 

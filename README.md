@@ -87,6 +87,62 @@ You can either do `/op add <player>` to give full access or assign specific perm
 
 **Permission:** `dev.ninesliced.bettermap.command.base.config`
 
+* `/bm config radar <range>`
+* Sets the radar range (use `-1` for infinite).
+
+
+* `/bm config location`
+* Toggles the server-wide default for the location HUD.
+
+
+* `/bm config hideplayers`
+* Hides player cursors on the map.
+
+
+* `/bm config hidewarps`
+* Hides other players' warps on the map.
+
+
+* `/bm config hideunexploredwarps`
+* Hides warps in unexplored regions.
+
+
+* `/bm config hidepois`
+* Hides all POI markers on the map.
+
+
+* `/bm config hideunexploredpoi`
+* Hides POIs in unexplored regions.
+
+
+* `/bm config waypointteleport`
+* Toggles waypoint teleports.
+
+
+* `/bm config markerteleport`
+* Toggles map marker teleports.
+
+
+* `/bm config shareallexploration`
+* Toggles "Linked Map" mode (shared exploration data).
+
+
+* `/bm config track` / `untrack`
+* Adds or removes the current world from the active whitelist.
+
+
+* `/bm config maxchunk <number>`
+* Manually overrides the maximum number of loaded chunks.
+
+
+* `/bm config autosave <minutes>`
+* Sets the interval for auto-saving map data.
+
+
+* `/bm reload`
+* Reloads the configuration file immediately.
+
+
 1.  `/bm config radar <range>`
     
     *   Sets the radar range (use `-1` for infinite).
@@ -138,6 +194,13 @@ _Note: Changing `mapQuality` or `maxChunksToLoad` requires a server restart to t
   "radarEnabled": true,
   "radarRange": -1,
   "hidePlayersOnMap": false,
+  "hideOtherWarpsOnMap": false,
+  "hideUnexploredWarpsOnMap": true,
+  "allowWaypointTeleports": true,
+  "allowMapMarkerTeleports": true,
+  "hideAllPoiOnMap": false,
+  "hideUnexploredPoiOnMap": true,
+  "hiddenPoiNames": [],
   "autoSaveInterval": 5,
   "allowedWorlds": [
     "default",
