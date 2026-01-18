@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.BetterMap;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.utils.PermissionsUtil;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -111,7 +112,8 @@ public class MapPrivacyManager {
 
                         WorldMapTracker tracker = player.getWorldMapTracker();
                         tracker.setPlayerMapFilter(ignored -> !hide);
-                        tracker.setAllowTeleportToMarkers(world, allowMarkerTeleports);
+                        boolean canTeleportMarkers = allowMarkerTeleports && PermissionsUtil.canTeleport(player);
+                        tracker.setAllowTeleportToMarkers(world, canTeleportMarkers);
                     }
                 } catch (Exception e) {}
             }
@@ -136,7 +138,8 @@ public class MapPrivacyManager {
         try {
             WorldMapTracker tracker = player.getWorldMapTracker();
             tracker.setPlayerMapFilter(ignored -> !hide);
-            tracker.setAllowTeleportToMarkers(world, allowMarkerTeleports);
+            boolean canTeleportMarkers = allowMarkerTeleports && PermissionsUtil.canTeleport(player);
+            tracker.setAllowTeleportToMarkers(world, canTeleportMarkers);
         } catch (Exception e) {
             LOGGER.severe("Error applying privacy filter: " + e.getMessage());
         }
