@@ -39,12 +39,13 @@ public class BetterMapWaypointTeleportCommand extends AbstractPlayerCommand {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        if (!PermissionsUtil.canTeleport(player)) {
-            context.sendMessage(Message.raw("You don't have permission to teleport to waypoints."));
+        if (!BetterMapConfig.getInstance().isAllowWaypointTeleports()) {
+            context.sendMessage(Message.raw("Waypoint teleports are disabled on this server."));
             return;
         }
-        if (!BetterMapConfig.getInstance().isAllowWaypointTeleports()) {
-            context.sendMessage(Message.raw("Waypoint teleports are currently disabled."));
+
+        if (!PermissionsUtil.canTeleport(player)) {
+            context.sendMessage(Message.raw("You don't have permission to teleport to waypoints."));
             return;
         }
 

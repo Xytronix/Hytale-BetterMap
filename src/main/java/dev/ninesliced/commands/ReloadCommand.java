@@ -5,6 +5,9 @@ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.universe.Universe;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.managers.MapPrivacyManager;
+import dev.ninesliced.managers.WarpPrivacyManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.utils.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
@@ -38,6 +41,9 @@ public class ReloadCommand extends AbstractCommand {
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext context) {
         BetterMapConfig.getInstance().reload();
+        MapPrivacyManager.getInstance().updatePrivacyState();
+        WarpPrivacyManager.getInstance().updatePrivacyState();
+        PoiPrivacyManager.getInstance().updatePrivacyState();
 
         Universe universe = Universe.get();
         if (universe != null) {

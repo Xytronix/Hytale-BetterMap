@@ -17,12 +17,13 @@ import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Command to toggle map marker teleport permissions.
+ * Command to toggle map marker teleports (POIs/warps) on the world map.
  */
 public class MarkerTeleportCommand extends AbstractCommand {
 
     public MarkerTeleportCommand() {
-        super("markerteleport", "Toggle map marker teleports");
+        super("markerteleport", "Toggle map marker teleports (POIs/warps)");
+        this.addAliases("markertp");
     }
 
     @NullableDecl
@@ -57,7 +58,13 @@ public class MarkerTeleportCommand extends AbstractCommand {
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;
-            playerRef.sendMessage(Message.raw("Map marker teleports " + status).color(color));
+
+            playerRef.sendMessage(Message.raw("Map Marker Teleports " + status).color(color));
+            if (newState) {
+                playerRef.sendMessage(Message.raw("POI/warp teleports from the map are now allowed.").color(Color.GRAY));
+            } else {
+                playerRef.sendMessage(Message.raw("POI/warp teleports from the map are now blocked.").color(Color.GRAY));
+            }
         }, world);
     }
 }

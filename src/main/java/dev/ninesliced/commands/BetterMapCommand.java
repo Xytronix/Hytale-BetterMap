@@ -59,6 +59,12 @@ public class BetterMapCommand extends AbstractCommand {
         context.sendMessage(Message.raw("Debug Mode: ").color(Color.YELLOW).insert(Message.raw(String.valueOf(config.isDebug())).color(Color.WHITE)));
         context.sendMessage(Message.raw("Player Radar: ").color(Color.YELLOW).insert(Message.raw(config.isRadarEnabled() ? "Enabled" : "Disabled").color(Color.WHITE)));
         context.sendMessage(Message.raw("Hide Players: ").color(Color.YELLOW).insert(Message.raw(config.isHidePlayersOnMap() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("Hide Other Warps: ").color(Color.YELLOW).insert(Message.raw(config.isHideOtherWarpsOnMap() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("Hide Unexplored Warps: ").color(Color.YELLOW).insert(Message.raw(config.isHideUnexploredWarpsOnMap() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("Waypoint Teleport: ").color(Color.YELLOW).insert(Message.raw(config.isAllowWaypointTeleports() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("Marker Teleport: ").color(Color.YELLOW).insert(Message.raw(config.isAllowMapMarkerTeleports() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("Hide All POIs: ").color(Color.YELLOW).insert(Message.raw(config.isHideAllPoiOnMap() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("Hide Unexplored POIs: ").color(Color.YELLOW).insert(Message.raw(config.isHideUnexploredPoiOnMap() ? "Enabled" : "Disabled").color(Color.WHITE)));
         String radarRange = config.getRadarRange() == -1 ? "Infinite" : config.getRadarRange() + " blocks";
         context.sendMessage(Message.raw("Radar Range: ").color(Color.YELLOW).insert(Message.raw(radarRange).color(Color.WHITE)));
         context.sendMessage(Message.raw("NOTE: The server must be restarted for map quality/max chunks changes to take effect."));

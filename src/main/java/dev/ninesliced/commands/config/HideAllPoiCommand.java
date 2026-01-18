@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.managers.PoiPrivacyManager;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -16,13 +17,12 @@ import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Command to toggle waypoint teleports.
+ * Command to toggle hiding all POI markers on the world map.
  */
-public class WaypointTeleportCommand extends AbstractCommand {
+public class HideAllPoiCommand extends AbstractCommand {
 
-    public WaypointTeleportCommand() {
-        super("waypointteleport", "Toggle waypoint teleports");
-        this.addAliases("waypointtp");
+    public HideAllPoiCommand() {
+        super("hidepois", "Toggle hiding all POI markers");
     }
 
     @NullableDecl
@@ -50,18 +50,21 @@ public class WaypointTeleportCommand extends AbstractCommand {
             }
 
             BetterMapConfig config = BetterMapConfig.getInstance();
-            boolean newState = !config.isAllowWaypointTeleports();
-            config.setAllowWaypointTeleports(newState);
+            boolean newState = !config.isHideAllPoiOnMap();
+            config.setHideAllPoiOnMap(newState);
+
+            PoiPrivacyManager.getInstance().updatePrivacyState();
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;
 
-            playerRef.sendMessage(Message.raw("Waypoint Teleports " + status).color(color));
+            playerRef.sendMessage(Message.raw("Hide All POIs " + status).color(color));
             if (newState) {
-                playerRef.sendMessage(Message.raw("Waypoint teleports are now allowed.").color(Color.GRAY));
+                playerRef.sendMessage(Message.raw("POI markers are now hidden on the world map.").color(Color.GRAY));
             } else {
-                playerRef.sendMessage(Message.raw("Waypoint teleports are now blocked.").color(Color.GRAY));
+                playerRef.sendMessage(Message.raw("POI markers are now visible on the world map.").color(Color.GRAY));
             }
+            playerRef.sendMessage(Message.raw("NOTE: It may take a few seconds for markers to refresh.").color(Color.GRAY));
         }, world);
     }
 }

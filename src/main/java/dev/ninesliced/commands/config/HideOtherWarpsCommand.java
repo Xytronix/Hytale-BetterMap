@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.managers.WarpPrivacyManager;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -16,13 +17,12 @@ import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Command to toggle waypoint teleports.
+ * Command to toggle hiding other players' warp markers on the world map.
  */
-public class WaypointTeleportCommand extends AbstractCommand {
+public class HideOtherWarpsCommand extends AbstractCommand {
 
-    public WaypointTeleportCommand() {
-        super("waypointteleport", "Toggle waypoint teleports");
-        this.addAliases("waypointtp");
+    public HideOtherWarpsCommand() {
+        super("hidewarps", "Toggle hiding other players' warps on the world map");
     }
 
     @NullableDecl
@@ -50,18 +50,21 @@ public class WaypointTeleportCommand extends AbstractCommand {
             }
 
             BetterMapConfig config = BetterMapConfig.getInstance();
-            boolean newState = !config.isAllowWaypointTeleports();
-            config.setAllowWaypointTeleports(newState);
+            boolean newState = !config.isHideOtherWarpsOnMap();
+            config.setHideOtherWarpsOnMap(newState);
+
+            WarpPrivacyManager.getInstance().updatePrivacyState();
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;
 
-            playerRef.sendMessage(Message.raw("Waypoint Teleports " + status).color(color));
+            playerRef.sendMessage(Message.raw("Hide Other Players' Warps " + status).color(color));
             if (newState) {
-                playerRef.sendMessage(Message.raw("Waypoint teleports are now allowed.").color(Color.GRAY));
+                playerRef.sendMessage(Message.raw("Only your own warps will be shown on the world map.").color(Color.GRAY));
             } else {
-                playerRef.sendMessage(Message.raw("Waypoint teleports are now blocked.").color(Color.GRAY));
+                playerRef.sendMessage(Message.raw("All warps will be shown on the world map.").color(Color.GRAY));
             }
+            playerRef.sendMessage(Message.raw("NOTE: It may take a few seconds for markers to refresh.").color(Color.GRAY));
         }, world);
     }
 }
