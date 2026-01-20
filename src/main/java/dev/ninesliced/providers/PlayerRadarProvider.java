@@ -62,7 +62,7 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
 
             int radarRange = config.getRadarRange();
             boolean infiniteRange = radarRange < 0;
-            int rangeSquared = infiniteRange ? Integer.MAX_VALUE : radarRange * radarRange;
+            long rangeSquared = infiniteRange ? Long.MAX_VALUE : (long) radarRange * radarRange;
 
             for (RadarData otherData : radarDataList) {
                 if (otherData.uuid.equals(viewerUuid.toString())) {
