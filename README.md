@@ -61,7 +61,7 @@ You can either do `/op add <player>` to give full access or assign specific perm
 * Displays current map settings and status.
 
 
-2. `/bm waypoint` (or `/bm menu`)
+2. `/bm waypoint menu` (or `/bm waypoint menu`)
 * Opens the Waypoint UI to manage, share, or delete waypoints.
 
 
@@ -72,11 +72,15 @@ You can either do `/op add <player>` to give full access or assign specific perm
 4. `/bm max <value>`
 * Sets your personal maximum zoom scale (default base is 256).
 
+### Global Waypoints
 
+**Permission:** `dev.ninesliced.bettermap.command.waypoint.global`
+
+* Allows the user to create, view, and manage global (shared) waypoints visible to all players.
 
 ### Teleportation
 
-**Permission:** `dev.ninesliced.bettermap.command.base.teleport`
+**Permission:** `dev.ninesliced.bettermap.command.teleport`
 
 * **Waypoint Teleport:** Allows the user to teleport to locations via the Waypoint UI buttons.
 
