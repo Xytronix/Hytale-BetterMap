@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.BetterMap;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.utils.PermissionsUtil;
 
 import java.util.*;
@@ -184,16 +185,26 @@ public class MapPrivacyManager {
     }
 
     private void applyPlayerSettings(Player player, World world) {
-        BetterMapConfig config = BetterMapConfig.getInstance();
-        boolean hide = config.isHidePlayersOnMap();
-        boolean radarEnabled = config.isRadarEnabled();
-        int radarRange = config.getRadarRange();
-        boolean allowMarkerTeleports = config.isAllowMapMarkerTeleports();
+        BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+        boolean globalHide = globalConfig.isHidePlayersOnMap();
+        boolean radarEnabled = globalConfig.isRadarEnabled();
+        int radarRange = globalConfig.getRadarRange();
+        boolean allowMarkerTeleports = globalConfig.isAllowMapMarkerTeleports();
+
+        // Check per-player setting (only if not globally hidden)
+        boolean hide = globalHide;
+        UUID playerUuid = player.getUuid();
+        if (!hide && playerUuid != null) {
+            PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+            if (playerConfig != null && playerConfig.isHidePlayersOnMap()) {
+                hide = true;
+            }
+        }
 
         if (world != null) {
             this.monitoredWorlds.add(world);
 
-            if (hide) {
+            if (globalHide) {
                 this.removeProvider(world);
             } else {
                 this.restoreProvider(world);

@@ -17,12 +17,12 @@ import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Command to toggle hiding all POI markers on the world map.
+ * Command to toggle hiding the death marker on the world map.
  */
-public class HideAllPoiCommand extends AbstractCommand {
+public class HideDeathMarkerCommand extends AbstractCommand {
 
-    public HideAllPoiCommand() {
-        super("hidepois", "Toggle hiding all POI markers");
+    public HideDeathMarkerCommand() {
+        super("hidedeath", "Toggle hiding the death marker");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
     }
 
@@ -56,21 +56,20 @@ public class HideAllPoiCommand extends AbstractCommand {
             }
 
             BetterMapConfig config = BetterMapConfig.getInstance();
-            boolean newState = !config.isHideAllPoiOnMap();
-            config.setHideAllPoiOnMap(newState);
+            boolean newState = !config.isHideDeathMarkerOnMap();
+            config.setHideDeathMarkerOnMap(newState);
 
             PoiPrivacyManager.getInstance().updatePrivacyState(world);
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;
 
-            playerRef.sendMessage(Message.raw("Hide All POIs " + status).color(color));
+            playerRef.sendMessage(Message.raw("Hide Death Marker " + status).color(color));
             if (newState) {
-                playerRef.sendMessage(Message.raw("POI markers are now hidden on the world map.").color(Color.GRAY));
+                playerRef.sendMessage(Message.raw("The death marker is now hidden on the world map.").color(Color.GRAY));
             } else {
-                playerRef.sendMessage(Message.raw("POI markers are now visible on the world map.").color(Color.GRAY));
+                playerRef.sendMessage(Message.raw("The death marker is now visible on the world map.").color(Color.GRAY));
             }
-            playerRef.sendMessage(Message.raw("NOTE: It may take a few seconds for markers to refresh.").color(Color.GRAY));
         }, world);
     }
 }

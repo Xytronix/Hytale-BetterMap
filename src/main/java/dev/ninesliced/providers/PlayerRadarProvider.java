@@ -12,6 +12,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.PlayerRadarManager.RadarData;
 
@@ -40,10 +42,19 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
             Player viewingPlayer = tracker.getPlayer();
             UUID viewerUuid = ((CommandSender) viewingPlayer).getUuid();
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
 
-            if (!config.isRadarEnabled() || config.isHidePlayersOnMap()) {
+            // Check global settings
+            if (!globalConfig.isRadarEnabled() || globalConfig.isHidePlayersOnMap()) {
                 return;
+            }
+
+            // Check per-player hide setting
+            if (viewerUuid != null) {
+                PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(viewerUuid);
+                if (playerConfig != null && playerConfig.isHidePlayersOnMap()) {
+                    return;
+                }
             }
 
             List<RadarData> radarDataList = PlayerRadarManager.getInstance().getRadarData(world.getName());
@@ -61,7 +72,7 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
             }
             Vector3d viewerPos = viewerData.position;
 
-            int radarRange = config.getRadarRange();
+            int radarRange = globalConfig.getRadarRange();
             boolean infiniteRange = radarRange < 0;
             int rangeSquared = infiniteRange ? Integer.MAX_VALUE : radarRange * radarRange;
 

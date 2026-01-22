@@ -1,25 +1,26 @@
 package dev.ninesliced.providers;
 
-import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
 
@@ -39,19 +40,57 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            Map<String, MapMarker> pointsOfInterest = world.getWorldMapManager().getPointsOfInterest();
+            WorldMapManager mapManager = world.getWorldMapManager();
+            if (mapManager == null) {
+                return;
+            }
+
+            Map<String, MapMarker> pointsOfInterest = mapManager.getPointsOfInterest();
             if (pointsOfInterest == null || pointsOfInterest.isEmpty()) {
                 return;
             }
 
             Player viewer = tracker.getPlayer();
+            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            boolean hideAll = globalConfig.isHideAllPoiOnMap();
+            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap();
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
-            if (config.isHideAllPoiOnMap()) {
+            // Check global hide all
+            if (hideAll) {
                 return;
             }
-            boolean hideUnexplored = config.isHideUnexploredPoiOnMap();
-            List<String> hiddenPoiNames = config.getHiddenPoiNames();
+
+            // Check per-player hide all (only if not globally hidden)
+            if (viewer != null) {
+                UUID playerUuid = viewer.getUuid();
+                if (playerUuid != null) {
+                    PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+                    if (playerConfig != null && playerConfig.isHideAllPoiOnMap()) {
+                        return;
+                    }
+                }
+            }
+
+            // Merge global and per-player hidden names
+            List<String> hiddenPoiNames = new ArrayList<>();
+            List<String> globalHidden = globalConfig.getHiddenPoiNames();
+            if (globalHidden != null) {
+                hiddenPoiNames.addAll(globalHidden);
+            }
+
+            // Add per-player hidden names
+            if (viewer != null) {
+                UUID playerUuid = viewer.getUuid();
+                if (playerUuid != null) {
+                    PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+                    if (playerConfig != null) {
+                        List<String> playerHidden = playerConfig.getHiddenPoiNames();
+                        if (playerHidden != null) {
+                            hiddenPoiNames.addAll(playerHidden);
+                        }
+                    }
+                }
+            }
 
             if (hideUnexplored && !ExplorationEventListener.isTrackedWorld(world)) {
                 hideUnexplored = false;
@@ -60,7 +99,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             ExplorationTracker.PlayerExplorationData explorationData = null;
             Set<Long> sharedExploredChunks = null;
             if (hideUnexplored) {
-                if (config.isShareAllExploration()) {
+                if (globalConfig.isShareAllExploration()) {
                     sharedExploredChunks = ExplorationManager.getInstance().getAllExploredChunks(world.getName());
                 } else {
                     explorationData = ExplorationTracker.getInstance().getPlayerData(viewer);
@@ -94,13 +133,16 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
 
         String normalizedName = normalize(marker.name);
         String normalizedId = normalize(marker.id);
+        String normalizedImage = normalize(marker.markerImage);
 
         for (String hiddenName : hiddenPoiNames) {
             String normalizedHidden = normalize(hiddenName);
             if (normalizedHidden.isEmpty()) {
                 continue;
             }
-            if (normalizedHidden.equals(normalizedName) || normalizedHidden.equals(normalizedId)) {
+            if (normalizedHidden.equals(normalizedName)
+                || normalizedHidden.equals(normalizedId)
+                || normalizedHidden.equals(normalizedImage)) {
                 return true;
             }
         }

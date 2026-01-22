@@ -59,7 +59,7 @@ public class HideUnexploredPoiCommand extends AbstractCommand {
             boolean newState = !config.isHideUnexploredPoiOnMap();
             config.setHideUnexploredPoiOnMap(newState);
 
-            PoiPrivacyManager.getInstance().updatePrivacyState();
+            PoiPrivacyManager.getInstance().updatePrivacyState(world);
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;

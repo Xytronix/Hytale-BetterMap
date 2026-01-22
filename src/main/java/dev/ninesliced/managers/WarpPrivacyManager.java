@@ -150,7 +150,8 @@ public class WarpPrivacyManager {
 
     private boolean shouldFilterWarps() {
         BetterMapConfig config = BetterMapConfig.getInstance();
-        return config.isHideOtherWarpsOnMap()
+        return config.isHideAllWarpsOnMap()
+            || config.isHideOtherWarpsOnMap()
             || config.isHideUnexploredWarpsOnMap();
     }
 }

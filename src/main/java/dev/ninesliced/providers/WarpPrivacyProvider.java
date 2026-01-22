@@ -15,12 +15,15 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
 
@@ -60,9 +63,33 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             Player viewer = tracker.getPlayer();
             String viewerName = viewer.getDisplayName();
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
-            boolean hideOtherWarps = config.isHideOtherWarpsOnMap();
-            boolean hideUnexploredWarps = config.isHideUnexploredWarpsOnMap();
+            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            boolean hideAllWarps = globalConfig.isHideAllWarpsOnMap();
+            boolean hideOtherWarps = globalConfig.isHideOtherWarpsOnMap();
+            boolean hideUnexploredWarps = globalConfig.isHideUnexploredWarpsOnMap();
+
+            // Check per-player settings (only if not globally hidden)
+            PlayerConfig playerConfig = null;
+            if (viewer != null) {
+                UUID playerUuid = viewer.getUuid();
+                if (playerUuid != null) {
+                    playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+                    if (playerConfig != null) {
+                        if (!hideAllWarps && playerConfig.isHideAllWarpsOnMap()) {
+                            hideAllWarps = true;
+                        }
+                        if (!hideOtherWarps && playerConfig.isHideOtherWarpsOnMap()) {
+                            hideOtherWarps = true;
+                        }
+                    }
+                }
+            }
+
+            // If hiding all warps, return early
+            if (hideAllWarps) {
+                return;
+            }
+
             if (hideUnexploredWarps && !ExplorationEventListener.isTrackedWorld(world)) {
                 hideUnexploredWarps = false;
             }
@@ -70,7 +97,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             ExplorationTracker.PlayerExplorationData explorationData = null;
             Set<Long> sharedExploredChunks = null;
             if (hideUnexploredWarps) {
-                if (config.isShareAllExploration()) {
+                if (globalConfig.isShareAllExploration()) {
                     sharedExploredChunks = ExplorationManager.getInstance().getAllExploredChunks(world.getName());
                 } else if (viewer != null) {
                     explorationData = ExplorationTracker.getInstance().getPlayerData(viewer);
