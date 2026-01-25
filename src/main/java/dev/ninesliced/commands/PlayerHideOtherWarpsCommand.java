@@ -37,29 +37,30 @@ public class PlayerHideOtherWarpsCommand extends AbstractCommand {
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
+        if (!context.isPlayer()) {
+            context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        // Check if ExtendedTeleport is available - required for ownership-based filtering
+        if (!ExtendedTeleportIntegration.getInstance().isAvailable()) {
+            context.sendMessage(Message.raw("This feature requires ExtendedTeleport to be installed.").color(Color.YELLOW));
+            context.sendMessage(Message.raw("Without it, warp ownership cannot be determined.").color(Color.GRAY));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        Player player = (Player) context.sender();
+        UUID uuid = player.getUuid();
+        World world = player.getWorld();
+        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
+
+        if (world == null || config == null) {
+            context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
-            if (!context.isPlayer()) {
-                context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
-                return;
-            }
-
-            // Check if ExtendedTeleport is available - required for ownership-based filtering
-            if (!ExtendedTeleportIntegration.getInstance().isAvailable()) {
-                context.sendMessage(Message.raw("This feature requires ExtendedTeleport to be installed.").color(Color.YELLOW));
-                context.sendMessage(Message.raw("Without it, warp ownership cannot be determined.").color(Color.GRAY));
-                return;
-            }
-
-            Player player = (Player) context.sender();
-            UUID uuid = player.getUuid();
-            World world = player.getWorld();
-            PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
-
-            if (world == null || config == null) {
-                context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
-                return;
-            }
-
             // Determine current desired state and toggle it
             boolean currentlyWantsVisible = config.isOverrideGlobalOtherWarpsHide() && !config.isHideOtherWarpsOnMap();
             boolean currentlyWantsHidden = config.isHideOtherWarpsOnMap();
@@ -88,6 +89,6 @@ public class PlayerHideOtherWarpsCommand extends AbstractCommand {
             Color color = newWantsVisible ? Color.GREEN : Color.RED;
             String status = newWantsVisible ? "VISIBLE" : "HIDDEN";
             context.sendMessage(Message.raw("Other players' warps are now " + status + " for you.").color(color));
-        });
+        }, world);
     }
 }

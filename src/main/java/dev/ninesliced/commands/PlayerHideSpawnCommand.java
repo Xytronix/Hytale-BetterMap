@@ -35,22 +35,23 @@ public class PlayerHideSpawnCommand extends AbstractCommand {
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
+        if (!context.isPlayer()) {
+            context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        Player player = (Player) context.sender();
+        UUID uuid = player.getUuid();
+        World world = player.getWorld();
+        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
+
+        if (world == null || config == null) {
+            context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
-            if (!context.isPlayer()) {
-                context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
-                return;
-            }
-
-            Player player = (Player) context.sender();
-            UUID uuid = player.getUuid();
-            World world = player.getWorld();
-            PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
-
-            if (world == null || config == null) {
-                context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
-                return;
-            }
-
             // Determine current desired state and toggle it
             boolean currentlyWantsVisible = config.isOverrideGlobalSpawnHide() && !config.isHideSpawnOnMap();
             boolean currentlyWantsHidden = config.isHideSpawnOnMap();
@@ -79,6 +80,6 @@ public class PlayerHideSpawnCommand extends AbstractCommand {
             Color color = newWantsVisible ? Color.GREEN : Color.RED;
             String status = newWantsVisible ? "VISIBLE" : "HIDDEN";
             context.sendMessage(Message.raw("Spawn markers are now " + status + " for you.").color(color));
-        });
+        }, world);
     }
 }

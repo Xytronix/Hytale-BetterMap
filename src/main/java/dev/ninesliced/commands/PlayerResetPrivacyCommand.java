@@ -36,22 +36,23 @@ public class PlayerResetPrivacyCommand extends AbstractCommand {
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
+        if (!context.isPlayer()) {
+            context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        Player player = (Player) context.sender();
+        UUID uuid = player.getUuid();
+        World world = player.getWorld();
+        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
+
+        if (world == null || config == null) {
+            context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
-            if (!context.isPlayer()) {
-                context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
-                return;
-            }
-
-            Player player = (Player) context.sender();
-            UUID uuid = player.getUuid();
-            World world = player.getWorld();
-            PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
-
-            if (world == null || config == null) {
-                context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
-                return;
-            }
-
             config.setHideAllPoiOnMap(false);
             config.setHideSpawnOnMap(false);
             config.setHideDeathMarkerOnMap(false);
@@ -77,6 +78,6 @@ public class PlayerResetPrivacyCommand extends AbstractCommand {
 
             context.sendMessage(Message.raw("Your map privacy settings have been reset.").color(Color.GREEN));
             context.sendMessage(Message.raw("You now follow the global map settings.").color(Color.GRAY));
-        });
+        }, world);
     }
 }

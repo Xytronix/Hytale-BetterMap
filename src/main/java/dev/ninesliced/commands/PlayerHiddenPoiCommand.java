@@ -44,30 +44,31 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
     @Nullable
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
+        if (!context.isPlayer()) {
+            context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        UUID uuid = context.sender().getUuid();
+        Player player = (Player) context.sender();
+        World world = player.getWorld();
+        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
+
+        if (world == null || config == null) {
+            context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        String action = context.get(actionArg);
+        String name = context.get(nameArg);
+
+        if (action == null || action.isEmpty()) {
+            showUsage(context);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
-            if (!context.isPlayer()) {
-                context.sendMessage(Message.raw("This command must be run by a player").color(Color.RED));
-                return;
-            }
-
-            UUID uuid = context.sender().getUuid();
-            Player player = (Player) context.sender();
-            World world = player.getWorld();
-            PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
-
-            if (world == null || config == null) {
-                context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
-                return;
-            }
-
-            String action = context.get(actionArg);
-            String name = context.get(nameArg);
-
-            if (action == null || action.isEmpty()) {
-                showUsage(context);
-                return;
-            }
-
             switch (action.toLowerCase(Locale.ROOT)) {
                 case "list":
                     listHiddenPois(context, config);
@@ -93,7 +94,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
                     showUsage(context);
                     break;
             }
-        });
+        }, world);
     }
 
     private void showUsage(CommandContext context) {
