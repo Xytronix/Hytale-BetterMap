@@ -1,17 +1,18 @@
 package dev.ninesliced.commands;
 
-import com.hypixel.hytale.protocol.GameMode;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-import com.hypixel.hytale.server.core.command.system.CommandContext;
-import dev.ninesliced.commands.config.ConfigCommand;
-import dev.ninesliced.configs.BetterMapConfig;
+import java.awt.Color;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.awt.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
+
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.AbstractCommand;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+
+import dev.ninesliced.commands.config.ConfigCommand;
+import dev.ninesliced.configs.BetterMapConfig;
 
 /**
  * Main command for the BetterMap mod.

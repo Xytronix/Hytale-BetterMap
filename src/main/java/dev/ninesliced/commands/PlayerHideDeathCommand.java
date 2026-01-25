@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.PermissionsUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -17,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Command to toggle the player's personal death marker visibility.
- * Only works if death marker is not globally hidden.
+ * Requires override permission when death marker is globally hidden.
  */
 public class PlayerHideDeathCommand extends AbstractCommand {
 
@@ -40,15 +41,15 @@ public class PlayerHideDeathCommand extends AbstractCommand {
             }
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            Player player = (Player) context.sender();
             
             // Check if globally disabled
-            if (globalConfig.isHideDeathMarkerOnMap()) {
+            if (globalConfig.isHideDeathMarkerOnMap() && !PermissionsUtil.canOverrideDeath(player)) {
                 context.sendMessage(Message.raw("Death marker is globally hidden by the server.").color(Color.YELLOW));
                 return;
             }
 
-            UUID uuid = context.sender().getUuid();
-            Player player = (Player) context.sender();
+            UUID uuid = player.getUuid();
             World world = player.getWorld();
             PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 

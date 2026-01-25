@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerT
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.PermissionsUtil;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -34,39 +35,45 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
         try {
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
 
+            Player player = tracker.getPlayer();
+            if (player == null) {
+                return;
+            }
+
+            boolean canOverrideDeath = PermissionsUtil.canOverrideDeath(player);
+
             // Check if death markers should be hidden globally
-            if (globalConfig.isHideDeathMarkerOnMap()) {
+            if (globalConfig.isHideDeathMarkerOnMap() && !canOverrideDeath) {
                 return;
             }
 
             // Check if "death" is in global hiddenPoiNames
-            List<String> hiddenNames = globalConfig.getHiddenPoiNames();
-            if (hiddenNames != null) {
-                for (String hidden : hiddenNames) {
-                    if ("death".equalsIgnoreCase(hidden.trim())) {
-                        return;
+            if (!canOverrideDeath) {
+                List<String> hiddenNames = globalConfig.getHiddenPoiNames();
+                if (hiddenNames != null) {
+                    for (String hidden : hiddenNames) {
+                        if ("death".equalsIgnoreCase(hidden.trim())) {
+                            return;
+                        }
                     }
                 }
             }
 
             // Check per-player settings (only if not globally hidden)
-            Player player = tracker.getPlayer();
-            if (player != null) {
-                UUID playerUuid = player.getUuid();
-                if (playerUuid != null) {
-                    PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
-                    if (playerConfig != null) {
-                        // Check player's personal hide death setting
-                        if (playerConfig.isHideDeathMarkerOnMap()) {
-                            return;
-                        }
-                        // Check player's personal hidden names
-                        List<String> playerHiddenNames = playerConfig.getHiddenPoiNames();
-                        if (playerHiddenNames != null) {
-                            for (String hidden : playerHiddenNames) {
-                                if ("death".equalsIgnoreCase(hidden.trim())) {
-                                    return;
-                                }
+            UUID playerUuid = player.getUuid();
+            if (playerUuid != null) {
+                PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+                if (playerConfig != null) {
+                    // Check player's personal hide death setting
+                    if (playerConfig.isHideDeathMarkerOnMap()) {
+                        return;
+                    }
+                    // Check player's personal hidden names
+                    List<String> playerHiddenNames = playerConfig.getHiddenPoiNames();
+                    if (playerHiddenNames != null) {
+                        for (String hidden : playerHiddenNames) {
+                            if ("death".equalsIgnoreCase(hidden.trim())) {
+                                return;
                             }
                         }
                     }

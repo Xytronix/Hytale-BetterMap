@@ -16,6 +16,7 @@ import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.PlayerRadarManager.RadarData;
+import dev.ninesliced.utils.PermissionsUtil;
 
 import java.util.List;
 import java.util.UUID;
@@ -44,7 +45,8 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
 
             // Check global settings
-            if (!globalConfig.isRadarEnabled() || globalConfig.isHidePlayersOnMap()) {
+            boolean hasGlobalOverride = PermissionsUtil.canOverridePlayers(viewingPlayer);
+            if (!globalConfig.isRadarEnabled() || (globalConfig.isHidePlayersOnMap() && !hasGlobalOverride)) {
                 return;
             }
 

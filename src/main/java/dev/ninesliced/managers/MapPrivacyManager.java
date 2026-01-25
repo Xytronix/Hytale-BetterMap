@@ -116,7 +116,7 @@ public class MapPrivacyManager {
 
                             WorldMapTracker tracker = player.getWorldMapTracker();
 
-                            boolean hide = globalHide;
+                            boolean hide = globalHide && !canBypassGlobalHidePlayers(player);
                             UUID playerUuid = playerRef.getUuid();
                             if (!hide && playerUuid != null) {
                                 PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
@@ -198,7 +198,7 @@ public class MapPrivacyManager {
         boolean allowMarkerTeleports = globalConfig.isAllowMapMarkerTeleports();
 
         // Check per-player setting (only if not globally hidden)
-        boolean hide = globalHide;
+        boolean hide = globalHide && !canBypassGlobalHidePlayers(player);
         UUID playerUuid = player.getUuid();
         if (!hide && playerUuid != null) {
             PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
@@ -290,11 +290,14 @@ public class MapPrivacyManager {
     }
 
     private void removeProvider(World world) {
-        BetterMapConfig config = BetterMapConfig.getInstance();
-        boolean shouldRemove = config.isRadarEnabled() || config.isHidePlayersOnMap();
-
         try {
             if (world == null) return;
+
+            BetterMapConfig config = BetterMapConfig.getInstance();
+            boolean shouldRemove = config.isRadarEnabled();
+            if (!shouldRemove && config.isHidePlayersOnMap()) {
+                shouldRemove = !hasGlobalHideOverride(world);
+            }
 
             WorldMapManager mapManager = world.getWorldMapManager();
 
@@ -322,6 +325,39 @@ public class MapPrivacyManager {
         } catch (Exception e) {
             LOGGER.severe("Error managing provider: " + e.getMessage());
         }
+    }
+
+    private boolean hasGlobalHideOverride(World world) {
+        if (world == null) {
+            return false;
+        }
+
+        try {
+            for (PlayerRef playerRef : world.getPlayerRefs()) {
+                if (playerRef == null) continue;
+
+                Holder<EntityStore> holder = playerRef.getHolder();
+                if (holder == null) continue;
+                Player player = holder.getComponent(Player.getComponentType());
+                if (player == null) continue;
+
+                if (canBypassGlobalHidePlayers(player)) {
+                    return true;
+                }
+            }
+        } catch (Exception _) {
+            return false;
+        }
+
+        return false;
+    }
+
+    private boolean canBypassGlobalHidePlayers(Player player) {
+        if (player == null) {
+            return false;
+        }
+
+        return PermissionsUtil.canOverridePlayers(player);
     }
 
     private void syncMarkerTeleportPermission(Player player, boolean allowMarkerTeleports) {

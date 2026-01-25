@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.PermissionsUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -17,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Command to toggle the player's personal "hide all POIs" setting.
- * Only works if POIs are not globally hidden.
+ * Requires override permission when POIs are globally hidden.
  */
 public class PlayerHideAllPoiCommand extends AbstractCommand {
 
@@ -40,15 +41,15 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
             }
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            Player player = (Player) context.sender();
             
             // Check if globally disabled
-            if (globalConfig.isHideAllPoiOnMap()) {
+            if (globalConfig.isHideAllPoiOnMap() && !PermissionsUtil.canOverridePoi(player)) {
                 context.sendMessage(Message.raw("All POIs are globally hidden by the server.").color(Color.YELLOW));
                 return;
             }
 
-            UUID uuid = context.sender().getUuid();
-            Player player = (Player) context.sender();
+            UUID uuid = player.getUuid();
             World world = player.getWorld();
             PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 

@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.PermissionsUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -17,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Command to toggle the player's personal "hide players" setting.
- * Only works if players are not globally hidden.
+ * If players are globally hidden, toggles the override for permitted players.
  */
 public class PlayerHidePlayersCommand extends AbstractCommand {
 
@@ -40,20 +41,18 @@ public class PlayerHidePlayersCommand extends AbstractCommand {
             }
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
-            
-            // Check if globally disabled
-            if (globalConfig.isHidePlayersOnMap()) {
-                context.sendMessage(Message.raw("Players are globally hidden by the server.").color(Color.YELLOW));
-                return;
-            }
-
-            UUID uuid = context.sender().getUuid();
             Player player = (Player) context.sender();
+            UUID uuid = player.getUuid();
             World world = player.getWorld();
             PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 
             if (world == null || config == null) {
                 context.sendMessage(Message.raw("Could not access player config.").color(Color.RED));
+                return;
+            }
+
+            if (globalConfig.isHidePlayersOnMap() && !PermissionsUtil.canOverridePlayers(player)) {
+                context.sendMessage(Message.raw("Players are globally hidden by the server.").color(Color.YELLOW));
                 return;
             }
 

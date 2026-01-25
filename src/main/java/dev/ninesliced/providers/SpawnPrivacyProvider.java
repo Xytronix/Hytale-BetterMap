@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.PermissionsUtil;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -29,24 +30,28 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
         try {
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
 
+            Player player = tracker.getPlayer();
+            if (player == null) {
+                return;
+            }
+
+            boolean canOverrideSpawn = PermissionsUtil.canOverrideSpawn(player);
+
             // Check if spawn markers should be hidden globally
-            if (globalConfig.isHideSpawnOnMap()) {
+            if (globalConfig.isHideSpawnOnMap() && !canOverrideSpawn) {
                 return;
             }
 
             // Check if "Spawn" is in global hiddenPoiNames
-            List<String> hiddenNames = globalConfig.getHiddenPoiNames();
-            if (hiddenNames != null) {
-                for (String hidden : hiddenNames) {
-                    if ("spawn".equalsIgnoreCase(hidden.trim())) {
-                        return;
+            if (!canOverrideSpawn) {
+                List<String> hiddenNames = globalConfig.getHiddenPoiNames();
+                if (hiddenNames != null) {
+                    for (String hidden : hiddenNames) {
+                        if ("spawn".equalsIgnoreCase(hidden.trim())) {
+                            return;
+                        }
                     }
                 }
-            }
-
-            Player player = tracker.getPlayer();
-            if (player == null) {
-                return;
             }
 
             // Check per-player settings (only if not globally hidden)

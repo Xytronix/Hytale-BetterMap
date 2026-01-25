@@ -14,6 +14,7 @@ import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
+import dev.ninesliced.utils.PermissionsUtil;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -59,8 +60,10 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
             }
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
-            boolean hideAll = globalConfig.isHideAllPoiOnMap();
-            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap();
+            boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
+            boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
+            boolean hideAll = globalConfig.isHideAllPoiOnMap() && !canOverridePoi;
+            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap() && !canOverrideUnexplored;
 
             // Check per-player hide all and merge hidden names
             PlayerConfig playerConfig = null;
@@ -74,9 +77,11 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
 
             // Merge global and per-player hidden names
             List<String> hiddenPoiNames = new ArrayList<>();
-            List<String> globalHidden = globalConfig.getHiddenPoiNames();
-            if (globalHidden != null) {
-                hiddenPoiNames.addAll(globalHidden);
+            if (!canOverridePoi) {
+                List<String> globalHidden = globalConfig.getHiddenPoiNames();
+                if (globalHidden != null) {
+                    hiddenPoiNames.addAll(globalHidden);
+                }
             }
 
             // Add per-player hidden names

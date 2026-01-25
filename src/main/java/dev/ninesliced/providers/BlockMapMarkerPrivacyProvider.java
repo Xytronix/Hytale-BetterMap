@@ -16,6 +16,7 @@ import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
+import dev.ninesliced.utils.PermissionsUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,8 +48,11 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
             }
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
-            boolean hideAll = globalConfig.isHideAllPoiOnMap();
-            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap();
+            Player viewer = tracker.getPlayer();
+            boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
+            boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
+            boolean hideAll = globalConfig.isHideAllPoiOnMap() && !canOverridePoi;
+            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap() && !canOverrideUnexplored;
             boolean debug = globalConfig.isDebug();
 
             // Check global hide all
@@ -60,7 +64,6 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
             }
 
             // Check per-player hide all and merge hidden names
-            Player viewer = tracker.getPlayer();
             PlayerConfig playerConfig = null;
             if (viewer != null) {
                 UUID playerUuid = viewer.getUuid();
@@ -77,9 +80,11 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
 
             // Merge global and per-player hidden names
             List<String> hiddenNames = new ArrayList<>();
-            List<String> globalHidden = globalConfig.getHiddenPoiNames();
-            if (globalHidden != null) {
-                hiddenNames.addAll(globalHidden);
+            if (!canOverridePoi) {
+                List<String> globalHidden = globalConfig.getHiddenPoiNames();
+                if (globalHidden != null) {
+                    hiddenNames.addAll(globalHidden);
+                }
             }
 
             // Add per-player hidden names

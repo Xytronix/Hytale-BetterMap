@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.PermissionsUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -17,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Command to toggle the player's personal spawn marker visibility.
- * Only works if spawn is not globally hidden.
+ * Requires override permission when spawn is globally hidden.
  */
 public class PlayerHideSpawnCommand extends AbstractCommand {
 
@@ -40,15 +41,15 @@ public class PlayerHideSpawnCommand extends AbstractCommand {
             }
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            Player player = (Player) context.sender();
             
             // Check if globally disabled
-            if (globalConfig.isHideSpawnOnMap()) {
+            if (globalConfig.isHideSpawnOnMap() && !PermissionsUtil.canOverrideSpawn(player)) {
                 context.sendMessage(Message.raw("Spawn marker is globally hidden by the server.").color(Color.YELLOW));
                 return;
             }
 
-            UUID uuid = context.sender().getUuid();
-            Player player = (Player) context.sender();
+            UUID uuid = player.getUuid();
             World world = player.getWorld();
             PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 

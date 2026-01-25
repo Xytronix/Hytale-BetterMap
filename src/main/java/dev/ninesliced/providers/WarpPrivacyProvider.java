@@ -21,6 +21,7 @@ import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
+import dev.ninesliced.utils.PermissionsUtil;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -69,9 +70,11 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             String viewerName = viewer.getDisplayName();
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
-            boolean hideAllWarps = globalConfig.isHideAllWarpsOnMap();
-            boolean hideOtherWarps = globalConfig.isHideOtherWarpsOnMap();
-            boolean hideUnexploredWarps = globalConfig.isHideUnexploredWarpsOnMap();
+            boolean canOverrideWarps = viewer != null && PermissionsUtil.canOverrideWarps(viewer);
+            boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredWarps(viewer);
+            boolean hideAllWarps = globalConfig.isHideAllWarpsOnMap() && !canOverrideWarps;
+            boolean hideOtherWarps = globalConfig.isHideOtherWarpsOnMap() && !canOverrideWarps;
+            boolean hideUnexploredWarps = globalConfig.isHideUnexploredWarpsOnMap() && !canOverrideUnexplored;
 
             // Check per-player settings (only if not globally hidden)
             PlayerConfig playerConfig = null;
