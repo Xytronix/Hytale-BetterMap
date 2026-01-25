@@ -13,6 +13,9 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 
 import dev.ninesliced.commands.config.ConfigCommand;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 
 /**
  * Main command for the BetterMap mod.
@@ -40,6 +43,7 @@ public class BetterMapCommand extends AbstractCommand {
         this.addSubCommand(new PlayerHidePlayersCommand());
         this.addSubCommand(new PlayerHideAllWarpsCommand());
         this.addSubCommand(new PlayerHideOtherWarpsCommand());
+        this.addSubCommand(new PlayerResetPrivacyCommand());
         this.addSubCommand(new BetterMapWaypointCommand());
     }
 
@@ -87,6 +91,41 @@ public class BetterMapCommand extends AbstractCommand {
         String radarRange = config.getRadarRange() == -1 ? "Infinite" : config.getRadarRange() + " blocks";
         context.sendMessage(Message.raw("Radar Range: ").color(Color.YELLOW).insert(Message.raw(radarRange).color(Color.WHITE)));
         context.sendMessage(Message.raw("NOTE: The server must be restarted for map quality/max chunks changes to take effect."));
+
+        // Show player-specific override settings if the sender is a player
+        if (context.isPlayer()) {
+            Player player = (Player) context.sender();
+            PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(player.getUuid());
+            if (playerConfig != null) {
+                context.sendMessage(Message.raw("=== Your Override Settings ===").color(Color.CYAN));
+                
+                String poiOverride = playerConfig.isOverrideGlobalPoiHide() ? "[OVERRIDE]" : "";
+                String spawnOverride = playerConfig.isOverrideGlobalSpawnHide() ? "[OVERRIDE]" : "";
+                String deathOverride = playerConfig.isOverrideGlobalDeathHide() ? "[OVERRIDE]" : "";
+                String playersOverride = playerConfig.isOverrideGlobalPlayersHide() ? "[OVERRIDE]" : "";
+                String allWarpsOverride = playerConfig.isOverrideGlobalAllWarpsHide() ? "[OVERRIDE]" : "";
+                String otherWarpsOverride = playerConfig.isOverrideGlobalOtherWarpsHide() ? "[OVERRIDE]" : "";
+                
+                context.sendMessage(Message.raw("Hide All POI: ").color(Color.YELLOW)
+                    .insert(Message.raw(playerConfig.isHideAllPoiOnMap() ? "Yes" : "No").color(Color.WHITE))
+                    .insert(Message.raw(" " + poiOverride).color(Color.GREEN)));
+                context.sendMessage(Message.raw("Hide Spawn: ").color(Color.YELLOW)
+                    .insert(Message.raw(playerConfig.isHideSpawnOnMap() ? "Yes" : "No").color(Color.WHITE))
+                    .insert(Message.raw(" " + spawnOverride).color(Color.GREEN)));
+                context.sendMessage(Message.raw("Hide Death: ").color(Color.YELLOW)
+                    .insert(Message.raw(playerConfig.isHideDeathMarkerOnMap() ? "Yes" : "No").color(Color.WHITE))
+                    .insert(Message.raw(" " + deathOverride).color(Color.GREEN)));
+                context.sendMessage(Message.raw("Hide Players: ").color(Color.YELLOW)
+                    .insert(Message.raw(playerConfig.isHidePlayersOnMap() ? "Yes" : "No").color(Color.WHITE))
+                    .insert(Message.raw(" " + playersOverride).color(Color.GREEN)));
+                context.sendMessage(Message.raw("Hide All Warps: ").color(Color.YELLOW)
+                    .insert(Message.raw(playerConfig.isHideAllWarpsOnMap() ? "Yes" : "No").color(Color.WHITE))
+                    .insert(Message.raw(" " + allWarpsOverride).color(Color.GREEN)));
+                context.sendMessage(Message.raw("Hide Other Warps: ").color(Color.YELLOW)
+                    .insert(Message.raw(playerConfig.isHideOtherWarpsOnMap() ? "Yes" : "No").color(Color.WHITE))
+                    .insert(Message.raw(" " + otherWarpsOverride).color(Color.GREEN)));
+            }
+        }
 
         return CompletableFuture.completedFuture(null);
     }

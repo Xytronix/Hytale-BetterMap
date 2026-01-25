@@ -9,7 +9,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
+import dev.ninesliced.utils.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -59,18 +62,24 @@ public class HideAllWarpsCommand extends AbstractCommand {
             boolean newState = !config.isHideAllWarpsOnMap();
             config.setHideAllWarpsOnMap(newState);
 
-            WarpPrivacyManager.getInstance().updatePrivacyState();
-
-            String status = newState ? "ENABLED" : "DISABLED";
-            Color color = newState ? Color.GREEN : Color.RED;
-
-            playerRef.sendMessage(Message.raw("Hide All Warps " + status).color(color));
-            if (newState) {
-                playerRef.sendMessage(Message.raw("No warps will be shown on the world map.").color(Color.GRAY));
-            } else {
-                playerRef.sendMessage(Message.raw("Warps will be shown on the world map (subject to other settings).").color(Color.GRAY));
+            // Reset player overrides BEFORE updating privacy state so the state is consistent
+            PlayerConfig playerConfig = playerRef.getUuid() != null
+                ? PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid())
+                : null;
+            if (playerConfig != null) {
+                playerConfig.setOverrideGlobalAllWarpsHide(false);
+                playerConfig.setOverrideGlobalOtherWarpsHide(false);
+                PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
             }
-            playerRef.sendMessage(Message.raw("NOTE: It may take a few seconds for markers to refresh.").color(Color.GRAY));
+
+            WarpPrivacyManager.getInstance().updatePrivacyState();
+            WorldMapHook.refreshTrackers(world);
+
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
+
+            playerRef.sendMessage(Message.raw("Warps are now " + status + " on the map.").color(color));
         }, world);
     }
 }

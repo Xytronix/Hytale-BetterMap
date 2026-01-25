@@ -35,15 +35,24 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
+            UUID playerUuid = player.getUuid();
+            PlayerConfig playerConfig = null;
+            if (playerUuid != null) {
+                playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+            }
+
             boolean canOverrideSpawn = PermissionsUtil.canOverrideSpawn(player);
+            boolean overrideEnabled = canOverrideSpawn
+                && playerConfig != null
+                && playerConfig.isOverrideGlobalSpawnHide();
 
             // Check if spawn markers should be hidden globally
-            if (globalConfig.isHideSpawnOnMap() && !canOverrideSpawn) {
+            if (globalConfig.isHideSpawnOnMap() && !overrideEnabled) {
                 return;
             }
 
             // Check if "Spawn" is in global hiddenPoiNames
-            if (!canOverrideSpawn) {
+            if (!overrideEnabled) {
                 List<String> hiddenNames = globalConfig.getHiddenPoiNames();
                 if (hiddenNames != null) {
                     for (String hidden : hiddenNames) {
@@ -55,9 +64,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
             }
 
             // Check per-player settings (only if not globally hidden)
-            UUID playerUuid = player.getUuid();
             if (playerUuid != null) {
-                PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
                 if (playerConfig != null) {
                     // Check player's personal hide spawn setting
                     if (playerConfig.isHideSpawnOnMap()) {

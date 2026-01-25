@@ -9,7 +9,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
+import dev.ninesliced.utils.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -24,6 +27,7 @@ public class HideAllPoiCommand extends AbstractCommand {
     public HideAllPoiCommand() {
         super("hidepois", "Toggle hiding all POI markers");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
+        this.addAliases("hidepoi", "hideallpoi", "hideallpois");
     }
 
     @Override
@@ -59,18 +63,23 @@ public class HideAllPoiCommand extends AbstractCommand {
             boolean newState = !config.isHideAllPoiOnMap();
             config.setHideAllPoiOnMap(newState);
 
-            PoiPrivacyManager.getInstance().updatePrivacyState(world);
-
-            String status = newState ? "ENABLED" : "DISABLED";
-            Color color = newState ? Color.GREEN : Color.RED;
-
-            playerRef.sendMessage(Message.raw("Hide All POIs " + status).color(color));
-            if (newState) {
-                playerRef.sendMessage(Message.raw("POI markers are now hidden on the world map.").color(Color.GRAY));
-            } else {
-                playerRef.sendMessage(Message.raw("POI markers are now visible on the world map.").color(Color.GRAY));
+            // Reset player overrides BEFORE updating privacy state so the state is consistent
+            PlayerConfig playerConfig = playerRef.getUuid() != null
+                ? PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid())
+                : null;
+            if (playerConfig != null) {
+                playerConfig.setOverrideGlobalPoiHide(false);
+                PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
             }
-            playerRef.sendMessage(Message.raw("NOTE: It may take a few seconds for markers to refresh.").color(Color.GRAY));
+
+            PoiPrivacyManager.getInstance().updatePrivacyState(world);
+            WorldMapHook.refreshTrackers(world);
+
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
+
+            playerRef.sendMessage(Message.raw("POIs are now " + status + " on the map.").color(color));
         }, world);
     }
 }

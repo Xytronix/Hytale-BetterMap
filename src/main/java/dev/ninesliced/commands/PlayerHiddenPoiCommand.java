@@ -10,6 +10,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
+import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,6 +33,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
 
     public PlayerHiddenPoiCommand() {
         super("hiddenpoi", "Manage your personal hidden POI list");
+        this.addAliases("hiddenpois");
     }
 
     @Override
@@ -74,17 +77,17 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
                         context.sendMessage(Message.raw("Usage: /bm hiddenpoi add <name>").color(Color.YELLOW));
                         return;
                     }
-                    addHiddenPoi(context, config, name, uuid);
+                    addHiddenPoi(context, config, name, uuid, world);
                     break;
                 case "remove":
                     if (name == null || name.isEmpty()) {
                         context.sendMessage(Message.raw("Usage: /bm hiddenpoi remove <name>").color(Color.YELLOW));
                         return;
                     }
-                    removeHiddenPoi(context, config, name, uuid);
+                    removeHiddenPoi(context, config, name, uuid, world);
                     break;
                 case "clear":
-                    clearHiddenPois(context, config, uuid);
+                    clearHiddenPois(context, config, uuid, world);
                     break;
                 default:
                     showUsage(context);
@@ -130,7 +133,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         }
     }
 
-    private void addHiddenPoi(CommandContext context, PlayerConfig config, String name, UUID uuid) {
+    private void addHiddenPoi(CommandContext context, PlayerConfig config, String name, UUID uuid, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
         
         // Check if already exists (case-insensitive)
@@ -144,11 +147,14 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         hiddenNames.add(name);
         config.setHiddenPoiNames(hiddenNames);
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+        PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        WorldMapHook.clearMarkerCaches(world);
+        WorldMapHook.refreshTrackers(world);
 
         context.sendMessage(Message.raw("Added '" + name + "' to your hidden POI list.").color(Color.GREEN));
     }
 
-    private void removeHiddenPoi(CommandContext context, PlayerConfig config, String name, UUID uuid) {
+    private void removeHiddenPoi(CommandContext context, PlayerConfig config, String name, UUID uuid, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
         
         // Find and remove (case-insensitive)
@@ -161,11 +167,14 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
 
         config.setHiddenPoiNames(hiddenNames);
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+        PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        WorldMapHook.clearMarkerCaches(world);
+        WorldMapHook.refreshTrackers(world);
 
         context.sendMessage(Message.raw("Removed '" + name + "' from your hidden POI list.").color(Color.GREEN));
     }
 
-    private void clearHiddenPois(CommandContext context, PlayerConfig config, UUID uuid) {
+    private void clearHiddenPois(CommandContext context, PlayerConfig config, UUID uuid, World world) {
         List<String> hiddenNames = config.getHiddenPoiNames();
         if (hiddenNames == null || hiddenNames.isEmpty()) {
             context.sendMessage(Message.raw("Your hidden POI list is already empty.").color(Color.YELLOW));
@@ -175,6 +184,9 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         int count = hiddenNames.size();
         config.setHiddenPoiNames(new ArrayList<>());
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+        PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        WorldMapHook.clearMarkerCaches(world);
+        WorldMapHook.refreshTrackers(world);
 
         context.sendMessage(Message.raw("Cleared " + count + " entries from your hidden POI list.").color(Color.GREEN));
     }

@@ -99,10 +99,6 @@ public final class PermissionsUtil {
     }
 
     private static boolean hasOverridePermission(@Nonnull Player player, String permission) {
-        if (isAdmin(player)) {
-            return true;
-        }
-
         PermissionsModule perms = PermissionsModule.get();
         if (perms == null) {
             return false;

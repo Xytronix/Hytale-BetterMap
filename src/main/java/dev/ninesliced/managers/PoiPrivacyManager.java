@@ -64,6 +64,9 @@ public class PoiPrivacyManager {
         });
 
         plugin.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
+            if (PlayerConfigManager.getInstance() != null) {
+                PlayerConfigManager.getInstance().getPlayerConfig(event.getPlayer().getUuid());
+            }
             World world = event.getPlayer().getWorld();
             this.trackWorld(world);
             this.applyPrivacy(world, shouldFilterPois());
@@ -136,6 +139,27 @@ public class PoiPrivacyManager {
         }
     }
 
+    /**
+     * Updates the POI visibility state synchronously for the given world.
+     * Use this when already on the world executor to avoid async race conditions.
+     *
+     * @param world The world to update.
+     */
+    public void updatePrivacyStateSync(World world) {
+        if (world == null) {
+            return;
+        }
+
+        boolean filter = shouldFilterPois();
+
+        try {
+            this.trackWorld(world);
+            this.applyPrivacySync(world, filter);
+        } catch (Exception e) {
+            LOGGER.severe("Error updating POI privacy state synchronously: " + e.getMessage());
+        }
+    }
+
     private void trackWorld(World world) {
         if (world != null) {
             this.monitoredWorlds.add(world);
@@ -147,14 +171,21 @@ public class PoiPrivacyManager {
             return;
         }
         world.execute(() -> {
-            if (filter) {
-                this.ensureCompassUpdating(world, true);
-                this.replaceProvider(world);
-            } else {
-                this.restoreProvider(world);
-                this.ensureCompassUpdating(world, false);
-            }
+            applyPrivacySync(world, filter);
         });
+    }
+
+    private void applyPrivacySync(World world, boolean filter) {
+        if (world == null) {
+            return;
+        }
+        if (filter) {
+            this.ensureCompassUpdating(world, true);
+            this.replaceProvider(world);
+        } else {
+            this.restoreProvider(world);
+            this.ensureCompassUpdating(world, false);
+        }
     }
 
     private void ensureCompassUpdating(World world, boolean enable) {
@@ -166,17 +197,11 @@ public class PoiPrivacyManager {
             compassUpdatingState.putIfAbsent(world, world.isCompassUpdating());
             if (!world.isCompassUpdating()) {
                 world.setCompassUpdating(true);
-                if (BetterMapConfig.getInstance().isDebug()) {
-                    LOGGER.info("Enabled compass updating for world " + world.getName());
-                }
             }
         } else {
             Boolean previous = compassUpdatingState.remove(world);
             if (previous != null && world.isCompassUpdating() != previous) {
                 world.setCompassUpdating(previous);
-                if (BetterMapConfig.getInstance().isDebug()) {
-                    LOGGER.info("Restored compass updating for world " + world.getName());
-                }
             }
         }
     }
@@ -191,8 +216,6 @@ public class PoiPrivacyManager {
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
             if (providers == null) return;
 
-            boolean debug = BetterMapConfig.getInstance().isDebug();
-
             // Install POI privacy provider
             WorldMapManager.MarkerProvider existing = providers.get(PoiPrivacyProvider.PROVIDER_ID);
             if (!(existing instanceof PoiPrivacyProvider)) {
@@ -200,9 +223,6 @@ public class PoiPrivacyManager {
                     backedUpProviders.putIfAbsent(world, existing);
                 }
                 providers.put(PoiPrivacyProvider.PROVIDER_ID, poiPrivacyProvider);
-                if (debug) {
-                    LOGGER.info("Installed POI provider in world " + world.getName());
-                }
             }
 
             // Install player marker provider
@@ -210,9 +230,6 @@ public class PoiPrivacyManager {
             if (playerMarkers != null && !(playerMarkers instanceof PoiPlayerMarkerProvider)) {
                 backedUpPlayerMarkerProviders.putIfAbsent(world, playerMarkers);
                 providers.put(PoiPlayerMarkerProvider.PROVIDER_ID, poiPlayerMarkerProvider);
-                if (debug) {
-                    LOGGER.info("Installed player marker provider in world " + world.getName());
-                }
             }
 
             // Install spawn privacy provider
@@ -220,9 +237,6 @@ public class PoiPrivacyManager {
             if (spawnMarkers != null && !(spawnMarkers instanceof SpawnPrivacyProvider)) {
                 backedUpSpawnProviders.putIfAbsent(world, spawnMarkers);
                 providers.put(SpawnPrivacyProvider.PROVIDER_ID, spawnPrivacyProvider);
-                if (debug) {
-                    LOGGER.info("Installed spawn provider in world " + world.getName());
-                }
             }
 
             // Install block map marker privacy provider (for dungeon markers)
@@ -230,20 +244,15 @@ public class PoiPrivacyManager {
             if (blockMarkers != null && !(blockMarkers instanceof BlockMapMarkerPrivacyProvider)) {
                 backedUpBlockMarkerProviders.putIfAbsent(world, blockMarkers);
                 providers.put(BlockMapMarkerPrivacyProvider.PROVIDER_ID, blockMapMarkerPrivacyProvider);
-                if (debug) {
-                    LOGGER.info("Installed block marker provider in world " + world.getName());
-                }
             }
 
             // Install death privacy provider
             WorldMapManager.MarkerProvider deathMarkers = providers.get(DeathPrivacyProvider.PROVIDER_ID);
-            if (deathMarkers != null && !(deathMarkers instanceof DeathPrivacyProvider)) {
-                backedUpDeathProviders.putIfAbsent(world, deathMarkers);
-                deathPrivacyProvider.setDelegate(deathMarkers);
-                providers.put(DeathPrivacyProvider.PROVIDER_ID, deathPrivacyProvider);
-                if (debug) {
-                    LOGGER.info("Installed death marker provider in world " + world.getName());
+            if (!(deathMarkers instanceof DeathPrivacyProvider)) {
+                if (deathMarkers != null) {
+                    backedUpDeathProviders.putIfAbsent(world, deathMarkers);
                 }
+                providers.put(DeathPrivacyProvider.PROVIDER_ID, deathPrivacyProvider);
             }
         } catch (Exception e) {
             LOGGER.severe("Error replacing POI provider: " + e.getMessage());
@@ -254,16 +263,16 @@ public class PoiPrivacyManager {
         try {
             if (world == null) return;
 
-            WorldMapManager.MarkerProvider original = backedUpProviders.remove(world);
-            if (original == null) return;
-
             WorldMapManager mapManager = world.getWorldMapManager();
             if (mapManager == null) return;
 
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
             if (providers == null) return;
 
-            providers.put(PoiPrivacyProvider.PROVIDER_ID, original);
+            WorldMapManager.MarkerProvider original = backedUpProviders.remove(world);
+            if (original != null) {
+                providers.put(PoiPrivacyProvider.PROVIDER_ID, original);
+            }
 
             WorldMapManager.MarkerProvider playerOriginal = backedUpPlayerMarkerProviders.remove(world);
             if (playerOriginal != null) {
@@ -284,10 +293,6 @@ public class PoiPrivacyManager {
             if (deathOriginal != null) {
                 providers.put(DeathPrivacyProvider.PROVIDER_ID, deathOriginal);
             }
-
-            if (BetterMapConfig.getInstance().isDebug()) {
-                LOGGER.info("Restored POI provider in world " + world.getName());
-            }
         } catch (Exception e) {
             LOGGER.severe("Error restoring POI provider: " + e.getMessage());
         }
@@ -295,10 +300,14 @@ public class PoiPrivacyManager {
 
     private boolean shouldFilterPois() {
         BetterMapConfig config = BetterMapConfig.getInstance();
+        PlayerConfigManager playerConfigManager = PlayerConfigManager.getInstance();
+        boolean hasPlayerFilters = playerConfigManager != null && playerConfigManager.hasPoiPrivacyOverrides();
+
         return config.isHideAllPoiOnMap()
             || config.isHideUnexploredPoiOnMap()
             || config.isHideSpawnOnMap()
             || config.isHideDeathMarkerOnMap()
-            || (config.getHiddenPoiNames() != null && !config.getHiddenPoiNames().isEmpty());
+            || (config.getHiddenPoiNames() != null && !config.getHiddenPoiNames().isEmpty())
+            || hasPlayerFilters;
     }
 }

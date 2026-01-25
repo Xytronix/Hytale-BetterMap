@@ -21,6 +21,13 @@ public class PlayerConfig {
     private boolean hidePlayersOnMap = false;
     private boolean hideAllWarpsOnMap = false;
     private boolean hideOtherWarpsOnMap = false;
+    private List<SavedDeathMarker> savedDeathMarkers = new ArrayList<>();
+    private boolean overrideGlobalPoiHide = false;
+    private boolean overrideGlobalSpawnHide = false;
+    private boolean overrideGlobalDeathHide = false;
+    private boolean overrideGlobalPlayersHide = false;
+    private boolean overrideGlobalAllWarpsHide = false;
+    private boolean overrideGlobalOtherWarpsHide = false;
 
     public PlayerConfig(UUID playerUuid, float minScale, float maxScale, boolean locationEnabled) {
         this.playerUuid = playerUuid;
@@ -118,5 +125,64 @@ public class PlayerConfig {
 
     public void setHideOtherWarpsOnMap(boolean hideOtherWarpsOnMap) {
         this.hideOtherWarpsOnMap = hideOtherWarpsOnMap;
+    }
+
+    public boolean isOverrideGlobalPoiHide() {
+        return overrideGlobalPoiHide;
+    }
+
+    public void setOverrideGlobalPoiHide(boolean overrideGlobalPoiHide) {
+        this.overrideGlobalPoiHide = overrideGlobalPoiHide;
+    }
+
+    public boolean isOverrideGlobalSpawnHide() {
+        return overrideGlobalSpawnHide;
+    }
+
+    public void setOverrideGlobalSpawnHide(boolean overrideGlobalSpawnHide) {
+        this.overrideGlobalSpawnHide = overrideGlobalSpawnHide;
+    }
+
+    public boolean isOverrideGlobalDeathHide() {
+        return overrideGlobalDeathHide;
+    }
+
+    public void setOverrideGlobalDeathHide(boolean overrideGlobalDeathHide) {
+        this.overrideGlobalDeathHide = overrideGlobalDeathHide;
+    }
+
+    public boolean isOverrideGlobalPlayersHide() {
+        return overrideGlobalPlayersHide;
+    }
+
+    public void setOverrideGlobalPlayersHide(boolean overrideGlobalPlayersHide) {
+        this.overrideGlobalPlayersHide = overrideGlobalPlayersHide;
+    }
+
+    public boolean isOverrideGlobalAllWarpsHide() {
+        return overrideGlobalAllWarpsHide;
+    }
+
+    public void setOverrideGlobalAllWarpsHide(boolean overrideGlobalAllWarpsHide) {
+        this.overrideGlobalAllWarpsHide = overrideGlobalAllWarpsHide;
+    }
+
+    public boolean isOverrideGlobalOtherWarpsHide() {
+        return overrideGlobalOtherWarpsHide;
+    }
+
+    public void setOverrideGlobalOtherWarpsHide(boolean overrideGlobalOtherWarpsHide) {
+        this.overrideGlobalOtherWarpsHide = overrideGlobalOtherWarpsHide;
+    }
+
+    public List<SavedDeathMarker> getSavedDeathMarkers() {
+        if (savedDeathMarkers == null) {
+            savedDeathMarkers = new ArrayList<>();
+        }
+        return savedDeathMarkers;
+    }
+
+    public void setSavedDeathMarkers(List<SavedDeathMarker> savedDeathMarkers) {
+        this.savedDeathMarkers = savedDeathMarkers != null ? savedDeathMarkers : new ArrayList<>();
     }
 }

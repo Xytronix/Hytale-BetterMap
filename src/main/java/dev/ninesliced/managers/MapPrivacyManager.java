@@ -116,13 +116,13 @@ public class MapPrivacyManager {
 
                             WorldMapTracker tracker = player.getWorldMapTracker();
 
-                            boolean hide = globalHide && !canBypassGlobalHidePlayers(player);
                             UUID playerUuid = playerRef.getUuid();
-                            if (!hide && playerUuid != null) {
-                                PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
-                                if (playerConfig != null && playerConfig.isHidePlayersOnMap()) {
-                                    hide = true;
-                                }
+                            PlayerConfig playerConfig = playerUuid != null
+                                ? PlayerConfigManager.getInstance().getPlayerConfig(playerUuid)
+                                : null;
+                            boolean hide = globalHide && !canBypassGlobalHidePlayers(player, playerConfig);
+                            if (!hide && playerConfig != null && playerConfig.isHidePlayersOnMap()) {
+                                hide = true;
                             }
 
                             if (hide) {
@@ -198,13 +198,13 @@ public class MapPrivacyManager {
         boolean allowMarkerTeleports = globalConfig.isAllowMapMarkerTeleports();
 
         // Check per-player setting (only if not globally hidden)
-        boolean hide = globalHide && !canBypassGlobalHidePlayers(player);
         UUID playerUuid = player.getUuid();
-        if (!hide && playerUuid != null) {
-            PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
-            if (playerConfig != null && playerConfig.isHidePlayersOnMap()) {
-                hide = true;
-            }
+        PlayerConfig playerConfig = playerUuid != null
+            ? PlayerConfigManager.getInstance().getPlayerConfig(playerUuid)
+            : null;
+        boolean hide = globalHide && !canBypassGlobalHidePlayers(player, playerConfig);
+        if (!hide && playerConfig != null && playerConfig.isHidePlayersOnMap()) {
+            hide = true;
         }
 
         if (world != null) {
@@ -341,7 +341,11 @@ public class MapPrivacyManager {
                 Player player = holder.getComponent(Player.getComponentType());
                 if (player == null) continue;
 
-                if (canBypassGlobalHidePlayers(player)) {
+                UUID playerUuid = player.getUuid();
+                PlayerConfig playerConfig = playerUuid != null
+                    ? PlayerConfigManager.getInstance().getPlayerConfig(playerUuid)
+                    : null;
+                if (canBypassGlobalHidePlayers(player, playerConfig)) {
                     return true;
                 }
             }
@@ -352,12 +356,14 @@ public class MapPrivacyManager {
         return false;
     }
 
-    private boolean canBypassGlobalHidePlayers(Player player) {
+    private boolean canBypassGlobalHidePlayers(Player player, PlayerConfig playerConfig) {
         if (player == null) {
             return false;
         }
 
-        return PermissionsUtil.canOverridePlayers(player);
+        return playerConfig != null
+            && playerConfig.isOverrideGlobalPlayersHide()
+            && PermissionsUtil.canOverridePlayers(player);
     }
 
     private void syncMarkerTeleportPermission(Player player, boolean allowMarkerTeleports) {

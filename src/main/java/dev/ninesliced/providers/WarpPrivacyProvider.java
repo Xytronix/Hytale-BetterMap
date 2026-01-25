@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -17,15 +16,18 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
+import dev.ninesliced.integration.ExtendedTeleportIntegration;
 import dev.ninesliced.listeners.ExplorationEventListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
 import dev.ninesliced.utils.PermissionsUtil;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -35,6 +37,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
 
     public static final String PROVIDER_ID = "warps";
     private static final Logger LOGGER = Logger.getLogger(WarpPrivacyProvider.class.getName());
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
     private static final String MARKER_PREFIX = "Warp-";
     private static final String MARKER_LABEL_PREFIX = "Warp: ";
     private static final String MARKER_ICON = "Warp.png";
@@ -56,40 +59,46 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            var gameplayConfig = world.getGameplayConfig();
-            if (gameplayConfig == null) {
-                return;
-            }
-
-            WorldMapConfig worldMapConfig = gameplayConfig.getWorldMapConfig();
-            if (worldMapConfig == null || !worldMapConfig.isDisplayWarps()) {
-                return;
-            }
 
             Player viewer = tracker.getPlayer();
-            String viewerName = viewer.getDisplayName();
+            String viewerName = resolveViewerName(viewer);
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
             boolean canOverrideWarps = viewer != null && PermissionsUtil.canOverrideWarps(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredWarps(viewer);
-            boolean hideAllWarps = globalConfig.isHideAllWarpsOnMap() && !canOverrideWarps;
-            boolean hideOtherWarps = globalConfig.isHideOtherWarpsOnMap() && !canOverrideWarps;
-            boolean hideUnexploredWarps = globalConfig.isHideUnexploredWarpsOnMap() && !canOverrideUnexplored;
-
-            // Check per-player settings (only if not globally hidden)
             PlayerConfig playerConfig = null;
             if (viewer != null) {
                 UUID playerUuid = viewer.getUuid();
                 if (playerUuid != null) {
                     playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
-                    if (playerConfig != null) {
-                        if (!hideAllWarps && playerConfig.isHideAllWarpsOnMap()) {
-                            hideAllWarps = true;
-                        }
-                        if (!hideOtherWarps && playerConfig.isHideOtherWarpsOnMap()) {
-                            hideOtherWarps = true;
-                        }
-                    }
+                }
+            }
+            boolean overrideAllEnabled = canOverrideWarps
+                && playerConfig != null
+                && playerConfig.isOverrideGlobalAllWarpsHide();
+            boolean overrideOtherEnabled = canOverrideWarps
+                && playerConfig != null
+                && playerConfig.isOverrideGlobalOtherWarpsHide();
+            
+            // Disable hideOtherWarps filtering entirely if ExtendedTeleport isn't available
+            boolean extendedTeleportAvailable = ExtendedTeleportIntegration.getInstance().isAvailable();
+            boolean overrideUnexploredEnabled = canOverrideUnexplored
+                && playerConfig != null
+                && playerConfig.isOverrideGlobalAllWarpsHide();
+            boolean hideAllWarps = globalConfig.isHideAllWarpsOnMap() && !overrideAllEnabled;
+            // Only enable hideOtherWarps if ExtendedTeleport is available for ownership checks
+            boolean hideOtherWarps = extendedTeleportAvailable 
+                && globalConfig.isHideOtherWarpsOnMap() && !overrideOtherEnabled;
+            boolean hideUnexploredWarps = globalConfig.isHideUnexploredWarpsOnMap() && !overrideUnexploredEnabled;
+
+            // Check per-player settings (only if not globally hidden)
+            if (playerConfig != null) {
+                if (!hideAllWarps && playerConfig.isHideAllWarpsOnMap()) {
+                    hideAllWarps = true;
+                }
+                // Only enable per-player hideOtherWarps if ExtendedTeleport is available
+                if (extendedTeleportAvailable && !hideOtherWarps && playerConfig.isHideOtherWarpsOnMap()) {
+                    hideOtherWarps = true;
                 }
             }
 
@@ -122,7 +131,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                     continue;
                 }
 
-                if (hideOtherWarps && !isVisibleToViewer(warp, viewerName)) {
+                if (hideOtherWarps && !isVisibleToViewer(warp, viewer, viewerName)) {
                     continue;
                 }
 
@@ -150,20 +159,94 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                     WarpPrivacyProvider::createMarker
                 );
             }
+            
         } catch (Exception e) {
             LOGGER.warning("Error in WarpPrivacyProvider.update: " + e.getMessage());
         }
     }
 
-    private static boolean isVisibleToViewer(Warp warp, @Nullable String viewerName) {
+    private static boolean isVisibleToViewer(Warp warp, @Nullable Player viewer, @Nullable String viewerName) {
         String creator = warp.getCreator();
+        
+        // No creator means visible to all
         if (creator == null || creator.isEmpty()) {
             return true;
         }
-        if (viewerName == null || viewerName.isEmpty()) {
+
+        // System warps with * prefix (except *Teleporter which we handle specially)
+        if (creator.startsWith("*") && !creator.equalsIgnoreCase("*Teleporter")) {
+            return true;
+        }
+
+        if (viewer == null) {
             return false;
         }
-        return creator.equalsIgnoreCase(viewerName);
+
+        UUID viewerUuid = viewer.getUuid();
+
+        // For *Teleporter warps, use ExtendedTeleport integration to check ownership
+        if (creator.equalsIgnoreCase("*Teleporter")) {
+            ExtendedTeleportIntegration integration = ExtendedTeleportIntegration.getInstance();
+            if (integration.isAvailable()) {
+                return viewerUuid != null && integration.isPlayerTeleporterOwner(viewerUuid, warp.getId());
+            } else {
+                // ExtendedTeleport not available - hide all *Teleporter warps when filtering
+                return false;
+            }
+        }
+
+        String normalizedCreator = normalizeName(creator);
+        if (normalizedCreator.isEmpty()) {
+            return true;
+        }
+
+        // Check username
+        String normalizedViewer = normalizeName(viewerName);
+        if (!normalizedViewer.isEmpty() && normalizedCreator.equals(normalizedViewer)) {
+            return true;
+        }
+
+        // Check display name
+        String displayName = viewer.getDisplayName();
+        String normalizedDisplay = normalizeName(displayName);
+        if (!normalizedDisplay.isEmpty() && normalizedCreator.equals(normalizedDisplay)) {
+            return true;
+        }
+
+        // Check UUID (for warps created with UUID as creator)
+        if (viewerUuid != null) {
+            String uuid = viewerUuid.toString().toLowerCase(Locale.ROOT);
+            if (normalizedCreator.equals(uuid)) {
+                return true;
+            }
+            String compactUuid = uuid.replace("-", "");
+            if (normalizedCreator.equals(compactUuid)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Nullable
+    private static String resolveViewerName(@Nullable Player viewer) {
+        if (viewer == null) {
+            return null;
+        }
+
+        try {
+            Ref<EntityStore> ref = viewer.getReference();
+            if (ref != null) {
+                PlayerRef playerRef = ref.getStore().getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef != null && playerRef.getUsername() != null && !playerRef.getUsername().isEmpty()) {
+                    return playerRef.getUsername();
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall back to display name.
+        }
+
+        return viewer.getDisplayName();
     }
 
     private static boolean isWarpExplored(Transform transform,
@@ -182,6 +265,14 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
         }
 
         return explorationData.getExploredChunks().isChunkExplored(chunkIndex);
+    }
+
+    private static String normalizeName(@Nullable String input) {
+        if (input == null) {
+            return "";
+        }
+        String stripped = HTML_TAG_PATTERN.matcher(input).replaceAll("");
+        return stripped.trim().toLowerCase(Locale.ROOT);
     }
 
 

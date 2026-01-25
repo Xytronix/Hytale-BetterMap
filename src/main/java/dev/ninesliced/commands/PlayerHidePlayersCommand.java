@@ -7,8 +7,10 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -51,19 +53,46 @@ public class PlayerHidePlayersCommand extends AbstractCommand {
                 return;
             }
 
-            if (globalConfig.isHidePlayersOnMap() && !PermissionsUtil.canOverridePlayers(player)) {
-                context.sendMessage(Message.raw("Players are globally hidden by the server.").color(Color.YELLOW));
+            if (globalConfig.isHidePlayersOnMap()) {
+                if (!PermissionsUtil.canOverridePlayers(player)) {
+                    context.sendMessage(Message.raw("Players are globally hidden by the server.").color(Color.YELLOW));
+                    return;
+                }
+
+                boolean newState = !config.isOverrideGlobalPlayersHide();
+                config.setOverrideGlobalPlayersHide(newState);
+                if (newState) {
+                    config.setHidePlayersOnMap(false);
+                }
+                PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+                MapPrivacyManager.getInstance().updatePrivacyState();
+                WorldMapHook.refreshTrackers(world);
+
+                boolean visible = newState;
+                Color color = visible ? Color.GREEN : Color.RED;
+                String status = visible ? "VISIBLE" : "HIDDEN";
+
+                context.sendMessage(Message.raw("Players are now " + status + " for you.").color(color));
+                if (visible) {
+                    context.sendMessage(Message.raw("Override enabled; global hide is ignored.").color(Color.GRAY));
+                } else {
+                    context.sendMessage(Message.raw("Override disabled; global hide is applied.").color(Color.GRAY));
+                }
                 return;
             }
 
             boolean newState = !config.isHidePlayersOnMap();
+            config.setOverrideGlobalPlayersHide(false);
             config.setHidePlayersOnMap(newState);
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+            MapPrivacyManager.getInstance().updatePrivacyState();
+            WorldMapHook.refreshTrackers(world);
 
-            String status = newState ? "HIDDEN" : "VISIBLE";
-            Color color = newState ? Color.RED : Color.GREEN;
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
 
-            context.sendMessage(Message.raw("Other players are now " + status + " on your map.").color(color));
+            context.sendMessage(Message.raw("Players are now " + status + " for you.").color(color));
             context.sendMessage(Message.raw("Note: You may need to reopen the map to see changes.").color(Color.GRAY));
         });
     }

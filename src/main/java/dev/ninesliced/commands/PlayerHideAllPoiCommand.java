@@ -8,7 +8,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -24,6 +26,7 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
 
     public PlayerHideAllPoiCommand() {
         super("hideallpoi", "Toggle hiding all POIs for yourself");
+        this.addAliases("hidepoi", "hidepois", "hideallpois");
     }
 
     @Override
@@ -43,9 +46,19 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
             Player player = (Player) context.sender();
             
+            boolean globalHideAll = globalConfig.isHideAllPoiOnMap();
+            boolean globalHideUnexplored = globalConfig.isHideUnexploredPoiOnMap();
+            boolean globalHiddenNames = globalConfig.getHiddenPoiNames() != null
+                && !globalConfig.getHiddenPoiNames().isEmpty();
+            boolean globalPoiFilters = globalHideAll || globalHideUnexplored || globalHiddenNames;
+
+            boolean canOverrideGlobalPoi = PermissionsUtil.canOverridePoi(player)
+                || (!globalHideAll && !globalHiddenNames && globalHideUnexplored
+                    && PermissionsUtil.canOverrideUnexploredPoi(player));
+
             // Check if globally disabled
-            if (globalConfig.isHideAllPoiOnMap() && !PermissionsUtil.canOverridePoi(player)) {
-                context.sendMessage(Message.raw("All POIs are globally hidden by the server.").color(Color.YELLOW));
+            if (globalPoiFilters && !canOverrideGlobalPoi) {
+                context.sendMessage(Message.raw("POIs are globally hidden by the server.").color(Color.YELLOW));
                 return;
             }
 
@@ -58,14 +71,41 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
                 return;
             }
 
+            if (globalPoiFilters) {
+                boolean newState = !config.isOverrideGlobalPoiHide();
+                config.setOverrideGlobalPoiHide(newState);
+                if (newState) {
+                    config.setHideAllPoiOnMap(false);
+                }
+                PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+                PoiPrivacyManager.getInstance().updatePrivacyState(world);
+                WorldMapHook.refreshTrackers(world);
+
+                boolean visible = newState;
+                Color color = visible ? Color.GREEN : Color.RED;
+                String status = visible ? "VISIBLE" : "HIDDEN";
+
+                context.sendMessage(Message.raw("POIs are now " + status + " for you.").color(color));
+                if (visible) {
+                    context.sendMessage(Message.raw("Override enabled; global hide is ignored.").color(Color.GRAY));
+                } else {
+                    context.sendMessage(Message.raw("Override disabled; global hide is applied.").color(Color.GRAY));
+                }
+                return;
+            }
+
             boolean newState = !config.isHideAllPoiOnMap();
+            config.setOverrideGlobalPoiHide(false);
             config.setHideAllPoiOnMap(newState);
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
+            PoiPrivacyManager.getInstance().updatePrivacyState(world);
+            WorldMapHook.refreshTrackers(world);
 
-            String status = newState ? "HIDDEN" : "VISIBLE";
-            Color color = newState ? Color.RED : Color.GREEN;
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
 
-            context.sendMessage(Message.raw("All POIs are now " + status + " for you.").color(color));
+            context.sendMessage(Message.raw("POIs are now " + status + " for you.").color(color));
         });
     }
 }

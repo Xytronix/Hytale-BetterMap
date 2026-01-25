@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -31,6 +32,7 @@ import javax.annotation.Nullable;
 public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
     public static final String PROVIDER_ID = "playerMarkers";
     private static final Logger LOGGER = Logger.getLogger(PoiPlayerMarkerProvider.class.getName());
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
 
     @Override
     public void update(World world, MapMarkerTracker tracker, int viewRadius, int chunkX, int chunkZ) {
@@ -62,22 +64,28 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
-            boolean hideAll = globalConfig.isHideAllPoiOnMap() && !canOverridePoi;
-            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap() && !canOverrideUnexplored;
-
-            // Check per-player hide all and merge hidden names
             PlayerConfig playerConfig = null;
             UUID playerUuid = viewer.getUuid();
             if (playerUuid != null) {
                 playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
-                if (playerConfig != null && playerConfig.isHideAllPoiOnMap()) {
-                    hideAll = true;
-                }
+            }
+            boolean overrideEnabled = canOverridePoi
+                && playerConfig != null
+                && playerConfig.isOverrideGlobalPoiHide();
+            boolean overrideUnexploredEnabled = canOverrideUnexplored
+                && playerConfig != null
+                && playerConfig.isOverrideGlobalPoiHide();
+            boolean hideAll = globalConfig.isHideAllPoiOnMap() && !overrideEnabled;
+            boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap() && !overrideUnexploredEnabled;
+
+            // Check per-player hide all and merge hidden names
+            if (playerConfig != null && playerConfig.isHideAllPoiOnMap()) {
+                hideAll = true;
             }
 
             // Merge global and per-player hidden names
             List<String> hiddenPoiNames = new ArrayList<>();
-            if (!canOverridePoi) {
+            if (!overrideEnabled) {
                 List<String> globalHidden = globalConfig.getHiddenPoiNames();
                 if (globalHidden != null) {
                     hiddenPoiNames.addAll(globalHidden);
@@ -217,7 +225,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
         if (input == null) {
             return "";
         }
-        String stripped = input.replaceAll("<[^>]*>", "");
+        String stripped = HTML_TAG_PATTERN.matcher(input).replaceAll("");
         return stripped.trim().toLowerCase(Locale.ROOT);
     }
 

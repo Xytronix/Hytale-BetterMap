@@ -11,7 +11,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
+import dev.ninesliced.utils.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -33,6 +36,7 @@ public class HiddenPoiCommand extends AbstractCommand {
     public HiddenPoiCommand() {
         super("hiddenpoi", "Manage hidden POI names list");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
+        this.addAliases("hiddenpois");
     }
 
     @Override
@@ -137,6 +141,8 @@ public class HiddenPoiCommand extends AbstractCommand {
         hiddenNames.add(name);
         config.setHiddenPoiNames(hiddenNames);
         PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        WorldMapHook.refreshTrackers(world);
+        resetOverride(playerRef);
 
         playerRef.sendMessage(Message.raw("Added '" + name + "' to hidden POI list.").color(Color.GREEN));
         playerRef.sendMessage(Message.raw("POIs matching this name will now be hidden.").color(Color.GRAY));
@@ -155,6 +161,8 @@ public class HiddenPoiCommand extends AbstractCommand {
 
         config.setHiddenPoiNames(hiddenNames);
         PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        WorldMapHook.refreshTrackers(world);
+        resetOverride(playerRef);
 
         playerRef.sendMessage(Message.raw("Removed '" + name + "' from hidden POI list.").color(Color.GREEN));
         playerRef.sendMessage(Message.raw("POIs matching this name will now be visible.").color(Color.GRAY));
@@ -170,7 +178,20 @@ public class HiddenPoiCommand extends AbstractCommand {
         int count = hiddenNames.size();
         config.setHiddenPoiNames(new ArrayList<>());
         PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        WorldMapHook.refreshTrackers(world);
+        resetOverride(playerRef);
 
         playerRef.sendMessage(Message.raw("Cleared " + count + " entries from hidden POI list.").color(Color.GREEN));
+    }
+
+    private void resetOverride(PlayerRef playerRef) {
+        if (playerRef == null || playerRef.getUuid() == null) {
+            return;
+        }
+        PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid());
+        if (playerConfig != null) {
+            playerConfig.setOverrideGlobalPoiHide(false);
+            PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
+        }
     }
 }

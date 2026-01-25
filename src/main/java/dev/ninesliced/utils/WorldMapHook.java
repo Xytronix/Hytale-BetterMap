@@ -26,6 +26,7 @@ import dev.ninesliced.managers.PlayerConfigManager;
 import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.logging.Logger;
+import java.lang.reflect.Field;
 
 /**
  * Hooks into the Hytale WorldMap system to provide custom exploration behavior.
@@ -384,6 +385,82 @@ public class WorldMapHook {
             } catch (Exception e) {
                 LOGGER.warning("Failed to refresh tracker for " + player.getDisplayName() + ": " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Clears cached map markers for all players in the given world.
+     * This is used to force marker providers to re-send markers after visibility toggles.
+     *
+     * @param world The world.
+     */
+    public static void clearMarkerCaches(@Nonnull World world) {
+        for (PlayerRef playerRef : world.getPlayerRefs()) {
+            Holder<EntityStore> holder = playerRef.getHolder();
+            if (holder == null) continue;
+            Player player = holder.getComponent(Player.getComponentType());
+            if (player == null) continue;
+
+            try {
+                clearMarkerCaches(player.getWorldMapTracker());
+            } catch (Exception e) {
+                LOGGER.fine("Failed to clear marker cache for " + player.getDisplayName() + ": " + e.getMessage());
+            }
+        }
+    }
+
+    private static void clearMarkerCaches(@Nonnull WorldMapTracker tracker) {
+        Object markerTracker = findMarkerTracker(tracker);
+        if (markerTracker == null) {
+            return;
+        }
+
+        clearCollections(markerTracker);
+        ReflectionHelper.invokeMethod(markerTracker, "clear", new Class<?>[0], new Object[0]);
+        ReflectionHelper.invokeMethod(markerTracker, "reset", new Class<?>[0], new Object[0]);
+    }
+
+    private static Object findMarkerTracker(@Nonnull WorldMapTracker tracker) {
+        Class<?> current = tracker.getClass();
+        while (current != null) {
+            for (Field field : current.getDeclaredFields()) {
+                try {
+                    field.setAccessible(true);
+                    Class<?> type = field.getType();
+                    String typeName = type.getName();
+                    if ("MapMarkerTracker".equals(type.getSimpleName())
+                        || typeName.endsWith(".MapMarkerTracker")) {
+                        Object value = field.get(tracker);
+                        if (value != null) {
+                            return value;
+                        }
+                    }
+                } catch (IllegalAccessException ignored) {
+                    // Ignore and continue searching
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
+    }
+
+    private static void clearCollections(@Nonnull Object target) {
+        Class<?> current = target.getClass();
+        while (current != null) {
+            for (Field field : current.getDeclaredFields()) {
+                try {
+                    field.setAccessible(true);
+                    Object value = field.get(target);
+                    if (value instanceof Map<?, ?> map) {
+                        map.clear();
+                    } else if (value instanceof Collection<?> collection) {
+                        collection.clear();
+                    }
+                } catch (IllegalAccessException ignored) {
+                    // Ignore and continue
+                }
+            }
+            current = current.getSuperclass();
         }
     }
 
