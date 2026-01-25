@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
@@ -32,8 +33,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
     public static final String PROVIDER_ID = "poi";
     private static final Logger LOGGER = Logger.getLogger(PoiPrivacyProvider.class.getName());
 
-    @Override
-    public void update(World world, GameplayConfig gameplayConfig, WorldMapTracker tracker,
+    public void update(World world, MapMarkerTracker tracker,
                        int viewRadius, int chunkX, int chunkZ) {
         try {
             if (world == null || tracker == null) {
