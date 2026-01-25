@@ -6,11 +6,10 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
+import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
@@ -56,9 +55,15 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-//            if (!gameplayConfig.getWorldMapConfig().isDisplayWarps()) {
-//                return;
-//            }
+            var gameplayConfig = world.getGameplayConfig();
+            if (gameplayConfig == null) {
+                return;
+            }
+
+            WorldMapConfig worldMapConfig = gameplayConfig.getWorldMapConfig();
+            if (worldMapConfig == null || !worldMapConfig.isDisplayWarps()) {
+                return;
+            }
 
             Player viewer = tracker.getPlayer();
             String viewerName = viewer.getDisplayName();
