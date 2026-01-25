@@ -92,11 +92,11 @@ public class MapPrivacyManager {
      * This can be called to refresh the privacy settings without restarting the server.
      */
     public void updatePrivacyState() {
-        BetterMapConfig config = BetterMapConfig.getInstance();
-        boolean hide = config.isHidePlayersOnMap();
-        boolean radarEnabled = config.isRadarEnabled();
-        int radarRange = config.getRadarRange();
-        boolean allowMarkerTeleports = config.isAllowMapMarkerTeleports();
+        BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+        boolean globalHide = globalConfig.isHidePlayersOnMap();
+        boolean radarEnabled = globalConfig.isRadarEnabled();
+        int radarRange = globalConfig.getRadarRange();
+        boolean allowMarkerTeleports = globalConfig.isAllowMapMarkerTeleports();
 
         try {
             for (World world : this.monitoredWorlds) {
@@ -115,6 +115,15 @@ public class MapPrivacyManager {
                             if (player == null) continue;
 
                             WorldMapTracker tracker = player.getWorldMapTracker();
+
+                            boolean hide = globalHide;
+                            UUID playerUuid = playerRef.getUuid();
+                            if (!hide && playerUuid != null) {
+                                PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+                                if (playerConfig != null && playerConfig.isHidePlayersOnMap()) {
+                                    hide = true;
+                                }
+                            }
 
                             if (hide) {
                                 tracker.setPlayerMapFilter(ignored -> false);
