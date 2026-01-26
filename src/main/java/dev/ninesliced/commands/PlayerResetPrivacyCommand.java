@@ -70,7 +70,7 @@ public class PlayerResetPrivacyCommand extends AbstractCommand {
 
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
 
-            PoiPrivacyManager.getInstance().updatePrivacyState(world);
+            PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
             WarpPrivacyManager.getInstance().updatePrivacyState();
             MapPrivacyManager.getInstance().updatePrivacyState();
             WorldMapHook.clearMarkerCaches(world);

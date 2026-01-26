@@ -74,8 +74,22 @@ public class WorldMapHook {
                 ((RestrictedSpiralIterator) spiralIterator).stop();
             }
 
+            // Get player's current position to initialize iterator at correct location
+            int mapChunkX = 0;
+            int mapChunkZ = 0;
+            Ref<EntityStore> ref = player.getReference();
+            if (ref != null && ref.isValid()) {
+                TransformComponent tc = ref.getStore().getComponent(ref, TransformComponent.getComponentType());
+                if (tc != null) {
+                    var pos = tc.getPosition();
+                    // Convert world coords to map chunk coords (map chunks are 32x32 blocks)
+                    mapChunkX = (int) Math.floor(pos.x) >> 5;
+                    mapChunkZ = (int) Math.floor(pos.z) >> 5;
+                }
+            }
+
             CircleSpiralIterator vanillaIterator = new CircleSpiralIterator();
-            vanillaIterator.init(0, 0, 0, 1);
+            vanillaIterator.init(mapChunkX, mapChunkZ, 0, 999);
             ReflectionHelper.setFieldValueRecursive(tracker, "spiralIterator", vanillaIterator);
             ReflectionHelper.setFieldValueRecursive(tracker, "viewRadiusOverride", null);
 
@@ -101,7 +115,7 @@ public class WorldMapHook {
                 ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 999.0f);
             } catch (Exception ignored) {}
 
-            LOGGER.info("Unhooked map tracker for player: " + player.getDisplayName());
+            LOGGER.info("Unhooked map tracker for player: " + player.getDisplayName() + " at map chunk (" + mapChunkX + ", " + mapChunkZ + ")");
         } catch (Exception e) {
             LOGGER.warning("Error unhooking tracker for " + player.getDisplayName() + ": " + e.getMessage());
         }
@@ -122,13 +136,27 @@ public class WorldMapHook {
 
             ReflectionHelper.setFieldValueRecursive(tracker, "viewRadiusOverride", null);
 
+            // Get player's current position to initialize iterator at correct location
+            int mapChunkX = 0;
+            int mapChunkZ = 0;
+            Ref<EntityStore> ref = player.getReference();
+            if (ref != null && ref.isValid()) {
+                TransformComponent tc = ref.getStore().getComponent(ref, TransformComponent.getComponentType());
+                if (tc != null) {
+                    var pos = tc.getPosition();
+                    // Convert world coords to map chunk coords (map chunks are 32x32 blocks)
+                    mapChunkX = (int) Math.floor(pos.x) >> 5;
+                    mapChunkZ = (int) Math.floor(pos.z) >> 5;
+                }
+            }
+
             CircleSpiralIterator vanillaIterator = new CircleSpiralIterator();
-            vanillaIterator.init(0, 0, 0, 1);
+            vanillaIterator.init(mapChunkX, mapChunkZ, 0, 999);
             ReflectionHelper.setFieldValueRecursive(tracker, "spiralIterator", vanillaIterator);
 
             ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
 
-            LOGGER.info("Restored vanilla map tracker for player: " + player.getDisplayName());
+            LOGGER.info("Restored vanilla map tracker for player: " + player.getDisplayName() + " at map chunk (" + mapChunkX + ", " + mapChunkZ + ")");
         } catch (Exception e) {
             LOGGER.warning("Failed to restore vanilla tracker for " + player.getDisplayName() + ": " + e.getMessage());
         }
@@ -547,11 +575,20 @@ public class WorldMapHook {
                         exploredWorldChunks = data.getExploredChunks().getExploredChunks();
                     }
 
+                    // Bootstrap initial exploration if empty - fixes white map on first join
                     if (exploredWorldChunks == null || exploredWorldChunks.isEmpty()) {
-                        this.currentIterator = Collections.emptyIterator();
-                        this.targetMapChunks = new ArrayList<>();
-                        this.initialized = true;
-                        return;
+                        // Convert map chunk coords (cx, cz) to world chunk coords
+                        int worldChunkX = cx * 2;
+                        int worldChunkZ = cz * 2;
+                        int bootstrapRadius = BetterMapConfig.getInstance().getExplorationRadius();
+                        
+                        // Mark chunks as explored around current position
+                        Set<Long> bootstrapChunks = ChunkUtil.getChunksInCircularArea(worldChunkX, worldChunkZ, bootstrapRadius);
+                        data.getExploredChunks().markChunksExplored(bootstrapChunks);
+                        data.getMapExpansion().updateBoundaries(worldChunkX, worldChunkZ, bootstrapRadius);
+                        
+                        exploredWorldChunks = data.getExploredChunks().getExploredChunks();
+                        LOGGER.info("Bootstrapped " + bootstrapChunks.size() + " exploration chunks around (" + worldChunkX + ", " + worldChunkZ + ")");
                     }
 
                     for (Long chunkIdx : exploredWorldChunks) {

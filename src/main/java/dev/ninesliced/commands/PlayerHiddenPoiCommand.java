@@ -148,7 +148,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         hiddenNames.add(name);
         config.setHiddenPoiNames(hiddenNames);
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
-        PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);
 
@@ -168,7 +168,8 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
 
         config.setHiddenPoiNames(hiddenNames);
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
-        PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        // Use sync method since we're already on the world executor
+        PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);
 
@@ -185,7 +186,8 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         int count = hiddenNames.size();
         config.setHiddenPoiNames(new ArrayList<>());
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
-        PoiPrivacyManager.getInstance().updatePrivacyState(world);
+        // Use sync method since we're already on the world executor
+        PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);
 

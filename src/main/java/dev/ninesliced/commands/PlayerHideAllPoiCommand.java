@@ -74,7 +74,7 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
             config.setHideAllPoiOnMap(!newWantsVisible);
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
 
-            PoiPrivacyManager.getInstance().updatePrivacyState(world);
+            PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
             WorldMapHook.clearMarkerCaches(world);
             WorldMapHook.refreshTrackers(world);
 

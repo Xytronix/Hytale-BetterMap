@@ -5,14 +5,15 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
- * Optional integration with ExtendedTeleport mod to check teleporter ownership.
+ * BetterMap integration with ExtendedTeleport mod to check teleporter ownership.
  */
 public class ExtendedTeleportIntegration {
     private static final Logger LOGGER = Logger.getLogger(ExtendedTeleportIntegration.class.getName());
     private static ExtendedTeleportIntegration instance;
     
     private boolean available = false;
-    private Object teleporterManager;
+    private boolean initializationAttempted = false;
+    private Method getInstanceMethod;
     private Method getTeleporterByWarpNameMethod;
     private Method isOwnerMethod;
     private Method getOwnerUuidMethod;
@@ -29,39 +30,55 @@ public class ExtendedTeleportIntegration {
     }
 
     private void tryInitialize() {
+        if (initializationAttempted) {
+            return;
+        }
+        initializationAttempted = true;
+        
         try {
-            // Try to load the ExtendedTeleport Main class
-            Class<?> mainClass = Class.forName("com.hytale.extendedteleport.Main");
+            // Load the TeleporterManager class directly
+            Class<?> managerClass = Class.forName("com.hytale.extendedteleport.TeleporterManager");
             
-            // Get the TeleporterManager instance
-            Method getManagerMethod = mainClass.getMethod("getTeleporterManager");
-            teleporterManager = getManagerMethod.invoke(null);
+            // Get the getInstance() method
+            getInstanceMethod = managerClass.getMethod("getInstance");
             
-            if (teleporterManager == null) {
-                LOGGER.info("ExtendedTeleport: TeleporterManager not yet initialized");
+            // Verify manager is available
+            Object manager = getInstanceMethod.invoke(null);
+            if (manager == null) {
+                // Manager not ready yet, allow retry later
+                initializationAttempted = false;
                 return;
             }
-
-            Class<?> managerClass = teleporterManager.getClass();
             
             // Get getTeleporterByWarpName method
             getTeleporterByWarpNameMethod = managerClass.getMethod("getTeleporterByWarpName", String.class);
             
-            // Get isOwner method (UUID, TeleporterInfo)
+            // Get TeleporterInfo class and its isOwner method
             Class<?> teleporterInfoClass = Class.forName("com.hytale.extendedteleport.data.TeleporterInfo");
-            isOwnerMethod = managerClass.getMethod("isOwner", UUID.class, teleporterInfoClass);
+            isOwnerMethod = teleporterInfoClass.getMethod("isOwner", UUID.class);
             
             // Get getOwnerUuid method from TeleporterInfo
             getOwnerUuidMethod = teleporterInfoClass.getMethod("getOwnerUuid");
 
             available = true;
-            LOGGER.info("ExtendedTeleport integration initialized successfully");
+            LOGGER.info("BetterMap: ExtendedTeleport integration enabled");
         } catch (ClassNotFoundException e) {
-            LOGGER.fine("ExtendedTeleport mod not found - integration disabled");
+            // ExtendedTeleport not installed - this is expected, no warning needed
         } catch (NoSuchMethodException e) {
-            LOGGER.warning("ExtendedTeleport API changed - integration disabled: " + e.getMessage());
+            LOGGER.warning("BetterMap: ExtendedTeleport API changed - integration disabled: " + e.getMessage());
         } catch (Exception e) {
-            LOGGER.warning("Failed to initialize ExtendedTeleport integration: " + e.getMessage());
+            LOGGER.warning("BetterMap: Failed to initialize ExtendedTeleport integration: " + e.getMessage());
+        }
+    }
+
+    private Object getTeleporterManager() {
+        if (getInstanceMethod == null) {
+            return null;
+        }
+        try {
+            return getInstanceMethod.invoke(null);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -69,8 +86,7 @@ public class ExtendedTeleportIntegration {
      * Checks if ExtendedTeleport integration is available.
      */
     public boolean isAvailable() {
-        // Retry initialization if manager wasn't ready before
-        if (!available && teleporterManager == null) {
+        if (!available && !initializationAttempted) {
             tryInitialize();
         }
         return available;
@@ -89,17 +105,21 @@ public class ExtendedTeleportIntegration {
         }
 
         try {
+            Object manager = getTeleporterManager();
+            if (manager == null) {
+                return false;
+            }
+
             // Get the TeleporterInfo by warp name
-            Object teleporterInfo = getTeleporterByWarpNameMethod.invoke(teleporterManager, warpName);
+            Object teleporterInfo = getTeleporterByWarpNameMethod.invoke(manager, warpName);
             if (teleporterInfo == null) {
                 return false;
             }
 
             // Check if the player owns this teleporter
-            Boolean isOwner = (Boolean) isOwnerMethod.invoke(teleporterManager, playerUuid, teleporterInfo);
+            Boolean isOwner = (Boolean) isOwnerMethod.invoke(teleporterInfo, playerUuid);
             return isOwner != null && isOwner;
         } catch (Exception e) {
-            LOGGER.fine("Error checking teleporter ownership: " + e.getMessage());
             return false;
         }
     }
@@ -116,14 +136,18 @@ public class ExtendedTeleportIntegration {
         }
 
         try {
-            Object teleporterInfo = getTeleporterByWarpNameMethod.invoke(teleporterManager, warpName);
+            Object manager = getTeleporterManager();
+            if (manager == null) {
+                return null;
+            }
+
+            Object teleporterInfo = getTeleporterByWarpNameMethod.invoke(manager, warpName);
             if (teleporterInfo == null) {
                 return null;
             }
 
             return (UUID) getOwnerUuidMethod.invoke(teleporterInfo);
         } catch (Exception e) {
-            LOGGER.fine("Error getting teleporter owner: " + e.getMessage());
             return null;
         }
     }
