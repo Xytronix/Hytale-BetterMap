@@ -15,6 +15,7 @@ import dev.ninesliced.commands.config.ConfigCommand;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 
 /**
@@ -95,7 +96,7 @@ public class BetterMapCommand extends AbstractCommand {
         // Show player-specific override settings if the sender is a player
         if (context.isPlayer()) {
             Player player = (Player) context.sender();
-            PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(player.getUuid());
+            PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(((CommandSender) player).getUuid());
             if (playerConfig != null) {
                 context.sendMessage(Message.raw("=== Your Override Settings ===").color(Color.CYAN));
                 

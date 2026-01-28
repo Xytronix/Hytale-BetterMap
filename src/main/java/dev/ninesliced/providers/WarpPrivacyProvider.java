@@ -22,6 +22,7 @@ import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
 import dev.ninesliced.utils.PermissionsUtil;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -68,7 +69,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredWarps(viewer);
             PlayerConfig playerConfig = null;
             if (viewer != null) {
-                UUID playerUuid = viewer.getUuid();
+                UUID playerUuid = ((CommandSender) viewer).getUuid();
                 if (playerUuid != null) {
                     playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
                 }
@@ -80,29 +81,24 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 && playerConfig != null
                 && playerConfig.isOverrideGlobalOtherWarpsHide();
             
-            // Disable hideOtherWarps filtering entirely if ExtendedTeleport isn't available
             boolean extendedTeleportAvailable = ExtendedTeleportIntegration.getInstance().isAvailable();
             boolean overrideUnexploredEnabled = canOverrideUnexplored
                 && playerConfig != null
                 && playerConfig.isOverrideGlobalAllWarpsHide();
             boolean hideAllWarps = globalConfig.isHideAllWarpsOnMap() && !overrideAllEnabled;
-            // Only enable hideOtherWarps if ExtendedTeleport is available for ownership checks
             boolean hideOtherWarps = extendedTeleportAvailable 
                 && globalConfig.isHideOtherWarpsOnMap() && !overrideOtherEnabled;
             boolean hideUnexploredWarps = globalConfig.isHideUnexploredWarpsOnMap() && !overrideUnexploredEnabled;
 
-            // Check per-player settings (only if not globally hidden)
             if (playerConfig != null) {
                 if (!hideAllWarps && playerConfig.isHideAllWarpsOnMap()) {
                     hideAllWarps = true;
                 }
-                // Only enable per-player hideOtherWarps if ExtendedTeleport is available
                 if (extendedTeleportAvailable && !hideOtherWarps && playerConfig.isHideOtherWarpsOnMap()) {
                     hideOtherWarps = true;
                 }
             }
 
-            // If hiding all warps, return early
             if (hideAllWarps) {
                 return;
             }
@@ -168,12 +164,10 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
     private static boolean isVisibleToViewer(Warp warp, @Nullable Player viewer, @Nullable String viewerName) {
         String creator = warp.getCreator();
         
-        // No creator means visible to all
         if (creator == null || creator.isEmpty()) {
             return true;
         }
 
-        // System warps with * prefix (except *Teleporter which we handle specially)
         if (creator.startsWith("*") && !creator.equalsIgnoreCase("*Teleporter")) {
             return true;
         }
@@ -182,17 +176,14 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             return false;
         }
 
-        UUID viewerUuid = viewer.getUuid();
+        UUID viewerUuid = ((CommandSender) viewer).getUuid();
 
-        // For *Teleporter warps, use ExtendedTeleport integration to check ownership
         if (creator.equalsIgnoreCase("*Teleporter")) {
             ExtendedTeleportIntegration integration = ExtendedTeleportIntegration.getInstance();
             if (integration.isAvailable()) {
                 return viewerUuid != null && integration.isPlayerTeleporterOwner(viewerUuid, warp.getId());
-            } else {
-                // ExtendedTeleport not available - hide all *Teleporter warps when filtering
-                return false;
             }
+            return false;
         }
 
         String normalizedCreator = normalizeName(creator);
@@ -200,20 +191,17 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             return true;
         }
 
-        // Check username
         String normalizedViewer = normalizeName(viewerName);
         if (!normalizedViewer.isEmpty() && normalizedCreator.equals(normalizedViewer)) {
             return true;
         }
 
-        // Check display name
         String displayName = viewer.getDisplayName();
         String normalizedDisplay = normalizeName(displayName);
         if (!normalizedDisplay.isEmpty() && normalizedCreator.equals(normalizedDisplay)) {
             return true;
         }
 
-        // Check UUID (for warps created with UUID as creator)
         if (viewerUuid != null) {
             String uuid = viewerUuid.toString().toLowerCase(Locale.ROOT);
             if (normalizedCreator.equals(uuid)) {
@@ -243,7 +231,6 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 }
             }
         } catch (Exception ignored) {
-            // Fall back to display name.
         }
 
         return viewer.getDisplayName();

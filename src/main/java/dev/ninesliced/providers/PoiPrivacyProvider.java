@@ -17,6 +17,8 @@ import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
 import dev.ninesliced.utils.PermissionsUtil;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -58,7 +60,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;
-            UUID playerUuid = viewer != null ? viewer.getUuid() : null;
+            UUID playerUuid = viewer != null ? ((CommandSender) viewer).getUuid() : null;
             if (playerUuid != null) {
                 playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
             }
@@ -71,21 +73,14 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             boolean hideAll = globalConfig.isHideAllPoiOnMap() && !overrideEnabled;
             boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap() && !overrideUnexploredEnabled;
 
-            // Check global hide all
             if (hideAll) {
                 return;
             }
 
-            // Check per-player hide all (only if not globally hidden)
-            if (viewer != null) {
-                if (playerUuid != null) {
-                    if (playerConfig != null && playerConfig.isHideAllPoiOnMap()) {
-                        return;
-                    }
-                }
+            if (viewer != null && playerUuid != null && playerConfig != null && playerConfig.isHideAllPoiOnMap()) {
+                return;
             }
 
-            // Merge global and per-player hidden names
             List<String> hiddenPoiNames = new ArrayList<>();
             if (!overrideEnabled) {
                 List<String> globalHidden = globalConfig.getHiddenPoiNames();
@@ -94,7 +89,6 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            // Add per-player hidden names
             if (playerConfig != null) {
                 List<String> playerHidden = playerConfig.getHiddenPoiNames();
                 if (playerHidden != null) {

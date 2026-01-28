@@ -131,8 +131,7 @@ public class HiddenPoiCommand extends AbstractCommand {
 
     private void addHiddenPoi(PlayerRef playerRef, BetterMapConfig config, String name, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
-        
-        // Check if already exists (case-insensitive)
+
         for (String existing : hiddenNames) {
             if (existing.equalsIgnoreCase(name)) {
                 playerRef.sendMessage(Message.raw("'" + name + "' is already in the hidden list.").color(Color.YELLOW));
@@ -153,8 +152,6 @@ public class HiddenPoiCommand extends AbstractCommand {
 
     private void removeHiddenPoi(PlayerRef playerRef, BetterMapConfig config, String name, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
-        
-        // Find and remove (case-insensitive)
         boolean removed = hiddenNames.removeIf(existing -> existing.equalsIgnoreCase(name));
 
         if (!removed) {
@@ -163,7 +160,6 @@ public class HiddenPoiCommand extends AbstractCommand {
         }
 
         config.setHiddenPoiNames(hiddenNames);
-        // Use sync method since we're already on the world executor
         PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);
@@ -182,7 +178,6 @@ public class HiddenPoiCommand extends AbstractCommand {
 
         int count = hiddenNames.size();
         config.setHiddenPoiNames(new ArrayList<>());
-        // Use sync method since we're already on the world executor
         PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);

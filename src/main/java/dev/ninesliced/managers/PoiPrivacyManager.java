@@ -65,7 +65,9 @@ public class PoiPrivacyManager {
 
         plugin.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             if (PlayerConfigManager.getInstance() != null) {
-                PlayerConfigManager.getInstance().getPlayerConfig(event.getPlayer().getUuid());
+                PlayerConfigManager.getInstance().getPlayerConfig(
+                    ((com.hypixel.hytale.server.core.command.system.CommandSender) event.getPlayer()).getUuid()
+                );
             }
             World world = event.getPlayer().getWorld();
             this.trackWorld(world);
@@ -216,7 +218,6 @@ public class PoiPrivacyManager {
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
             if (providers == null) return;
 
-            // Install POI privacy provider
             WorldMapManager.MarkerProvider existing = providers.get(PoiPrivacyProvider.PROVIDER_ID);
             if (!(existing instanceof PoiPrivacyProvider)) {
                 if (existing != null) {
@@ -225,28 +226,24 @@ public class PoiPrivacyManager {
                 providers.put(PoiPrivacyProvider.PROVIDER_ID, poiPrivacyProvider);
             }
 
-            // Install player marker provider
             WorldMapManager.MarkerProvider playerMarkers = providers.get(PoiPlayerMarkerProvider.PROVIDER_ID);
             if (playerMarkers != null && !(playerMarkers instanceof PoiPlayerMarkerProvider)) {
                 backedUpPlayerMarkerProviders.putIfAbsent(world, playerMarkers);
                 providers.put(PoiPlayerMarkerProvider.PROVIDER_ID, poiPlayerMarkerProvider);
             }
 
-            // Install spawn privacy provider
             WorldMapManager.MarkerProvider spawnMarkers = providers.get(SpawnPrivacyProvider.PROVIDER_ID);
             if (spawnMarkers != null && !(spawnMarkers instanceof SpawnPrivacyProvider)) {
                 backedUpSpawnProviders.putIfAbsent(world, spawnMarkers);
                 providers.put(SpawnPrivacyProvider.PROVIDER_ID, spawnPrivacyProvider);
             }
 
-            // Install block map marker privacy provider (for dungeon markers)
             WorldMapManager.MarkerProvider blockMarkers = providers.get(BlockMapMarkerPrivacyProvider.PROVIDER_ID);
             if (blockMarkers != null && !(blockMarkers instanceof BlockMapMarkerPrivacyProvider)) {
                 backedUpBlockMarkerProviders.putIfAbsent(world, blockMarkers);
                 providers.put(BlockMapMarkerPrivacyProvider.PROVIDER_ID, blockMapMarkerPrivacyProvider);
             }
 
-            // Install death privacy provider
             WorldMapManager.MarkerProvider deathMarkers = providers.get(DeathPrivacyProvider.PROVIDER_ID);
             if (!(deathMarkers instanceof DeathPrivacyProvider)) {
                 if (deathMarkers != null) {

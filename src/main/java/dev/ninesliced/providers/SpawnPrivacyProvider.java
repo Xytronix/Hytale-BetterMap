@@ -14,6 +14,7 @@ import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -35,7 +36,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            UUID playerUuid = player.getUuid();
+            UUID playerUuid = ((CommandSender) player).getUuid();
             PlayerConfig playerConfig = null;
             if (playerUuid != null) {
                 playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
@@ -46,12 +47,10 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 && playerConfig != null
                 && playerConfig.isOverrideGlobalSpawnHide();
 
-            // Check if spawn markers should be hidden globally
             if (globalConfig.isHideSpawnOnMap() && !overrideEnabled) {
                 return;
             }
 
-            // Check if "Spawn" is in global hiddenPoiNames
             if (!overrideEnabled) {
                 List<String> hiddenNames = globalConfig.getHiddenPoiNames();
                 if (hiddenNames != null) {
@@ -63,26 +62,20 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            // Check per-player settings (only if not globally hidden)
-            if (playerUuid != null) {
-                if (playerConfig != null) {
-                    // Check player's personal hide spawn setting
-                    if (playerConfig.isHideSpawnOnMap()) {
-                        return;
-                    }
-                    // Check player's personal hidden names
-                    List<String> playerHiddenNames = playerConfig.getHiddenPoiNames();
-                    if (playerHiddenNames != null) {
-                        for (String hidden : playerHiddenNames) {
-                            if ("spawn".equalsIgnoreCase(hidden.trim())) {
-                                return;
-                            }
+            if (playerUuid != null && playerConfig != null) {
+                if (playerConfig.isHideSpawnOnMap()) {
+                    return;
+                }
+                List<String> playerHiddenNames = playerConfig.getHiddenPoiNames();
+                if (playerHiddenNames != null) {
+                    for (String hidden : playerHiddenNames) {
+                        if ("spawn".equalsIgnoreCase(hidden.trim())) {
+                            return;
                         }
                     }
                 }
             }
 
-            // Otherwise, show spawn marker (same logic as original SpawnMarkerProvider)
             var gameplayConfig = world.getGameplayConfig();
             if (gameplayConfig == null) {
                 return;
@@ -98,7 +91,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            Transform spawnTransform = spawnProvider.getSpawnPoint(player);
+            Transform spawnTransform = spawnProvider.getSpawnPoint(world, playerUuid);
             if (spawnTransform == null) {
                 return;
             }

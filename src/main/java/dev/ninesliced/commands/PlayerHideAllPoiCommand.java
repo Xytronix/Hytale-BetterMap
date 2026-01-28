@@ -10,6 +10,8 @@ import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.utils.WorldMapHook;
 
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -42,7 +44,7 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
         }
 
         Player player = (Player) context.sender();
-        UUID uuid = player.getUuid();
+        UUID uuid = ((CommandSender) player).getUuid();
         World world = player.getWorld();
         PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 
@@ -51,25 +53,12 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
-            // Determine current desired state and toggle it
-            boolean currentlyWantsVisible = config.isOverrideGlobalPoiHide() && !config.isHideAllPoiOnMap();
-            boolean currentlyWantsHidden = config.isHideAllPoiOnMap();
-            
-            boolean newWantsVisible;
-            if (currentlyWantsVisible) {
-                // Currently wants visible -> switch to hidden
-                newWantsVisible = false;
-            } else if (currentlyWantsHidden) {
-                // Currently wants hidden -> switch to visible
-                newWantsVisible = true;
-            } else {
-                // Default state -> switch to hidden
-                newWantsVisible = false;
-            }
+            boolean newWantsVisible = determineNewVisibilityState(
+                config.isOverrideGlobalPoiHide() && !config.isHideAllPoiOnMap(),
+                config.isHideAllPoiOnMap()
+            );
 
-            // Save the new desired state
             config.setOverrideGlobalPoiHide(newWantsVisible);
             config.setHideAllPoiOnMap(!newWantsVisible);
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
@@ -82,5 +71,14 @@ public class PlayerHideAllPoiCommand extends AbstractCommand {
             String status = newWantsVisible ? "VISIBLE" : "HIDDEN";
             context.sendMessage(Message.raw("POIs are now " + status + " for you.").color(color));
         }, world);
+    }
+
+    private boolean determineNewVisibilityState(boolean currentlyWantsVisible, boolean currentlyWantsHidden) {
+        if (currentlyWantsVisible) {
+            return false;
+        } else if (currentlyWantsHidden) {
+            return true;
+        }
+        return false;
     }
 }

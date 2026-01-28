@@ -43,14 +43,11 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
             UUID viewerUuid = ((CommandSender) viewingPlayer).getUuid();
 
             BetterMapConfig globalConfig = BetterMapConfig.getInstance();
-
-            // Check global settings
             boolean hasGlobalOverride = PermissionsUtil.canOverridePlayers(viewingPlayer);
             if (!globalConfig.isRadarEnabled() || (globalConfig.isHidePlayersOnMap() && !hasGlobalOverride)) {
                 return;
             }
 
-            // Check per-player hide setting
             if (viewerUuid != null) {
                 PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(viewerUuid);
                 if (playerConfig != null && playerConfig.isHidePlayersOnMap()) {

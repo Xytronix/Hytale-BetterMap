@@ -18,6 +18,7 @@ import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
 import dev.ninesliced.utils.PermissionsUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -54,7 +55,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;
-            UUID playerUuid = viewer != null ? viewer.getUuid() : null;
+            UUID playerUuid = viewer != null ? ((CommandSender) viewer).getUuid() : null;
             if (playerUuid != null) {
                 playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
             }
@@ -67,17 +68,14 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
             boolean hideAll = globalConfig.isHideAllPoiOnMap() && !overrideEnabled;
             boolean hideUnexplored = globalConfig.isHideUnexploredPoiOnMap() && !overrideUnexploredEnabled;
 
-            // Check global hide all
             if (hideAll) {
                 return;
             }
 
-            // Check per-player hide all and merge hidden names
             if (playerConfig != null && playerConfig.isHideAllPoiOnMap()) {
                 return;
             }
 
-            // Merge global and per-player hidden names
             List<String> hiddenNames = new ArrayList<>();
             if (!overrideEnabled) {
                 List<String> globalHidden = globalConfig.getHiddenPoiNames();
@@ -86,7 +84,6 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 }
             }
 
-            // Add per-player hidden names
             if (playerConfig != null) {
                 List<String> playerHidden = playerConfig.getHiddenPoiNames();
                 if (playerHidden != null) {
@@ -112,12 +109,10 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 String name = markerData.getName();
                 String icon = markerData.getIcon();
 
-                // Check if hidden by name
                 if (shouldHideByName(name, icon, hiddenNames)) {
                     continue;
                 }
 
-                // Check if hidden by exploration status
                 if (hideUnexplored) {
                     var pos = markerData.getPosition();
                     if (!isExplored(pos.getX(), pos.getZ(), explorationData, sharedExploredChunks)) {
@@ -125,7 +120,6 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                     }
                 }
 
-                // Send the marker
                 var pos = markerData.getPosition();
                 Transform transform = new Transform();
                 transform.position = new Position(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);

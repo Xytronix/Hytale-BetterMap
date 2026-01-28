@@ -11,6 +11,8 @@ import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.utils.WorldMapHook;
 
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -50,7 +52,7 @@ public class PlayerHideOtherWarpsCommand extends AbstractCommand {
         }
 
         Player player = (Player) context.sender();
-        UUID uuid = player.getUuid();
+        UUID uuid = ((CommandSender) player).getUuid();
         World world = player.getWorld();
         PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 
@@ -59,25 +61,12 @@ public class PlayerHideOtherWarpsCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
-            // Determine current desired state and toggle it
-            boolean currentlyWantsVisible = config.isOverrideGlobalOtherWarpsHide() && !config.isHideOtherWarpsOnMap();
-            boolean currentlyWantsHidden = config.isHideOtherWarpsOnMap();
-            
-            boolean newWantsVisible;
-            if (currentlyWantsVisible) {
-                // Currently wants visible -> switch to hidden
-                newWantsVisible = false;
-            } else if (currentlyWantsHidden) {
-                // Currently wants hidden -> switch to visible
-                newWantsVisible = true;
-            } else {
-                // Default state -> switch to hidden
-                newWantsVisible = false;
-            }
+            boolean newWantsVisible = determineNewVisibilityState(
+                config.isOverrideGlobalOtherWarpsHide() && !config.isHideOtherWarpsOnMap(),
+                config.isHideOtherWarpsOnMap()
+            );
 
-            // Save the new desired state
             config.setOverrideGlobalOtherWarpsHide(newWantsVisible);
             config.setHideOtherWarpsOnMap(!newWantsVisible);
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
@@ -90,5 +79,14 @@ public class PlayerHideOtherWarpsCommand extends AbstractCommand {
             String status = newWantsVisible ? "VISIBLE" : "HIDDEN";
             context.sendMessage(Message.raw("Other players' warps are now " + status + " for you.").color(color));
         }, world);
+    }
+
+    private boolean determineNewVisibilityState(boolean currentlyWantsVisible, boolean currentlyWantsHidden) {
+        if (currentlyWantsVisible) {
+            return false;
+        } else if (currentlyWantsHidden) {
+            return true;
+        }
+        return false;
     }
 }

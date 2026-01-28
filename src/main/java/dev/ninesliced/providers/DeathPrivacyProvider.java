@@ -14,6 +14,7 @@ import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -38,7 +39,7 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            UUID playerUuid = player.getUuid();
+            UUID playerUuid = ((CommandSender) player).getUuid();
             PlayerConfig playerConfig = null;
             if (playerUuid != null) {
                 playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
@@ -50,12 +51,10 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
                 && playerConfig.isOverrideGlobalDeathHide();
             boolean globalHide = globalConfig.isHideDeathMarkerOnMap();
 
-            // Check if death markers should be hidden globally
             if (globalHide && !overrideEnabled) {
                 return;
             }
 
-            // Check if "death" is in global hiddenPoiNames
             if (!overrideEnabled) {
                 List<String> hiddenNames = globalConfig.getHiddenPoiNames();
                 if (hiddenNames != null) {
@@ -67,7 +66,6 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            // Check per-player settings
             if (playerConfig != null) {
                 if (playerConfig.isHideDeathMarkerOnMap()) {
                     return;
@@ -82,7 +80,6 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            // Get death positions from game's native storage
             PlayerWorldData worldData = player.getPlayerConfigData().getPerWorldData(world.getName());
             if (worldData == null) {
                 return;

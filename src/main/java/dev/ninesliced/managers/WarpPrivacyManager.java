@@ -54,7 +54,9 @@ public class WarpPrivacyManager {
 
         plugin.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
             if (PlayerConfigManager.getInstance() != null) {
-                PlayerConfigManager.getInstance().getPlayerConfig(event.getPlayer().getUuid());
+                PlayerConfigManager.getInstance().getPlayerConfig(
+                    ((com.hypixel.hytale.server.core.command.system.CommandSender) event.getPlayer()).getUuid()
+                );
             }
             World world = event.getPlayer().getWorld();
             if (world != null) {

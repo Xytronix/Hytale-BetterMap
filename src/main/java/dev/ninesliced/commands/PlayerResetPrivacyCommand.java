@@ -12,6 +12,8 @@ import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.utils.WorldMapHook;
 
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -42,7 +44,7 @@ public class PlayerResetPrivacyCommand extends AbstractCommand {
         }
 
         Player player = (Player) context.sender();
-        UUID uuid = player.getUuid();
+        UUID uuid = ((CommandSender) player).getUuid();
         World world = player.getWorld();
         PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
 
@@ -51,7 +53,6 @@ public class PlayerResetPrivacyCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
             config.setHideAllPoiOnMap(false);
             config.setHideSpawnOnMap(false);

@@ -49,7 +49,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        UUID uuid = context.sender().getUuid();
+        UUID uuid = ((com.hypixel.hytale.server.core.command.system.CommandSender) context.sender()).getUuid();
         Player player = (Player) context.sender();
         World world = player.getWorld();
         PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(uuid);
@@ -67,7 +67,6 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        // Run on world executor to ensure proper ordering
         return CompletableFuture.runAsync(() -> {
             switch (action.toLowerCase(Locale.ROOT)) {
                 case "list":
@@ -104,7 +103,6 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         context.sendMessage(Message.raw("  /bm hiddenpoi remove <name> - Remove a POI name").color(Color.GRAY));
         context.sendMessage(Message.raw("  /bm hiddenpoi clear - Clear your hidden POI list").color(Color.GRAY));
         
-        // Show global hidden POIs for reference
         BetterMapConfig globalConfig = BetterMapConfig.getInstance();
         List<String> globalHidden = globalConfig.getHiddenPoiNames();
         if (globalHidden != null && !globalHidden.isEmpty()) {
@@ -123,7 +121,6 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
             }
         }
         
-        // Also show global hidden POIs
         BetterMapConfig globalConfig = BetterMapConfig.getInstance();
         List<String> globalHidden = globalConfig.getHiddenPoiNames();
         if (globalHidden != null && !globalHidden.isEmpty()) {
@@ -136,8 +133,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
 
     private void addHiddenPoi(CommandContext context, PlayerConfig config, String name, UUID uuid, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
-        
-        // Check if already exists (case-insensitive)
+
         for (String existing : hiddenNames) {
             if (existing.equalsIgnoreCase(name)) {
                 context.sendMessage(Message.raw("'" + name + "' is already in your hidden list.").color(Color.YELLOW));
@@ -157,8 +153,6 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
 
     private void removeHiddenPoi(CommandContext context, PlayerConfig config, String name, UUID uuid, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
-        
-        // Find and remove (case-insensitive)
         boolean removed = hiddenNames.removeIf(existing -> existing.equalsIgnoreCase(name));
 
         if (!removed) {
@@ -168,7 +162,6 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
 
         config.setHiddenPoiNames(hiddenNames);
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
-        // Use sync method since we're already on the world executor
         PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);
@@ -186,7 +179,6 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         int count = hiddenNames.size();
         config.setHiddenPoiNames(new ArrayList<>());
         PlayerConfigManager.getInstance().savePlayerConfig(uuid);
-        // Use sync method since we're already on the world executor
         PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
         WorldMapHook.clearMarkerCaches(world);
         WorldMapHook.refreshTrackers(world);

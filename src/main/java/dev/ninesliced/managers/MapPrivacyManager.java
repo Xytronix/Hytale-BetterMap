@@ -197,8 +197,7 @@ public class MapPrivacyManager {
         int radarRange = globalConfig.getRadarRange();
         boolean allowMarkerTeleports = globalConfig.isAllowMapMarkerTeleports();
 
-        // Check per-player setting (only if not globally hidden)
-        UUID playerUuid = player.getUuid();
+        UUID playerUuid = ((CommandSender) player).getUuid();
         PlayerConfig playerConfig = playerUuid != null
             ? PlayerConfigManager.getInstance().getPlayerConfig(playerUuid)
             : null;
@@ -341,7 +340,7 @@ public class MapPrivacyManager {
                 Player player = holder.getComponent(Player.getComponentType());
                 if (player == null) continue;
 
-                UUID playerUuid = player.getUuid();
+                UUID playerUuid = ((CommandSender) player).getUuid();
                 PlayerConfig playerConfig = playerUuid != null
                     ? PlayerConfigManager.getInstance().getPlayerConfig(playerUuid)
                     : null;
