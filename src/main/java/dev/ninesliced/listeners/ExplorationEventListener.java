@@ -67,11 +67,23 @@ public class ExplorationEventListener {
             if (isTrackedWorld(world)) {
                 WaypointManager.onPlayerJoin(player);
             }
+
             if (BetterMapConfig.getInstance().isFirstLaunch()) {
-                 String worldName = world.getName();
-                 BetterMapConfig.getInstance().addAllowedWorld(worldName);
-                 BetterMapConfig.getInstance().setFirstLaunch(false);
-                 LOGGER.info("First launch detected. Added " + worldName + " to tracked worlds.");
+                String worldName = world.getName();
+                BetterMapConfig.getInstance().addAllowedWorld(worldName);
+                BetterMapConfig.getInstance().setFirstLaunch(false);
+
+                LOGGER.info("First launch detected. Added " + worldName + " to tracked worlds.");
+
+                ExplorationTicker.getInstance().scheduleDelayedTask(() -> {
+                    try {
+                        if (player.getReference() != null && player.getReference().isValid()) {
+                            player.sendMessage(Message.raw("WARNING: BetterMap - Just added this world as tracked but you need to restart the server to apply the changes.").color(Color.RED));
+                        }
+                    } catch (Exception e) {
+                        LOGGER.warning("Failed to send warning message: " + e.getMessage());
+                    }
+                }, 4, TimeUnit.SECONDS);
             }
 
             if (playerWorlds.containsKey(playerName)) {
