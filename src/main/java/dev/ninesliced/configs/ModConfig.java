@@ -42,12 +42,13 @@ public class ModConfig {
     private boolean hideUnexploredPoiOnMap = true;
     private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
-    private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
+    private List<String> allowedWorlds = new ArrayList<>();//Arrays.asList("default", "world"));
 
     private transient Path configPath;
     private transient Path configDir;
     private transient MapQuality activeMapQuality;
     private transient int activeMaxChunksToLoad;
+    private transient boolean firstLaunch = false;
 
     /**
      * Private constructor to enforce singleton pattern.
@@ -85,6 +86,7 @@ public class ModConfig {
                 load();
             } else {
                 save();
+                this.firstLaunch = true;
             }
 
             this.activeMapQuality = this.mapQuality;
@@ -761,6 +763,24 @@ public class ModConfig {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Checks if this is the first launch of the plugin (config was created).
+     *
+     * @return True if first launch.
+     */
+    public boolean isFirstLaunch() {
+        return firstLaunch;
+    }
+
+    /**
+     * Sets the first launch status.
+     *
+     * @param firstLaunch The new status.
+     */
+    public void setFirstLaunch(boolean firstLaunch) {
+        this.firstLaunch = firstLaunch;
     }
 
     /**
