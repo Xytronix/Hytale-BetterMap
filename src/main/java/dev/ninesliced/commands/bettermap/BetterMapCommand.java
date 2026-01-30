@@ -91,6 +91,9 @@ public class BetterMapCommand extends AbstractCommand {
         context.sendMessage(Message.raw("Hide Unexplored POIs: ").color(Color.YELLOW).insert(Message.raw(config.isHideUnexploredPoiOnMap() ? "Enabled" : "Disabled").color(Color.WHITE)));
         String radarRange = config.getRadarRange() == -1 ? "Infinite" : config.getRadarRange() + " blocks";
         context.sendMessage(Message.raw("Radar Range: ").color(Color.YELLOW).insert(Message.raw(radarRange).color(Color.WHITE)));
+        context.sendMessage(Message.raw("World Border: ").color(Color.YELLOW).insert(Message.raw(config.isWorldBorderEnabled() ? "Enabled" : "Disabled").color(Color.WHITE)));
+        context.sendMessage(Message.raw("World Border Radius: ").color(Color.YELLOW).insert(Message.raw(config.getWorldBorderRadius() + " blocks").color(Color.WHITE)));
+        context.sendMessage(Message.raw("World Border Offset: ").color(Color.YELLOW).insert(Message.raw("X: " + config.getWorldBorderOffsetX() + ", Z: " + config.getWorldBorderOffsetZ()).color(Color.WHITE)));
         context.sendMessage(Message.raw("NOTE: The server must be restarted for map quality/max chunks changes to take effect."));
 
         return CompletableFuture.completedFuture(null);

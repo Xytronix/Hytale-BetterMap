@@ -331,6 +331,47 @@ $C.@PageOverlay {
             $C.@TextField #AllowedWorldList { Anchor: (Height: 28, Top: 4); }
             TextButton #AddCurrentWorldBtn { Anchor: (Height: 28, Top: 4); Text: "ADD CURRENT WORLD"; Style: @NavButtonStyle; }
           }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 32, Top: 16);
+            Background: #cc6600(0.15);
+            Padding: (Left: 10);
+
+            Label {
+              Text: "World Border Settings";
+              Style: (FontSize: 18, TextColor: #cc6600, RenderBold: true);
+            }
+          }
+
+          @SectionCard {
+            Anchor: (Top: 8, Bottom: 16);
+            Background: #2a1f1a(0.6);
+            OutlineColor: #5a4a3a(0.5);
+
+            @CheckboxRow {
+              $C.@CheckBox #WorldBorderEnabled { }
+              Label { Text: "Enable World Border Visualization"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Border Radius (blocks)"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #WorldBorderRadius { Anchor: (Width: 120, Height: 28); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Border Offset X"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #WorldBorderOffsetX { Anchor: (Width: 120, Height: 28); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Border Offset Z"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #WorldBorderOffsetZ { Anchor: (Width: 120, Height: 28); }
+            }
+          }
         }
       }
     }

@@ -26,6 +26,7 @@ import dev.ninesliced.configs.ModConfig.MapQuality;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.WorldMapHook;
 
@@ -96,6 +97,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AllowedWorldList.Value", String.join(", ", gConfig.getAllowedWorlds()));
              ui.set("#AutoSaveInterval.Value", gConfig.getAutoSaveInterval());
 
+             ui.set("#WorldBorderEnabled.Value", gConfig.isWorldBorderEnabled());
+             ui.set("#WorldBorderRadius.Value", gConfig.getWorldBorderRadius());
+             ui.set("#WorldBorderOffsetX.Value", gConfig.getWorldBorderOffsetX());
+             ui.set("#WorldBorderOffsetZ.Value", gConfig.getWorldBorderOffsetZ());
+
              bindChange(events, "#AdminExplorationRadius", "admin_exp_radius", BindingType.NUMBER);
              bindClick(events, "#AdminMapQualityInfo", "admin_map_quality");
              bindChange(events, "#AdminMaxChunksToLoad", "admin_max_chunks", BindingType.NUMBER);
@@ -119,6 +125,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AllowedWorldList", "admin_allowed_worlds", BindingType.STRING);
              bindClick(events, "#AddCurrentWorldBtn", "admin_add_current_world");
              bindChange(events, "#AutoSaveInterval", "admin_autosave", BindingType.NUMBER);
+
+             bindChange(events, "#WorldBorderEnabled", "admin_world_border_enabled", BindingType.BOOLEAN);
+             bindChange(events, "#WorldBorderRadius", "admin_world_border_radius", BindingType.NUMBER);
+             bindChange(events, "#WorldBorderOffsetX", "admin_world_border_offset_x", BindingType.NUMBER);
+             bindChange(events, "#WorldBorderOffsetZ", "admin_world_border_offset_z", BindingType.NUMBER);
         }
     }
 
@@ -366,6 +377,30 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_autosave":
                     if (val != null) gConfig.setAutoSaveInterval(Integer.parseInt(val));
+                    break;
+                case "admin_world_border_enabled":
+                    if (val != null) {
+                        gConfig.setWorldBorderEnabled(Boolean.parseBoolean(val));
+                        WorldBorderManager.getInstance().clearAllCaches();
+                    }
+                    break;
+                case "admin_world_border_radius":
+                    if (val != null) {
+                        gConfig.setWorldBorderRadius(Integer.parseInt(val));
+                        WorldBorderManager.getInstance().clearAllCaches();
+                    }
+                    break;
+                case "admin_world_border_offset_x":
+                    if (val != null) {
+                        gConfig.setWorldBorderOffsetX(Integer.parseInt(val));
+                        WorldBorderManager.getInstance().clearAllCaches();
+                    }
+                    break;
+                case "admin_world_border_offset_z":
+                    if (val != null) {
+                        gConfig.setWorldBorderOffsetZ(Integer.parseInt(val));
+                        WorldBorderManager.getInstance().clearAllCaches();
+                    }
                     break;
             }
             gConfig.save();

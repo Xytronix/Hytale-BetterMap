@@ -22,6 +22,7 @@ import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.MapExpansionManager;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.WorldBorderManager;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -150,6 +151,8 @@ public class WorldMapHook {
             ReflectionHelper.setFieldValueRecursive(settings, "imageScale", quality.scale);
 
             manager.clearImages();
+
+            WorldBorderManager.getInstance().hookWorldMapManager(world);
 
             LOGGER.info("Modified WorldMapSettings imageScale to " + quality.scale + " (" + quality + " quality) for world: " + world.getName());
         } catch (Exception e) {
