@@ -42,7 +42,7 @@ public class BetterMapConfig {
     private boolean hideUnexploredPoiOnMap = true;
     private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
-    private List<String> allowedWorlds = new ArrayList<>();//Arrays.asList("default", "world"));
+    private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
 
     private transient Path configPath;
     private transient Path configDir;
