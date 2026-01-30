@@ -35,6 +35,9 @@ public class ConfigCommand extends AbstractCommandCollection {
         this.addSubCommand(new TrackWorldCommand());
         this.addSubCommand(new UntrackWorldCommand());
         this.addSubCommand(new AutoSaveIntervalCommand());
+        this.addSubCommand(new WorldBorderToggleCommand());
+        this.addSubCommand(new WorldBorderRadiusCommand());
+        this.addSubCommand(new WorldBorderOffsetCommand());
     }
 
     @Override

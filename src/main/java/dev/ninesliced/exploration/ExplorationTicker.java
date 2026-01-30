@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.managers.PlayerRadarManager;
+import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
@@ -102,6 +103,7 @@ public class ExplorationTicker {
                     if (!world.isAlive()) return;
                     updateWorldPlayers(world);
                     PlayerRadarManager.getInstance().updateRadarData(world);
+                    WorldBorderManager.getInstance().hookWorldMapManager(world);
                 });
             } catch (IllegalThreadStateException ignored) {
             } catch (Exception ignored) {

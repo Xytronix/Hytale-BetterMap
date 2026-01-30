@@ -44,6 +44,11 @@ public class ModConfig {
     private int autoSaveInterval = 5;
     private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
 
+    private boolean worldBorderEnabled = false;
+    private int worldBorderRadius = 5000;
+    private int worldBorderOffsetX = 0;
+    private int worldBorderOffsetZ = 0;
+
     private transient Path configPath;
     private transient Path configDir;
     private transient MapQuality activeMapQuality;
@@ -237,6 +242,30 @@ public class ModConfig {
 
                     if (jsonObject.has("allowedWorlds") && loaded.allowedWorlds != null) {
                         this.allowedWorlds = loaded.allowedWorlds;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("worldBorderEnabled")) {
+                        this.worldBorderEnabled = loaded.worldBorderEnabled;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("worldBorderRadius")) {
+                        this.worldBorderRadius = loaded.worldBorderRadius;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("worldBorderOffsetX")) {
+                        this.worldBorderOffsetX = loaded.worldBorderOffsetX;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("worldBorderOffsetZ")) {
+                        this.worldBorderOffsetZ = loaded.worldBorderOffsetZ;
                     } else {
                         needsSave = true;
                     }
@@ -781,6 +810,82 @@ public class ModConfig {
      */
     public void setFirstLaunch(boolean firstLaunch) {
         this.firstLaunch = firstLaunch;
+    }
+
+    /**
+     * Checks if world border visualization is enabled.
+     *
+     * @return True if world border is enabled.
+     */
+    public boolean isWorldBorderEnabled() {
+        return worldBorderEnabled;
+    }
+
+    /**
+     * Sets whether world border visualization is enabled.
+     *
+     * @param worldBorderEnabled True to enable world border visualization.
+     */
+    public void setWorldBorderEnabled(boolean worldBorderEnabled) {
+        this.worldBorderEnabled = worldBorderEnabled;
+        save();
+    }
+
+    /**
+     * Gets the world border radius in blocks.
+     *
+     * @return The world border radius.
+     */
+    public int getWorldBorderRadius() {
+        return worldBorderRadius;
+    }
+
+    /**
+     * Sets the world border radius in blocks.
+     *
+     * @param worldBorderRadius The new world border radius.
+     */
+    public void setWorldBorderRadius(int worldBorderRadius) {
+        this.worldBorderRadius = Math.max(1, worldBorderRadius);
+        save();
+    }
+
+    /**
+     * Gets the world border X offset.
+     *
+     * @return The X offset.
+     */
+    public int getWorldBorderOffsetX() {
+        return worldBorderOffsetX;
+    }
+
+    /**
+     * Sets the world border X offset.
+     *
+     * @param worldBorderOffsetX The new X offset.
+     */
+    public void setWorldBorderOffsetX(int worldBorderOffsetX) {
+        this.worldBorderOffsetX = worldBorderOffsetX;
+        save();
+    }
+
+    /**
+     * Gets the world border Z offset.
+     *
+     * @return The Z offset.
+     */
+    public int getWorldBorderOffsetZ() {
+        return worldBorderOffsetZ;
+    }
+
+    /**
+     * Sets the world border Z offset.
+     *
+     * @param worldBorderOffsetZ The new Z offset.
+     */
+    public void setWorldBorderOffsetZ(int worldBorderOffsetZ) {
+        this.worldBorderOffsetZ = worldBorderOffsetZ;
+        save();
     }
 
     /**

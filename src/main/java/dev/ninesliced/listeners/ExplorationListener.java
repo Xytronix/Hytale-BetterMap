@@ -21,6 +21,7 @@ import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.ReflectionHelper;
 import dev.ninesliced.utils.WorldMapHook;
@@ -109,7 +110,10 @@ public class ExplorationListener {
                 WorldMapHook.hookWorldMapResolution(world);
 
                 PlayerRadarManager.getInstance().registerForPlayer(player);
+                
+                WorldBorderManager.getInstance().registerForPlayer(player);
 
+                WaypointManager.onPlayerJoin(player);
 
                 LOGGER.info("Exploration tracking initialized for player: " + playerName);
             } else {
@@ -251,6 +255,8 @@ public class ExplorationListener {
                 }
 
                 PlayerRadarManager.getInstance().registerForWorld(newWorld);
+
+                WorldBorderManager.getInstance().registerForWorld(newWorld);
 
                 final WorldMapTracker finalTracker = tracker;
                 final String finalNewWorldName = newWorldName;

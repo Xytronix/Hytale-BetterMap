@@ -21,6 +21,7 @@ import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
+import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.providers.LocationHudProvider;
 
 import javax.annotation.Nonnull;
@@ -137,6 +138,9 @@ public class BetterMap extends JavaPlugin {
             PlayerRadarManager.getInstance();
             LOGGER.info("Player Radar: INITIALIZED");
 
+            WorldBorderManager.getInstance();
+            LOGGER.info("World Border Manager: INITIALIZED");
+
             this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, ExplorationListener::onPlayerReady);
             this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, ExplorationListener::onPlayerQuit);
 
@@ -164,6 +168,7 @@ public class BetterMap extends JavaPlugin {
             this.locationHudProvider.cleanup();
         }
         PlayerRadarManager.getInstance().cleanup();
+        WorldBorderManager.getInstance().cleanup();
         super.shutdown();
     }
 }

@@ -120,6 +120,15 @@ You can either do `/op add <player>` to give full access or assign specific perm
 13.  `/bm config autosave <minutes>`
     
     *   Sets the interval for auto-saving map data.
+14.  `/bm config worldborder`
+    
+    *   Toggles the world border visualization on the map.
+15.  `/bm config worldborderradius <radius>`
+    
+    *   Sets the world border radius in blocks.
+16.  `/bm config worldborderoffset <x> <z>`
+    
+    *   Sets the world border center offset (X and Z coordinates).
 
 ### Reload Command
 
@@ -165,7 +174,11 @@ _Note: Changing `mapQuality` or `maxChunksToLoad` requires a server restart to t
   "allowedWorlds": [
     "default",
     "world"
-  ]
+  ],
+  "worldBorderEnabled": false,
+  "worldBorderRadius": 5000,
+  "worldBorderOffsetX": 0,
+  "worldBorderOffsetZ": 0
 }
 ```
 
