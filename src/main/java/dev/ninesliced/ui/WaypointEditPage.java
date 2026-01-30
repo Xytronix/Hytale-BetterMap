@@ -135,6 +135,9 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputZ", 
             new EventData().put(EditData.KEY_INPUT_Z, "#InputZ.Value"), false);
+
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#CurrentLocationBtn", 
+            new EventData().put(EditData.KEY_ACTION, Action.CURRENT_LOCATION.name()), false);
         
         for (int i = 0; i < AVAILABLE_ICONS.length; i++) {
             events.addEventBinding(CustomUIEventBindingType.Activating, "#Icon" + i, 
@@ -219,6 +222,15 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                 break;
             case BACK:
                 player.getPageManager().openCustomPage(ref, store, new WaypointMenuPage(this.playerRef));
+                break;
+            case CURRENT_LOCATION:
+                TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+                if (transform != null) {
+                    var pos = transform.getPosition();
+                    this.inputX = String.format(Locale.ROOT, "%.2f", pos.x);
+                    this.inputZ = String.format(Locale.ROOT, "%.2f", pos.z);
+                    refreshCoordinates(ref, store);
+                }
                 break;
             case SAVE:
                 String newName = this.nameInput.trim();
@@ -360,6 +372,16 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         sendUpdate(ui, events, false);
     }
 
+    private void refreshCoordinates(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        UICommandBuilder ui = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
+        
+        ui.set("#InputX.Value", this.inputX);
+        ui.set("#InputZ.Value", this.inputZ);
+        
+        sendUpdate(ui, events, false);
+    }
+
     private String generateDefaultName(@Nonnull Player player, boolean isNew) {
         List<UserMapMarker> markers = WaypointManager.getUserMarkers(player);
         int count = markers.size();
@@ -368,7 +390,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     }
 
     enum Action {
-        SAVE, CANCEL, BACK,
+        SAVE, CANCEL, BACK, CURRENT_LOCATION,
         SELECT_ICON_0, SELECT_ICON_1, SELECT_ICON_2, SELECT_ICON_3, SELECT_ICON_4, SELECT_ICON_5,
         SELECT_COLOR_0, SELECT_COLOR_1, SELECT_COLOR_2, SELECT_COLOR_3, SELECT_COLOR_4, SELECT_COLOR_5, SELECT_COLOR_6, SELECT_COLOR_7
     }

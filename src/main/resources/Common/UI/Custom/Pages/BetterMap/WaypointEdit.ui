@@ -41,9 +41,13 @@ $C.@PageOverlay {
         @Text = "Edit Waypoint";
       }
       TextButton #BackButton {
-        Anchor: (Left: 12, Top: 4, Width: 48, Height: 24);
-        Style: @NavBtn;
+        Anchor: (Left: 12, Top: 4, Width: 64, Height: 24);
         Text: "Back";
+        Style: TextButtonStyle(
+          Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+          Sounds: $C.@ButtonSounds,
+        );
+        Background: #000000(0.13);
       }
     }
 
@@ -73,6 +77,18 @@ $C.@PageOverlay {
         $C.@TextField #InputX { FlexWeight: 1; PlaceholderText: "X"; }
         Panel { Anchor: (Width: 10, Height: 1); }
         $C.@TextField #InputZ { FlexWeight: 1; PlaceholderText: "Z"; }
+        Panel { Anchor: (Width: 10, Height: 1); }
+        TextButton #CurrentLocationBtn {
+          Anchor: (Width: 56, Height: 36, Top: 2);
+          Text: "Here";
+          Style: TextButtonStyle(
+            Default: (Background: $C.@DefaultSquareButtonDefaultBackground, LabelStyle: $C.@DefaultButtonLabelStyle),
+            Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: $C.@DefaultButtonLabelStyle),
+            Pressed: (Background: $C.@DefaultSquareButtonPressedBackground, LabelStyle: $C.@DefaultButtonLabelStyle),
+            Disabled: (Background: $C.@DefaultSquareButtonDisabledBackground, LabelStyle: $C.@DefaultButtonDisabledLabelStyle),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
       }
 
       Label {

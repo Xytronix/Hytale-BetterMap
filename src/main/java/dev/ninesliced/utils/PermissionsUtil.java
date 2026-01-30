@@ -3,6 +3,8 @@ package dev.ninesliced.utils;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
+import com.hypixel.hytale.server.core.asset.type.gameplay.worldmap.UserMapMarkerConfig;
+import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -12,7 +14,6 @@ public final class PermissionsUtil {
     private static final String ADMIN_COMMAND_PERMISSION = "command.bettermap.admin";
     private static final String TELEPORT_PERMISSION = "dev.ninesliced.bettermap.command.teleport";
     private static final String WARP_GO_PERMISSION = "hytale.command.warp.go";
-    private static final String GLOBAL_WAYPOINT_PERMISSION = "dev.ninesliced.bettermap.command.waypoint.global";
 
     private PermissionsUtil() {
     }
@@ -46,18 +47,21 @@ public final class PermissionsUtil {
             || perms.hasPermission(uuid, TELEPORT_PERMISSION);
     }
 
+    /**
+     * Checks if the player can use global/shared waypoints based on Hytale's UserMapMarkerConfig.
+     * Returns true if the world allows creating markers and the max shared markers limit is > 0.
+     */
     public static boolean canUseGlobalWaypoints(@Nonnull Player player) {
-        PermissionsModule perms = PermissionsModule.get();
-        if (perms == null) {
+        World world = player.getWorld();
+        if (world == null) {
             return false;
         }
-
-        UUID uuid = ((CommandSender) player).getUuid();
-        Set<String> groups = perms.getGroupsForUser(uuid);
-        if (groups != null && groups.contains("OP")) {
-            return true;
+        
+        try {
+            UserMapMarkerConfig config = world.getGameplayConfig().getWorldMapConfig().getUserMapMarkerConfig();
+            return config.isAllowCreatingMarkers() && config.getMaxSharedMarkersPerPlayer() > 0;
+        } catch (Exception e) {
+            return false;
         }
-
-        return perms.hasPermission(uuid, GLOBAL_WAYPOINT_PERMISSION);
     }
 }

@@ -150,7 +150,13 @@ public class WaypointManager {
         if (updated) {
             entry.store.setUserMapMarkers(markers);
             
-            forceRefreshMarkerOnClient(player, id);
+            // For shared markers, refresh for ALL players in the world
+            // For personal markers, only refresh for the owning player
+            if (entry.shared) {
+                forceRefreshMarkerOnAllClients(world, id);
+            } else {
+                forceRefreshMarkerOnClient(player, id);
+            }
         }
         return updated;
     }
@@ -166,6 +172,18 @@ public class WaypointManager {
             var sentMarkers = tracker.getSentMarkers();
             if (sentMarkers != null) {
                 sentMarkers.remove(markerId);
+            }
+        } catch (Exception e) {
+        }
+    }
+    
+    /**
+     * Forces a shared marker to be re-sent to ALL clients in the world.
+     */
+    private static void forceRefreshMarkerOnAllClients(@Nonnull World world, @Nonnull String markerId) {
+        try {
+            for (Player worldPlayer : world.getPlayers()) {
+                forceRefreshMarkerOnClient(worldPlayer, markerId);
             }
         } catch (Exception e) {
         }

@@ -28,7 +28,6 @@ public class BetterMapWaypointDeleteGlobalCommand extends AbstractPlayerCommand 
     public BetterMapWaypointDeleteGlobalCommand() {
         super("removeglobal", "Remove a shared map waypoint");
         this.addAliases("deleteglobal", "delglobal", "removeshared", "deleteshared");
-        this.requirePermission("dev.ninesliced.bettermap.command.waypoint.global");
     }
 
     @Override
