@@ -16,9 +16,25 @@ $C = "../../Common.ui";
     Sounds: $C.@ButtonSounds
 );
 
+@IconBtn = TextButtonStyle(
+    Default: (Background: #000000(0)),
+    Hovered: (Background: #FFFFFF(0.15)),
+    Pressed: (Background: #FFFFFF(0.25)),
+    Disabled: (Background: #000000(0)),
+    Sounds: $C.@ButtonSounds
+);
+
+@ColorBtn = TextButtonStyle(
+    Default: (Background: #000000(0)),
+    Hovered: (Background: #FFFFFF(0.15)),
+    Pressed: (Background: #FFFFFF(0.25)),
+    Disabled: (Background: #000000(0)),
+    Sounds: $C.@ButtonSounds
+);
+
 $C.@PageOverlay {
   $C.@DecoratedContainer {
-    Anchor: (Width: 450, Height: 500);
+    Anchor: (Width: 480, Height: 520);
 
     #Title {
       $C.@Title {
@@ -66,72 +82,143 @@ $C.@PageOverlay {
       }
       Group #IconRow {
         LayoutMode: Left;
-        Anchor: (Height: 36);
+        Anchor: (Height: 44);
+        Padding: (Top: 4);
 
-        TextButton #IconPrev {
-          Anchor: (Width: 36, Height: 36);
-          Style: @NavBtn;
-          Text: "<";
-        }
-        
         Group {
-          FlexWeight: 1;
-          LayoutMode: Left;
-          
-          Panel #IconPreview {
-            Anchor: (Width: 24, Height: 24, Left: 10);
-            Background: "Common/UserA.png";
-          }
-          
-          Label #IconLabel {
-            Anchor: (Left: 10);
-            Style: (FontSize: 14, TextColor: #d3d6db);
-            Text: "UserA";
-          }
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Icon0Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Icon0Preview { Anchor: (Width: 28, Height: 28); Background: "Common/UserA.png"; }
+          TextButton #Icon0 { Anchor: (Full: 0); Style: @IconBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Icon1Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Icon1Preview { Anchor: (Width: 28, Height: 28); Background: "Common/UserB.png"; }
+          TextButton #Icon1 { Anchor: (Full: 0); Style: @IconBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Icon2Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Icon2Preview { Anchor: (Width: 28, Height: 28); Background: "Common/UserC.png"; }
+          TextButton #Icon2 { Anchor: (Full: 0); Style: @IconBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Icon3Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Icon3Preview { Anchor: (Width: 28, Height: 28); Background: "Common/UserD.png"; }
+          TextButton #Icon3 { Anchor: (Full: 0); Style: @IconBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Icon4Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Icon4Preview { Anchor: (Width: 28, Height: 28); Background: "Common/UserE.png"; }
+          TextButton #Icon4 { Anchor: (Full: 0); Style: @IconBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Icon5Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Icon5Preview { Anchor: (Width: 28, Height: 28); Background: "Common/UserF.png"; }
+          TextButton #Icon5 { Anchor: (Full: 0); Style: @IconBtn; }
         }
 
-        TextButton #IconNext {
-          Anchor: (Width: 36, Height: 36);
-          Style: @NavBtn;
-          Text: ">";
+        Panel { Anchor: (Width: 20, Height: 1); }
+        
+        Label {
+          Text: "Selected:";
+          Style: (FontSize: 12, TextColor: #93844c);
+          Anchor: (Top: 14);
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Panel #SelectedIconPreview {
+          Anchor: (Width: 32, Height: 32, Top: 4);
+          Background: "Common/UserA.png";
         }
       }
 
       Label {
-        Text: "Color Tint";
+        Text: "Color";
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true); 
         Anchor: (Height: 20, Top: 10);
       }
-      Group #TintRow {
+      Group #ColorRow {
         LayoutMode: Left;
-        Anchor: (Height: 36);
+        Anchor: (Height: 44);
+        Padding: (Top: 4);
 
-        TextButton #TintPrev {
-          Anchor: (Width: 36, Height: 36);
-          Style: @NavBtn;
-          Text: "<";
-        }
-        
         Group {
-          FlexWeight: 1;
-          LayoutMode: Left;
-          
-          Panel #ColorPreview {
-            Anchor: (Width: 24, Height: 24, Left: 10);
-            Background: "Common/UserA.png";
-          }
-          
-          Label #ColorLabel {
-            Anchor: (Left: 10);
-            Style: (FontSize: 14, TextColor: #d3d6db);
-            Text: "White";
-          }
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color0Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color0Preview { Anchor: (Width: 28, Height: 28); Background: #FFFFFF; }
+          TextButton #Color0 { Anchor: (Full: 0); Style: @ColorBtn; }
         }
-
-        TextButton #TintNext {
-          Anchor: (Width: 36, Height: 36);
-          Style: @NavBtn;
-          Text: ">";
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color1Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color1Preview { Anchor: (Width: 28, Height: 28); Background: #FF4444; }
+          TextButton #Color1 { Anchor: (Full: 0); Style: @ColorBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color2Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color2Preview { Anchor: (Width: 28, Height: 28); Background: #44FF44; }
+          TextButton #Color2 { Anchor: (Full: 0); Style: @ColorBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color3Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color3Preview { Anchor: (Width: 28, Height: 28); Background: #4444FF; }
+          TextButton #Color3 { Anchor: (Full: 0); Style: @ColorBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color4Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color4Preview { Anchor: (Width: 28, Height: 28); Background: #FFFF44; }
+          TextButton #Color4 { Anchor: (Full: 0); Style: @ColorBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color5Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color5Preview { Anchor: (Width: 28, Height: 28); Background: #FF44FF; }
+          TextButton #Color5 { Anchor: (Full: 0); Style: @ColorBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color6Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color6Preview { Anchor: (Width: 28, Height: 28); Background: #44FFFF; }
+          TextButton #Color6 { Anchor: (Full: 0); Style: @ColorBtn; }
+        }
+        Panel { Anchor: (Width: 6, Height: 1); }
+        Group {
+          Anchor: (Width: 40, Height: 40);
+          Panel { Anchor: (Full: 0); Background: #2a2a2a; }
+          Panel #Color7Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
+          Panel #Color7Preview { Anchor: (Width: 28, Height: 28); Background: #FF8800; }
+          TextButton #Color7 { Anchor: (Full: 0); Style: @ColorBtn; }
         }
       }
 

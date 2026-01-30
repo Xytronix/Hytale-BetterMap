@@ -43,10 +43,6 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         new Color((byte) -1, (byte) -120, (byte) 0),  // Orange #FF8800
     };
 
-    private static final String[] TINT_NAMES = {
-        "White", "Red", "Green", "Blue", "Yellow", "Magenta", "Cyan", "Orange"
-    };
-
     @Nullable
     private final String targetId;
     private boolean shared = false;
@@ -109,16 +105,21 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         ui.set("#InputX.Value", this.inputX);
         ui.set("#InputZ.Value", this.inputZ);
 
-        String iconName = AVAILABLE_ICONS[selectedIconIndex];
-        ui.set("#IconLabel.Text", getIconDisplayName(iconName));
-        ui.set("#IconPreview.Background", "Common/" + iconName);
-        
-        ui.set("#ColorLabel.Text", getTintDisplayName(selectedTintIndex));
         Color tintColor = AVAILABLE_TINTS[selectedTintIndex];
         String tintHex = String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF);
-        ui.set("#IconPreview.Background.Color", tintHex);
-        ui.set("#ColorPreview.Background", "Common/" + iconName);
-        ui.set("#ColorPreview.Background.Color", tintHex);
+        for (int i = 0; i < AVAILABLE_ICONS.length; i++) {
+            ui.set("#Icon" + i + "Preview.Background", "Common/" + AVAILABLE_ICONS[i]);
+            ui.set("#Icon" + i + "Preview.Background.Color", tintHex);
+            ui.set("#Icon" + i + "Selected.Visible", i == selectedIconIndex);
+        }
+        
+        for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
+            ui.set("#Color" + i + "Selected.Visible", i == selectedTintIndex);
+        }
+        
+        String iconName = AVAILABLE_ICONS[selectedIconIndex];
+        ui.set("#SelectedIconPreview.Background", "Common/" + iconName);
+        ui.set("#SelectedIconPreview.Background.Color", tintHex);
 
         boolean canShared = PermissionsUtil.canUseGlobalWaypoints(player);
         ui.set("#GlobalRow.Visible", canShared);
@@ -135,15 +136,15 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputZ", 
             new EventData().put(EditData.KEY_INPUT_Z, "#InputZ.Value"), false);
         
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#IconPrev", 
-            new EventData().put(EditData.KEY_ACTION, Action.ICON_PREV.name()), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#IconNext", 
-            new EventData().put(EditData.KEY_ACTION, Action.ICON_NEXT.name()), false);
+        for (int i = 0; i < AVAILABLE_ICONS.length; i++) {
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#Icon" + i, 
+                new EventData().put(EditData.KEY_ACTION, "SELECT_ICON_" + i), false);
+        }
 
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#TintPrev", 
-            new EventData().put(EditData.KEY_ACTION, Action.TINT_PREV.name()), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#TintNext", 
-            new EventData().put(EditData.KEY_ACTION, Action.TINT_NEXT.name()), false);
+        for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#Color" + i, 
+                new EventData().put(EditData.KEY_ACTION, "SELECT_COLOR_" + i), false);
+        }
 
         events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton", 
             new EventData().put(EditData.KEY_ACTION, Action.BACK.name()), false);
@@ -187,21 +188,31 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         }
 
         switch (action) {
-            case ICON_PREV:
-                selectedIconIndex = (selectedIconIndex - 1 + AVAILABLE_ICONS.length) % AVAILABLE_ICONS.length;
-                refreshIconAndTint(ref, store);
+            case SELECT_ICON_0:
+            case SELECT_ICON_1:
+            case SELECT_ICON_2:
+            case SELECT_ICON_3:
+            case SELECT_ICON_4:
+            case SELECT_ICON_5:
+                int iconIndex = action.ordinal() - Action.SELECT_ICON_0.ordinal();
+                if (iconIndex >= 0 && iconIndex < AVAILABLE_ICONS.length) {
+                    selectedIconIndex = iconIndex;
+                    refreshIconAndTint(ref, store);
+                }
                 break;
-            case ICON_NEXT:
-                selectedIconIndex = (selectedIconIndex + 1) % AVAILABLE_ICONS.length;
-                refreshIconAndTint(ref, store);
-                break;
-            case TINT_PREV:
-                selectedTintIndex = (selectedTintIndex - 1 + AVAILABLE_TINTS.length) % AVAILABLE_TINTS.length;
-                refreshIconAndTint(ref, store);
-                break;
-            case TINT_NEXT:
-                selectedTintIndex = (selectedTintIndex + 1) % AVAILABLE_TINTS.length;
-                refreshIconAndTint(ref, store);
+            case SELECT_COLOR_0:
+            case SELECT_COLOR_1:
+            case SELECT_COLOR_2:
+            case SELECT_COLOR_3:
+            case SELECT_COLOR_4:
+            case SELECT_COLOR_5:
+            case SELECT_COLOR_6:
+            case SELECT_COLOR_7:
+                int colorIndex = action.ordinal() - Action.SELECT_COLOR_0.ordinal();
+                if (colorIndex >= 0 && colorIndex < AVAILABLE_TINTS.length) {
+                    selectedTintIndex = colorIndex;
+                    refreshIconAndTint(ref, store);
+                }
                 break;
             case CANCEL:
                 player.getPageManager().openCustomPage(ref, store, new WaypointMenuPage(this.playerRef));
@@ -329,29 +340,24 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         UICommandBuilder ui = new UICommandBuilder();
         UIEventBuilder events = new UIEventBuilder();
         
-        String iconName = AVAILABLE_ICONS[selectedIconIndex];
-        ui.set("#IconLabel.Text", getIconDisplayName(iconName));
-        ui.set("#IconPreview.Background", "Common/" + iconName);
-        
-        ui.set("#ColorLabel.Text", getTintDisplayName(selectedTintIndex));
         Color tintColor = AVAILABLE_TINTS[selectedTintIndex];
         String tintHex = String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF);
-        ui.set("#IconPreview.Background.Color", tintHex);
-        ui.set("#ColorPreview.Background", "Common/" + iconName);
-        ui.set("#ColorPreview.Background.Color", tintHex);
+        
+        for (int i = 0; i < AVAILABLE_ICONS.length; i++) {
+            ui.set("#Icon" + i + "Preview.Background", "Common/" + AVAILABLE_ICONS[i]);
+            ui.set("#Icon" + i + "Preview.Background.Color", tintHex);
+            ui.set("#Icon" + i + "Selected.Visible", i == selectedIconIndex);
+        }
+        
+        for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
+            ui.set("#Color" + i + "Selected.Visible", i == selectedTintIndex);
+        }
+        
+        String iconName = AVAILABLE_ICONS[selectedIconIndex];
+        ui.set("#SelectedIconPreview.Background", "Common/" + iconName);
+        ui.set("#SelectedIconPreview.Background.Color", tintHex);
         
         sendUpdate(ui, events, false);
-    }
-
-    private String getIconDisplayName(@Nonnull String icon) {
-        return icon.replace(".png", "");
-    }
-
-    private String getTintDisplayName(int index) {
-        if (index >= 0 && index < TINT_NAMES.length) {
-            return TINT_NAMES[index];
-        }
-        return "Unknown";
     }
 
     private String generateDefaultName(@Nonnull Player player, boolean isNew) {
@@ -362,7 +368,9 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     }
 
     enum Action {
-        SAVE, CANCEL, BACK, ICON_PREV, ICON_NEXT, TINT_PREV, TINT_NEXT
+        SAVE, CANCEL, BACK,
+        SELECT_ICON_0, SELECT_ICON_1, SELECT_ICON_2, SELECT_ICON_3, SELECT_ICON_4, SELECT_ICON_5,
+        SELECT_COLOR_0, SELECT_COLOR_1, SELECT_COLOR_2, SELECT_COLOR_3, SELECT_COLOR_4, SELECT_COLOR_5, SELECT_COLOR_6, SELECT_COLOR_7
     }
 
     public static class EditData {
