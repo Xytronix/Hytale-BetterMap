@@ -64,11 +64,11 @@ public class ExplorationListener {
 
             world.execute(() -> WorldMapHook.sendMapSettingsToPlayer(player));
 
-            if (BetterMapConfig.getInstance().isFirstLaunch()) {
-                 String worldName = world.getName();
-                 BetterMapConfig.getInstance().addAllowedWorld(worldName);
-                 BetterMapConfig.getInstance().setFirstLaunch(false);
-                 LOGGER.info("First launch detected. Added " + worldName + " to tracked worlds.");
+            if (ModConfig.getInstance().isFirstLaunch()) {
+                String worldName = world.getName();
+                ModConfig.getInstance().addAllowedWorld(worldName);
+                ModConfig.getInstance().setFirstLaunch(false);
+                LOGGER.info("First launch detected. Added " + worldName + " to tracked worlds.");
             }
 
             if (playerWorlds.containsKey(playerName)) {
