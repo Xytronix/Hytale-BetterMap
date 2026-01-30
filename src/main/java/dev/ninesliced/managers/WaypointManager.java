@@ -150,8 +150,6 @@ public class WaypointManager {
         if (updated) {
             entry.store.setUserMapMarkers(markers);
             
-            // For shared markers, refresh for ALL players in the world
-            // For personal markers, only refresh for the owning player
             if (entry.shared) {
                 forceRefreshMarkerOnAllClients(world, id);
             } else {

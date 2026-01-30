@@ -21,6 +21,7 @@ import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.managers.WaypointMigrationManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.ReflectionHelper;
 import dev.ninesliced.utils.WorldMapHook;
@@ -66,9 +67,10 @@ public class ExplorationEventListener {
 
             if (isTrackedWorld(world)) {
                 WaypointManager.onPlayerJoin(player);
+                WaypointMigrationManager.onPlayerJoin(player);
             }
 
-            if (BetterMapConfig.getInstance().isFirstLaunch()) {
+            if (BetterMapConfig.getInstance().isFirstLaunch() && !isTrackedWorld(world)) {
                 String worldName = world.getName();
                 BetterMapConfig.getInstance().addAllowedWorld(worldName);
                 BetterMapConfig.getInstance().setFirstLaunch(false);
