@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -16,6 +15,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
@@ -51,22 +51,22 @@ public class BetterMapWaypointTeleportCommand extends AbstractPlayerCommand {
         }
 
         String target = this.targetArg.get(context);
-        MapMarker marker = WaypointManager.findWaypoint(player, target);
-        if (marker == null || marker.transform == null || marker.transform.position == null) {
+        UserMapMarker marker = WaypointManager.findMarker(player, target);
+        if (marker == null) {
             context.sendMessage(Message.raw("Could not find waypoint with that name or id."));
             return;
         }
 
-        Vector3d destination = new Vector3d(
-            marker.transform.position.x,
-            marker.transform.position.y,
-            marker.transform.position.z
-        );
+        // UserMapMarker only has x, z - use current Y for teleport
         TransformComponent transform = player.getTransformComponent();
+        double currentY = transform != null ? transform.getPosition().y : 64.0;
+        
+        Vector3d destination = new Vector3d(marker.getX(), currentY, marker.getZ());
         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
         Teleport teleport = new Teleport(destination, currentRotation);
 
         world.execute(() -> store.addComponent(ref, Teleport.getComponentType(), teleport));
-        context.sendMessage(Message.raw("Teleported to waypoint: " + (marker.name != null ? marker.name : target)));
+        String markerName = marker.getName() != null ? marker.getName() : target;
+        context.sendMessage(Message.raw("Teleported to waypoint: " + markerName));
     }
 }

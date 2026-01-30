@@ -11,6 +11,13 @@ Group #WaypointItem {
     LayoutMode: Left;
     Anchor: (Height: 24);
 
+    Panel #TintPreview {
+      Anchor: (Width: 16, Height: 16, Top: 4);
+      Background: #FFFFFF;
+    }
+
+    Panel { Anchor: (Width: 8, Height: 1); }
+
     Label #NameLabel {
       Style: (
         FontSize: 18,
@@ -117,25 +124,6 @@ Group #WaypointItem {
     }
 
     Label {
-      Text: "Y: ";
-      Style: (
-        FontSize: 13,
-        RenderBold: true,
-        TextColor: #93844c
-      );
-    }
-
-    Label #YValue {
-      Text: "0";
-      Style: (
-        FontSize: 13,
-        RenderBold: false,
-        TextColor: #ffffff
-      );
-      Padding: (Right: 10);
-    }
-
-    Label {
       Text: "Z: ";
       Style: (
         FontSize: 13,
@@ -150,6 +138,25 @@ Group #WaypointItem {
         FontSize: 13,
         RenderBold: false,
         TextColor: #ffffff
+      );
+      Padding: (Right: 10);
+    }
+
+    Label {
+      Text: "By: ";
+      Style: (
+        FontSize: 13,
+        RenderBold: true,
+        TextColor: #93844c
+      );
+    }
+
+    Label #CreatorValue {
+      Text: "-";
+      Style: (
+        FontSize: 13,
+        RenderBold: false,
+        TextColor: #aaaaaa
       );
     }
   }

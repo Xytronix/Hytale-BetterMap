@@ -1,17 +1,12 @@
 package dev.ninesliced.providers;
 
-import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.listeners.ExplorationEventListener;
@@ -32,10 +27,10 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
     public static final String PROVIDER_ID = "poi";
     private static final Logger LOGGER = Logger.getLogger(PoiPrivacyProvider.class.getName());
 
-    public void update(World world, MapMarkerTracker tracker,
-                       int viewRadius, int chunkX, int chunkZ) {
+    @Override
+    public void update(World world, Player viewer, MarkersCollector collector) {
         try {
-            if (world == null || tracker == null) {
+            if (world == null) {
                 return;
             }
 
@@ -43,8 +38,6 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             if (pointsOfInterest == null || pointsOfInterest.isEmpty()) {
                 return;
             }
-
-            Player viewer = tracker.getPlayer();
 
             BetterMapConfig config = BetterMapConfig.getInstance();
             if (config.isHideAllPoiOnMap()) {
@@ -80,7 +73,13 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
                     continue;
                 }
 
-                tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
+                if (marker.transform != null && marker.transform.position != null) {
+                    if (!collector.isInViewDistance(marker.transform.position.x, marker.transform.position.z)) {
+                        continue;
+                    }
+                }
+
+                collector.add(marker);
             }
         } catch (Exception e) {
             LOGGER.warning("Error in PoiPrivacyProvider.update: " + e.getMessage());
@@ -92,7 +91,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             return false;
         }
 
-        String normalizedName = normalize(marker.name);
+        String normalizedName = normalize(marker.customName != null ? marker.customName : marker.name != null ? marker.name.rawText : null);
         String normalizedId = normalize(marker.id);
 
         for (String hiddenName : hiddenPoiNames) {

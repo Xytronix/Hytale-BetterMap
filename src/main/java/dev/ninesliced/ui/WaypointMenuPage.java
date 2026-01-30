@@ -5,9 +5,9 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -19,14 +19,14 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.PositionUtil;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 import javax.annotation.Nonnull;
 
 public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.WaypointGuiData> {
@@ -70,8 +70,8 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             return;
         }
 
-        MapMarker[] markers = WaypointManager.getWaypoints(player);
-        if (markers == null) {
+        List<UserMapMarker> markers = WaypointManager.getUserMarkers(player);
+        if (markers == null || markers.isEmpty()) {
             return;
         }
 
@@ -79,37 +79,47 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             && BetterMapConfig.getInstance().isAllowWaypointTeleports();
 
         int index = 0;
-        for (MapMarker marker : markers) {
-            if (marker == null) {
+        for (UserMapMarker marker : markers) {
+            if (marker == null || marker.getId() == null) {
                 continue;
             }
 
             String itemPath = WAYPOINT_LIST_PATH + "[" + index + "]";
 
             ui.append(WAYPOINT_LIST_PATH, "Pages/BetterMap/WaypointItem.ui");
-            ui.set(itemPath + " #NameLabel.Text", marker.name != null ? marker.name : "Unnamed");
-            ui.set(itemPath + " #IconLabel.Text", "[" + colorLabel(marker.markerImage) + "]");
             
-            boolean isGlobal = WaypointManager.isGlobalId(marker.id);
-            ui.set(itemPath + " #SharedLabel.Text", isGlobal ? "(Global)" : "(Local)");
+            // Name
+            String name = marker.getName();
+            ui.set(itemPath + " #NameLabel.Text", name != null && !name.isEmpty() ? name : "Unnamed");
+            
+            // Icon
+            String icon = marker.getIcon();
+            ui.set(itemPath + " #IconLabel.Text", "[" + formatIcon(icon) + "]");
+            
+            // Shared status
+            boolean isShared = WaypointManager.isSharedId(marker.getId());
+            ui.set(itemPath + " #SharedLabel.Text", isShared ? "(Shared)" : "(Personal)");
 
+            // World name
             String worldName = player.getWorld() != null ? player.getWorld().getName() : "-";
             if (worldName == null || worldName.isEmpty()) {
                 worldName = "-";
             }
             ui.set(itemPath + " #WorldValue.Text", worldName);
 
-            double x = 0.0;
-            double y = 0.0;
-            double z = 0.0;
-            if (marker.transform != null && marker.transform.position != null) {
-                x = marker.transform.position.x;
-                y = marker.transform.position.y;
-                z = marker.transform.position.z;
+            // Coordinates (UserMapMarker only has x, z - no y)
+            ui.set(itemPath + " #XValue.Text", String.format(Locale.ROOT, "%.1f", marker.getX()));
+            ui.set(itemPath + " #ZValue.Text", String.format(Locale.ROOT, "%.1f", marker.getZ()));
+
+            // Creator info
+            String createdBy = marker.getCreatedByName();
+            ui.set(itemPath + " #CreatorValue.Text", createdBy != null && !createdBy.isEmpty() ? createdBy : "-");
+
+            // Color tint
+            Color tint = marker.getColorTint();
+            if (tint != null) {
+                ui.set(itemPath + " #TintPreview.Background", String.format("#%02X%02X%02X", tint.red & 0xFF, tint.green & 0xFF, tint.blue & 0xFF));
             }
-            ui.set(itemPath + " #XValue.Text", String.format(Locale.ROOT, "%.1f", x));
-            ui.set(itemPath + " #YValue.Text", String.format(Locale.ROOT, "%.1f", y));
-            ui.set(itemPath + " #ZValue.Text", String.format(Locale.ROOT, "%.1f", z));
 
             ui.set(itemPath + " #TeleportButton.Visible", canTeleport);
             if (canTeleport) {
@@ -117,32 +127,32 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                     CustomUIEventBindingType.Activating,
                     itemPath + " #TeleportButton",
                     new EventData()
-                        .put(WaypointGuiData.KEY_TARGET_ID, marker.id)
+                        .put(WaypointGuiData.KEY_TARGET_ID, marker.getId())
                         .put(WaypointGuiData.KEY_ACTION, Action.TELEPORT.name()),
                     false
                 );
             }
 
-            boolean canDelete = !isGlobal || PermissionsUtil.canUseGlobalWaypoints(player);
-            ui.set(itemPath + " #EditButton.Visible", canDelete);
-            if (canDelete) {
+            boolean canEdit = !isShared || PermissionsUtil.canUseGlobalWaypoints(player);
+            ui.set(itemPath + " #EditButton.Visible", canEdit);
+            if (canEdit) {
                 events.addEventBinding(
                     CustomUIEventBindingType.Activating,
                     itemPath + " #EditButton",
                     new EventData()
-                        .put(WaypointGuiData.KEY_TARGET_ID, marker.id)
+                        .put(WaypointGuiData.KEY_TARGET_ID, marker.getId())
                         .put(WaypointGuiData.KEY_ACTION, Action.EDIT.name()),
                     false
                 );
             }
 
-            ui.set(itemPath + " #DeleteButton.Visible", canDelete);
-            if (canDelete) {
+            ui.set(itemPath + " #DeleteButton.Visible", canEdit);
+            if (canEdit) {
                 events.addEventBinding(
                     CustomUIEventBindingType.Activating,
                     itemPath + " #DeleteButton",
                     new EventData()
-                        .put(WaypointGuiData.KEY_TARGET_ID, marker.id)
+                        .put(WaypointGuiData.KEY_TARGET_ID, marker.getId())
                         .put(WaypointGuiData.KEY_ACTION, Action.DELETE.name()),
                     false
                 );
@@ -152,22 +162,15 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
         }
     }
 
-    private static String colorLabel(String markerImage) {
-        if (markerImage == null) {
-            return "White";
+    private static String formatIcon(String icon) {
+        if (icon == null || icon.isEmpty()) {
+            return "Default";
         }
-        switch (markerImage) {
-            case "RedMarker.png":
-                return "Red";
-            case "GreenMarker.png":
-                return "Green";
-            case "BlueMarker.png":
-                return "Blue";
-            case "Coordinate.png":
-                return "White";
-            default:
-                return markerImage;
+        // Remove .png extension for display
+        if (icon.endsWith(".png")) {
+            return icon.substring(0, icon.length() - 4);
         }
+        return icon;
     }
 
     @Override
@@ -195,11 +198,11 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             }
             case DELETE -> {
                 if (data.targetId != null && !data.targetId.isEmpty()) {
-                    if (WaypointManager.isGlobalId(data.targetId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
-                        player.sendMessage(Message.raw("You do not have permission to delete global waypoints."));
+                    if (WaypointManager.isSharedId(data.targetId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
+                        player.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
                         return;
                     }
-                    boolean removed = WaypointManager.removeWaypoint(player, data.targetId);
+                    boolean removed = WaypointManager.removeMarker(player, data.targetId);
                     if (removed) {
                         refreshWaypoints(ref, store);
                     }
@@ -207,8 +210,8 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             }
             case EDIT -> {
                 if (data.targetId != null && !data.targetId.isEmpty()) {
-                    if (WaypointManager.isGlobalId(data.targetId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
-                        player.sendMessage(Message.raw("You do not have permission to delete global waypoints."));
+                    if (WaypointManager.isSharedId(data.targetId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
+                        player.sendMessage(Message.raw("You do not have permission to edit shared waypoints."));
                         return;
                     }
                      player.getPageManager().openCustomPage(ref, store, new WaypointEditPage(this.playerRef, data.targetId));
@@ -220,14 +223,13 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                     return;
                 }
                 if (data.targetId != null && !data.targetId.isEmpty()) {
-                    MapMarker marker = WaypointManager.getWaypoint(player, data.targetId);
-                    if (marker != null && marker.transform != null && marker.transform.position != null) {
-                        Vector3d destination = new Vector3d(
-                            marker.transform.position.x,
-                            marker.transform.position.y,
-                            marker.transform.position.z
-                        );
+                    UserMapMarker marker = WaypointManager.getMarker(player, data.targetId);
+                    if (marker != null) {
+                        // UserMapMarker has only x, z - use current y for teleport
                         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+                        double currentY = transform != null ? transform.getPosition().y : 64.0;
+                        
+                        Vector3d destination = new Vector3d(marker.getX(), currentY, marker.getZ());
                         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
                         Teleport teleport = new Teleport(destination, currentRotation);
                         World world = ((EntityStore) store.getExternalData()).getWorld();

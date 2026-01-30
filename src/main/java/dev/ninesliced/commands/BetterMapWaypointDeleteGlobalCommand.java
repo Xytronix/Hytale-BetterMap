@@ -11,14 +11,14 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 
 import javax.annotation.Nonnull;
 
 public class BetterMapWaypointDeleteGlobalCommand extends AbstractPlayerCommand {
-    private final RequiredArg<String> targetArg = this.withRequiredArg("target", "Global waypoint id", ArgTypes.STRING);
+    private final RequiredArg<String> targetArg = this.withRequiredArg("target", "Shared waypoint id", ArgTypes.STRING);
 
     @Override
     protected boolean canGeneratePermission() {
@@ -26,8 +26,8 @@ public class BetterMapWaypointDeleteGlobalCommand extends AbstractPlayerCommand 
     }
 
     public BetterMapWaypointDeleteGlobalCommand() {
-        super("removeglobal", "Remove a global map waypoint");
-        this.addAliases("deleteglobal", "delglobal");
+        super("removeglobal", "Remove a shared map waypoint");
+        this.addAliases("deleteglobal", "delglobal", "removeshared", "deleteshared");
         this.requirePermission("dev.ninesliced.bettermap.command.waypoint.global");
     }
 
@@ -37,39 +37,40 @@ public class BetterMapWaypointDeleteGlobalCommand extends AbstractPlayerCommand 
         if (player == null) return;
 
         if (!PermissionsUtil.canUseGlobalWaypoints(player)) {
-            context.sendMessage(Message.raw("You do not have permission to delete global waypoints."));
+            context.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
             return;
         }
 
         String target = this.targetArg.get(context);
         
-        MapMarker marker = WaypointManager.findWaypoint(player, target);
+        UserMapMarker marker = WaypointManager.findMarker(player, target);
 
         if (marker == null) {
-            if (!WaypointManager.isGlobalId(target)) {
-                context.sendMessage(Message.raw("Could not find global waypoint with that name or id."));
+            if (!WaypointManager.isSharedId(target)) {
+                context.sendMessage(Message.raw("Could not find shared waypoint with that name or id."));
                 return;
             }
-            boolean deletedFallback = WaypointManager.removeWaypoint(player, target);
+            boolean deletedFallback = WaypointManager.removeMarker(player, target);
             if (deletedFallback) {
-                context.sendMessage(Message.raw("Global waypoint has been removed."));
+                context.sendMessage(Message.raw("Shared waypoint has been removed."));
             } else {
-                context.sendMessage(Message.raw("Could not find global waypoint with that name or id."));
+                context.sendMessage(Message.raw("Could not find shared waypoint with that name or id."));
             }
             return;
         }
 
-        if (!WaypointManager.isGlobalId(marker.id)) {
+        if (!WaypointManager.isSharedId(marker.getId())) {
             context.sendMessage(Message.raw("That is a personal waypoint. Use 'remove' instead of 'removeglobal'."));
             return;
         }
 
-        boolean deleted = WaypointManager.removeWaypoint(player, marker.id);
+        boolean deleted = WaypointManager.removeMarker(player, marker.getId());
 
         if (deleted) {
-            context.sendMessage(Message.raw("Global waypoint '" + marker.name + "' has been removed."));
+            String name = marker.getName() != null ? marker.getName() : marker.getId();
+            context.sendMessage(Message.raw("Shared waypoint '" + name + "' has been removed."));
         } else {
-            context.sendMessage(Message.raw("Failed to remove global waypoint."));
+            context.sendMessage(Message.raw("Failed to remove shared waypoint."));
         }
     }
 }

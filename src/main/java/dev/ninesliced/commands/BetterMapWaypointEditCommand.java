@@ -4,6 +4,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -11,44 +13,48 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.managers.WaypointManager;
-import java.util.List;
+import dev.ninesliced.ui.WaypointEditPage;
+
 import javax.annotation.Nonnull;
 
-public class BetterMapWaypointListCommand extends AbstractPlayerCommand {
-
-    public BetterMapWaypointListCommand() {
-        super("list", "List all your map waypoints");
-        this.addAliases("markers");
+/**
+ * Command to open the waypoint edit page for a specific marker.
+ * Used by the context menu "Edit" option on map markers.
+ */
+public class BetterMapWaypointEditCommand extends AbstractPlayerCommand {
+    
+    private final RequiredArg<String> idArg = this.withRequiredArg("id", "The waypoint ID to edit", ArgTypes.STRING);
+    
+    public BetterMapWaypointEditCommand() {
+        super("edit", "Edit a waypoint");
     }
-
+    
     @Override
     protected boolean canGeneratePermission() {
         return false;
     }
-
+    
     @Override
     protected String generatePermissionNode() {
         return "";
     }
-
+    
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
-
-        List<UserMapMarker> markers = WaypointManager.getUserMarkers(player);
-
-        if (markers.isEmpty()) {
-            context.sendMessage(Message.raw("You have no active waypoints."));
+        
+        String id = this.idArg.get(context);
+        
+        // Check if marker exists
+        UserMapMarker marker = WaypointManager.getMarker(player, id);
+        if (marker == null) {
+            context.sendMessage(Message.raw("Waypoint not found: " + id).color("#FF4444"));
             return;
         }
-
-        context.sendMessage(Message.raw("Active Waypoints:"));
-        for (UserMapMarker marker : markers) {
-            String positionStr = String.format("%.0f, %.0f", marker.getX(), marker.getZ());
-            String markerName = marker.getName() != null ? marker.getName() : "Unnamed";
-            String sharedStatus = WaypointManager.isSharedId(marker.getId()) ? " [Shared]" : "";
-            context.sendMessage(Message.raw("- " + markerName + " @ " + positionStr + sharedStatus));
-        }
+        
+        // Open the edit page for this marker
+        WaypointEditPage editPage = new WaypointEditPage(playerRef, id);
+        player.getPageManager().openCustomPage(ref, store, editPage);
     }
 }

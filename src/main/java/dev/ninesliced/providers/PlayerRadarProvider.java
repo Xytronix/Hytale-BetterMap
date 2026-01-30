@@ -3,14 +3,12 @@ package dev.ninesliced.providers;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
-import com.hypixel.hytale.server.core.util.PositionUtil;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.PlayerRadarManager.RadarData;
@@ -33,10 +31,9 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
     /**
      * Updates the player radar markers for the viewing player.
      */
-    public void update(World world, MapMarkerTracker tracker,
-                       int viewRadius, int chunkX, int chunkZ) {
+    @Override
+    public void update(World world, Player viewingPlayer, MarkersCollector collector) {
         try {
-            Player viewingPlayer = tracker.getPlayer();
             UUID viewerUuid = ((CommandSender) viewingPlayer).getUuid();
 
             BetterMapConfig config = BetterMapConfig.getInstance();
@@ -82,22 +79,14 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
                     }
 
                     int distance = (int) Math.sqrt(distanceSquared);
+                    if (!collector.isInViewDistance(otherPos.x, otherPos.z)) {
+                        continue;
+                    }
+
                     String markerId = MARKER_PREFIX + otherData.uuid;
                     String markerName = otherData.name + " (" + distance + "m)";
 
-                    float yaw = otherData.rotation != null ? otherData.rotation.getYaw() : 0.0f;
-
-                    tracker.trySendMarker(
-                        viewRadius,
-                        chunkX,
-                        chunkZ,
-                        otherPos,
-                        yaw,
-                        markerId,
-                        markerName,
-                        otherData,
-                        PlayerRadarProvider::createMarker
-                    );
+                    collector.add(createMarker(markerId, markerName, otherData));
                 } catch (Exception e) {}
             }
         } catch (Exception e) {
@@ -113,12 +102,9 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
             data.position,
             data.rotation != null ? data.rotation : Vector3f.ZERO
         );
-        return new MapMarker(
-            id,
-            name,
-            MARKER_ICON,
-            PositionUtil.toTransformPacket(vecTransform),
-            null
-        );
+
+        return new MapMarkerBuilder(id, MARKER_ICON, vecTransform)
+            .withCustomName(name)
+            .build();
     }
 }

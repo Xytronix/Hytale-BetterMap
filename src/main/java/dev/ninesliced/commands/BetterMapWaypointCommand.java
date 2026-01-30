@@ -24,6 +24,7 @@ public class BetterMapWaypointCommand extends AbstractCommandCollection {
         this.addSubCommand(new BetterMapWaypointUpdateCommand());
         this.addSubCommand(new BetterMapWaypointTeleportCommand());
         this.addSubCommand(new BetterMapWaypointIdCommand());
+        this.addSubCommand(new BetterMapWaypointEditCommand());
         this.addSubCommand(new BetterMapMenuCommand());
     }
 

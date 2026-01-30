@@ -8,13 +8,26 @@ $C = "../../Common.ui";
     Sounds: $C.@ButtonSounds
 );
 
+@NavBtn = TextButtonStyle(
+    Default: (Background: #3d5a85, LabelStyle: (TextColor: #FFFFFF)),
+    Hovered: (Background: #5078a8, LabelStyle: (TextColor: #FFFFFF)),
+    Pressed: (Background: #2a4060, LabelStyle: (TextColor: #FFFFFF)),
+    Disabled: (Background: #222222, LabelStyle: (TextColor: #666666)),
+    Sounds: $C.@ButtonSounds
+);
+
 $C.@PageOverlay {
   $C.@DecoratedContainer {
-    Anchor: (Width: 450, Height: 550);
+    Anchor: (Width: 450, Height: 500);
 
     #Title {
       $C.@Title {
         @Text = "Edit Waypoint";
+      }
+      TextButton #BackButton {
+        Anchor: (Left: 12, Top: 4, Width: 48, Height: 24);
+        Style: @NavBtn;
+        Text: "Back";
       }
     }
 
@@ -34,7 +47,7 @@ $C.@PageOverlay {
       }
 
       Label {
-        Text: "Coordinates (X / Y / Z)";
+        Text: "Coordinates (X / Z)";
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true); 
         Anchor: (Height: 20);
       }
@@ -42,99 +55,83 @@ $C.@PageOverlay {
         LayoutMode: Left;
         Anchor: (Height: 40);
         $C.@TextField #InputX { FlexWeight: 1; PlaceholderText: "X"; }
-        $C.@TextField #InputY { FlexWeight: 1; PlaceholderText: "Y"; }
+        Panel { Anchor: (Width: 10, Height: 1); }
         $C.@TextField #InputZ { FlexWeight: 1; PlaceholderText: "Z"; }
       }
 
       Label {
-        Text: "Icon Color";
+        Text: "Icon";
         Style: (FontSize: 16, TextColor: #93844c, RenderBold: true); 
-        Anchor: (Height: 20);
+        Anchor: (Height: 20, Top: 10);
       }
-      Group #ColorRow {
+      Group #IconRow {
         LayoutMode: Left;
-        Anchor: (Height: 40);
+        Anchor: (Height: 36);
 
-        // White (default)
-        Group {
-          Anchor: (Width: 40, Height: 40);
-
-          Panel {
-             Anchor: (Full: 0);
-             Background: "../../Common/WhiteMarker.png";
-          }
-          Group #SelWhite {
-            Anchor: (Full: 0);
-            Visible: false;
-            Background: #FFFF55(0.5);
-          }
-          TextButton #ColorWhite { Anchor: (Full: 0); Style: @TransparentBtn; Text: ""; }
+        TextButton #IconPrev {
+          Anchor: (Width: 36, Height: 36);
+          Style: @NavBtn;
+          Text: "<";
         }
-
-        // Spacer
-        Panel { Anchor: (Width: 10, Height: 1); }
         
-        // Red
         Group {
-            Anchor: (Width: 40, Height: 40); 
-            
-            // Icon
-            Panel { 
-               Anchor: (Full: 0);
-               Background: "../../Common/RedMarker.png"; 
-            }
-            // Selection Highlight
-            Group #SelRed {
-                Anchor: (Full: 0);
-                Visible: false;
-                Background: #FFFF55(0.5);
-            }
-            // Button Interaction
-            TextButton #ColorRed { Anchor: (Full: 0); Style: @TransparentBtn; Text: ""; }
+          FlexWeight: 1;
+          LayoutMode: Left;
+          
+          Panel #IconPreview {
+            Anchor: (Width: 24, Height: 24, Left: 10);
+            Background: "../../Common/UserA.png"; 
+          }
+          
+          Label #IconLabel {
+            Anchor: (Left: 10);
+            Style: (FontSize: 14, TextColor: #d3d6db);
+            Text: "UserA";
+          }
         }
 
-        // Spacer
-        Panel { Anchor: (Width: 10, Height: 1); }
+        TextButton #IconNext {
+          Anchor: (Width: 36, Height: 36);
+          Style: @NavBtn;
+          Text: ">";
+        }
+      }
 
-        // Green
+      Label {
+        Text: "Color Tint";
+        Style: (FontSize: 16, TextColor: #93844c, RenderBold: true); 
+        Anchor: (Height: 20, Top: 10);
+      }
+      Group #TintRow {
+        LayoutMode: Left;
+        Anchor: (Height: 36);
+
+        TextButton #TintPrev {
+          Anchor: (Width: 36, Height: 36);
+          Style: @NavBtn;
+          Text: "<";
+        }
+        
         Group {
-            Anchor: (Width: 40, Height: 40); 
-            
-            // Icon
-            Panel { 
-               Anchor: (Full: 0);
-               Background: "../../Common/GreenMarker.png"; 
-            }
-            // Selection Highlight
-            Group #SelGreen {
-                Anchor: (Full: 0);
-                Visible: false;
-                Background: #FFFF55(0.5);
-            }
-            // Button Interaction
-            TextButton #ColorGreen { Anchor: (Full: 0); Style: @TransparentBtn; Text: ""; }
+          FlexWeight: 1;
+          LayoutMode: Left;
+          
+          Panel #ColorPreview {
+            Anchor: (Width: 24, Height: 24, Left: 10);
+            Background: #FFFFFF;
+          }
+          
+          Label #ColorLabel {
+            Anchor: (Left: 10);
+            Style: (FontSize: 14, TextColor: #d3d6db);
+            Text: "White";
+          }
         }
 
-        // Spacer
-        Panel { Anchor: (Width: 10, Height: 1); }
-
-        // Blue
-        Group {
-            Anchor: (Width: 40, Height: 40); 
-            
-            // Icon
-            Panel { 
-               Anchor: (Full: 0);
-               Background: "../../Common/BlueMarker.png"; 
-            }
-            // Selection Highlight
-            Group #SelBlue {
-                Anchor: (Full: 0);
-                Visible: false;
-                Background: #FFFF55(0.5);
-            }
-            // Button Interaction
-            TextButton #ColorBlue { Anchor: (Full: 0); Style: @TransparentBtn; Text: ""; }
+        TextButton #TintNext {
+          Anchor: (Width: 36, Height: 36);
+          Style: @NavBtn;
+          Text: ">";
         }
       }
 
@@ -150,7 +147,7 @@ $C.@PageOverlay {
         Label {
           Anchor: (Left: 8);
           Style: (FontSize: 14, TextColor: #d3d6db);
-          Text: "Global waypoint (visible to everyone)";
+          Text: "Shared waypoint (visible to everyone)";
         }
       }
 

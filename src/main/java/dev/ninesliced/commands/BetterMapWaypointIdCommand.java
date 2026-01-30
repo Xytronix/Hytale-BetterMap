@@ -2,18 +2,18 @@ package dev.ninesliced.commands;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
+import dev.ninesliced.managers.WaypointManager;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class BetterMapWaypointIdCommand extends AbstractPlayerCommand {
@@ -39,18 +39,18 @@ public class BetterMapWaypointIdCommand extends AbstractPlayerCommand {
         if (player == null) return;
 
         String targetName = this.nameArg.get(context);
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
-        MapMarker[] markers = perWorldData.getWorldMapMarkers();
+        List<UserMapMarker> markers = WaypointManager.getUserMarkers(player);
 
-        if (markers == null || markers.length == 0) {
+        if (markers.isEmpty()) {
             context.sendMessage(Message.raw("You have no waypoints."));
             return;
         }
 
-        for (MapMarker marker : markers) {
+        for (UserMapMarker marker : markers) {
             if (marker == null) continue;
-            if (marker.name != null && marker.name.equalsIgnoreCase(targetName)) {
-                context.sendMessage(Message.raw("Waypoint '" + targetName + "' id: " + marker.id));
+            String markerName = marker.getName();
+            if (markerName != null && markerName.equalsIgnoreCase(targetName)) {
+                context.sendMessage(Message.raw("Waypoint '" + targetName + "' id: " + marker.getId()));
                 return;
             }
         }

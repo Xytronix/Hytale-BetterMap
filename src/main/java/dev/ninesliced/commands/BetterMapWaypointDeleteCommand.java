@@ -2,22 +2,18 @@ package dev.ninesliced.commands;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.managers.WaypointManager;
-import java.util.ArrayList;
-import java.util.List;
 import javax.annotation.Nonnull;
 
 public class BetterMapWaypointDeleteCommand extends AbstractPlayerCommand {
@@ -45,15 +41,15 @@ public class BetterMapWaypointDeleteCommand extends AbstractPlayerCommand {
 
         String target = this.targetArg.get(context);
         
-        MapMarker marker = WaypointManager.findWaypoint(player, target);
-        if (marker != null && WaypointManager.isGlobalId(marker.id)) {
+        UserMapMarker marker = WaypointManager.findMarker(player, target);
+        if (marker != null && WaypointManager.isSharedId(marker.getId())) {
             if (!PermissionsUtil.canUseGlobalWaypoints(player)) {
-                context.sendMessage(Message.raw("You do not have permission to delete global waypoints."));
+                context.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
                 return;
             }
         }
 
-        boolean deleted = WaypointManager.removeWaypoint(player, target);
+        boolean deleted = WaypointManager.removeMarker(player, target);
 
         if (deleted) {
             context.sendMessage(Message.raw("Waypoint has been removed."));

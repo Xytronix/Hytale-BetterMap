@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapSettings;
+import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -345,6 +346,13 @@ public class WorldMapHook {
             WorldMapTracker tracker = player.getWorldMapTracker();
             packet.allowTeleportToCoordinates = tracker.isAllowTeleportToCoordinates();
             packet.allowTeleportToMarkers = tracker.isAllowTeleportToMarkers();
+
+            // Preserve marker creation settings from world config (like Hytale does)
+            WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
+            packet.allowCreatingMapMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowCreatingMarkers();
+            packet.allowRemovingOtherPlayersMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowDeleteOtherPlayersSharedMarkers();
+            packet.allowShowOnMapToggle = worldMapConfig.canTogglePlayersInMap();
+            packet.allowCompassTrackingToggle = worldMapConfig.canTrackPlayersInCompass();
 
             sendPacket(player, packet);
 

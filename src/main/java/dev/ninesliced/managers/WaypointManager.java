@@ -1,559 +1,256 @@
 package dev.ninesliced.managers;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.annotations.SerializedName;
-import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.protocol.Transform;
-import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
+import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.PositionUtil;
-import dev.ninesliced.configs.BetterMapConfig;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarkersStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
 import dev.ninesliced.listeners.ExplorationEventListener;
-import dev.ninesliced.utils.PermissionsUtil;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * Manages user map markers through Hytale's built-in UserMapMarkersStore system.
+ * BetterMap uses this for CRUD operations on markers; Hytale's PersonalMarkersProvider
+ * and SharedMarkersProvider handle the actual rendering on the map.
+ */
 public class WaypointManager {
     private static final Logger LOGGER = Logger.getLogger(WaypointManager.class.getName());
-    private static final String GLOBAL_ID_PREFIX = "global_waypoint_";
-
-    private static WaypointPersistence persistence;
-    private static final Set<String> loadedPlayers = ConcurrentHashMap.newKeySet();
+    private static final String PERSONAL_ID_PREFIX = "user_personal_";
+    private static final String SHARED_ID_PREFIX = "user_shared_";
 
     private WaypointManager() {
     }
 
+    /**
+     * Kept for backwards compatibility with the old initialization flow.
+     * No-op now that we rely on Hytale's built-in marker storage.
+     */
     public static void initialize(@Nonnull Path configDir) {
-        persistence = new WaypointPersistence(configDir);
-    }
-
-    @Nullable
-    public static MapMarker[] getWaypoints(@Nonnull Player player) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return new MapMarker[0];
-
-        ensureLoaded(player, world);
-
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
-        MapMarker[] markers = perWorldData.getWorldMapMarkers();
-        return markers != null ? markers : new MapMarker[0];
-    }
-
-    public static void addWaypoint(@Nonnull Player player, @Nonnull String name, @Nonnull String icon, @Nonnull Transform transform, boolean global) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return;
-
-        ensureLoaded(player, world);
-
-        String markerId = (global ? GLOBAL_ID_PREFIX : "waypoint_") + UUID.randomUUID();
-        MapMarker marker = new MapMarker(markerId, name, normalizeIcon(icon), transform, buildContextMenu(player, markerId));
-
-        if (global) {
-            saveGlobalMarker(marker, world, player);
-            invalidatePlayerCache(player, world);
-            if (world.isInThread()) {
-                refreshPlayerMarkers(player);
-            } else {
-                world.execute(() -> refreshPlayerMarkers(player));
-            }
-        } else {
-            savePersonalMarker(player, world, marker);
-            invalidatePlayerCache(player, world);
-            if (world.isInThread()) {
-                refreshPlayerMarkers(player);
-            } else {
-                world.execute(() -> refreshPlayerMarkers(player));
-            }
-        }
-    }
-
-    public static boolean removeWaypoint(@Nonnull Player player, @Nonnull String idOrName) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return false;
-
-        ensureLoaded(player, world);
-
-        MapMarker target = findWaypoint(player, idOrName);
-        if (target == null || target.id == null) {
-            return false;
-        }
-
-        if (isGlobalId(target.id)) {
-            boolean result = removeGlobalMarker(target.id, world.getName(), player);
-            if (result) {
-                invalidatePlayerCache(player, world);
-                if (world.isInThread()) {
-                    refreshPlayerMarkers(player);
-                } else {
-                    world.execute(() -> refreshPlayerMarkers(player));
-                }
-            }
-            return result;
-        }
-
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
-        MapMarker[] currentMarkers = perWorldData.getWorldMapMarkers();
-        if (currentMarkers == null) return false;
-
-        List<MapMarker> newMarkerList = new ArrayList<>();
-        boolean found = false;
-
-        for (MapMarker marker : currentMarkers) {
-            boolean match = marker != null && marker.id != null && marker.id.equalsIgnoreCase(target.id);
-            if (!match && marker != null && marker.name != null) {
-                match = stripColorTags(marker.name).equalsIgnoreCase(idOrName);
-            }
-
-            if (match) {
-                found = true;
-                continue;
-            }
-            newMarkerList.add(marker);
-        }
-
-        if (found) {
-            persistPersonal(player, world.getName(), newMarkerList);
-            invalidatePlayerCache(player, world);
-            if (world.isInThread()) {
-                refreshPlayerMarkers(player);
-            } else {
-                world.execute(() -> refreshPlayerMarkers(player));
-            }
-        }
-        return found;
-    }
-
-    public static boolean updateWaypoint(@Nonnull Player player, @Nonnull String id, @Nullable String newName, @Nullable String newIcon, @Nullable Transform newTransform) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return false;
-
-        ensureLoaded(player, world);
-
-        if (isGlobalId(id)) {
-            boolean result = updateGlobalMarker(id, newName, newIcon, newTransform, world.getName(), player);
-            if (result) {
-                invalidatePlayerCache(player, world);
-                if (world.isInThread()) {
-                    refreshPlayerMarkers(player);
-                } else {
-                    world.execute(() -> refreshPlayerMarkers(player));
-                }
-            }
-            return result;
-        }
-
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
-        MapMarker[] currentMarkers = perWorldData.getWorldMapMarkers();
-        if (currentMarkers == null) return false;
-
-        List<MapMarker> rebuilt = new ArrayList<>();
-        boolean found = false;
-
-        for (MapMarker m : currentMarkers) {
-            if (m != null && m.id != null && m.id.equals(id)) {
-                found = true;
-                String nameToUse = newName != null ? newName : m.name;
-                String iconToUse = newIcon != null ? normalizeIcon(newIcon) : m.markerImage;
-                Transform transformToUse = newTransform != null ? newTransform : m.transform;
-                String newId = (iconToUse != null && !iconToUse.equals(m.markerImage)) ? ("waypoint_" + UUID.randomUUID()) : m.id;
-                rebuilt.add(new MapMarker(newId, nameToUse, iconToUse, transformToUse, buildContextMenu(player, newId)));
-                continue;
-            }
-            rebuilt.add(m);
-        }
-
-        if (!found) {
-            return false;
-        }
-
-        persistPersonal(player, world.getName(), rebuilt);
-        invalidatePlayerCache(player, world);
-        if (world.isInThread()) {
-            refreshPlayerMarkers(player);
-        } else {
-            world.execute(() -> refreshPlayerMarkers(player));
-        }
-        return true;
-    }
-
-    @Nullable
-    private static ContextMenuItem[] buildContextMenu(@Nonnull Player player, @Nonnull String markerId) {
-        List<ContextMenuItem> menuItems = new ArrayList<>();
-        boolean isGlobal = isGlobalId(markerId);
-        menuItems.add(new ContextMenuItem(isGlobal ? "Global Waypoint" : "Personal Waypoint", ""));
-        if (PermissionsUtil.canTeleport(player)
-            && BetterMapConfig.getInstance().isAllowWaypointTeleports()) {
-            menuItems.add(new ContextMenuItem("Teleport To", "bm waypoint teleport " + markerId));
-        }
-        if (isGlobal) {
-            menuItems.add(new ContextMenuItem("Delete", "bm waypoint removeglobal " + markerId));
-        } else {
-            menuItems.add(new ContextMenuItem("Delete", "bm waypoint remove " + markerId));
-        }
-        return menuItems.isEmpty() ? null : menuItems.toArray(new ContextMenuItem[0]);
-    }
-
-    public static MapMarker getWaypoint(@Nonnull Player player, @Nonnull String id) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return null;
-
-        ensureLoaded(player, world);
-
-        MapMarker[] all = getWaypoints(player);
-        for (MapMarker m : all) {
-            if (m != null && m.id != null && m.id.equals(id)) {
-                return m;
-            }
-        }
-        return null;
-    }
-
-    public static MapMarker findWaypoint(@Nonnull Player player, @Nonnull String nameOrId) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return null;
-
-        ensureLoaded(player, world);
-
-        MapMarker[] all = getWaypoints(player);
-        for (MapMarker m : all) {
-            if (m == null) continue;
-            if (m.id != null && m.id.equalsIgnoreCase(nameOrId)) return m;
-            if (m.name != null) {
-                if (m.name.equalsIgnoreCase(nameOrId)) return m;
-                if (stripColorTags(m.name).equalsIgnoreCase(nameOrId)) return m;
-            }
-        }
-        return null;
-    }
-
-    private static void refreshPlayerMarkers(@Nonnull Player player) {
-        World world = player.getWorld();
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) return;
-
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
-        MapMarker[] currentMarkers = perWorldData.getWorldMapMarkers();
-
-        List<String> oldMarkerIds = new ArrayList<>();
-        if (currentMarkers != null) {
-            for (MapMarker m : currentMarkers) {
-                if (m != null && m.id != null) {
-                    oldMarkerIds.add(m.id);
-                }
-            }
-        }
-
-        List<MapMarker> personal = new ArrayList<>();
-        if (persistence != null) {
-            UUID uuid = ((CommandSender) player).getUuid();
-            List<StoredWaypoint> stored = persistence.loadPlayer(uuid, player.getDisplayName(), world.getName());
-            for (StoredWaypoint waypoint : stored) {
-                MapMarker marker = toMarker(waypoint, player);
-                if (marker != null) {
-                    personal.add(marker);
-                }
-            }
-        }
-
-        List<MapMarker> globals = getGlobalMarkers(world.getName(), player);
-        List<MapMarker> combined = new ArrayList<>(personal);
-        combined.addAll(globals);
-
-        MapMarker[] newMarkers = combined.toArray(new MapMarker[0]);
-        perWorldData.setWorldMapMarkers(newMarkers);
-
-        sendMarkersToClient(player, newMarkers, oldMarkerIds);
-    }
-
-    private static void ensureLoaded(@Nonnull Player player, @Nonnull World world) {
-        if (persistence == null) {
-            return;
-        }
-
-        if (!isTrackedWorld(world)) {
-            return;
-        }
-
-        UUID uuid = ((CommandSender) player).getUuid();
-        String worldName = world.getName();
-        String worldCacheKey = cacheKey(uuid, worldName);
-        if (!loadedPlayers.add(worldCacheKey)) {
-            return;
-        }
-
-        List<StoredWaypoint> stored = persistence.loadPlayer(uuid, player.getDisplayName(), worldName);
-        List<MapMarker> markers = new ArrayList<>();
-        if (!stored.isEmpty()) {
-            for (StoredWaypoint waypoint : stored) {
-                MapMarker marker = toMarker(waypoint, player);
-                if (marker != null) {
-                    markers.add(marker);
-                }
-            }
-        }
-        markers.addAll(getGlobalMarkers(worldName, player));
-
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(worldName);
-        MapMarker[] oldMarkers = perWorldData.getWorldMapMarkers();
-        List<String> oldMarkerIds = new ArrayList<>();
-        if (oldMarkers != null) {
-            for (MapMarker m : oldMarkers) {
-                if (m != null && m.id != null) {
-                    oldMarkerIds.add(m.id);
-                }
-            }
-        }
-        
-        List<String> persistedOldIds = persistence.loadLastSentMarkerIds(uuid, worldName);
-        for (String id : persistedOldIds) {
-            if (!oldMarkerIds.contains(id)) {
-                oldMarkerIds.add(id);
-            }
-        }
-        
-        MapMarker[] newMarkers = markers.toArray(new MapMarker[0]);
-        perWorldData.setWorldMapMarkers(newMarkers);
-        
-        sendMarkersToClient(player, newMarkers, oldMarkerIds);
+        // No-op - Hytale handles persistence
     }
 
     /**
-     * Called when a player joins or is ready. Loads their waypoints and sends them to the client.
-     * Removes any stale markers from previous sessions.
-     *
-     * @param player The player who joined.
+     * Gets all user markers (personal and shared) for a player.
      */
-    public static void onPlayerJoin(@Nonnull Player player) {
+    @Nonnull
+    public static List<UserMapMarker> getUserMarkers(@Nonnull Player player) {
         World world = player.getWorld();
         if (world == null || !isTrackedWorld(world)) {
-            return;
+            return List.of();
+        }
+
+        List<UserMapMarker> result = new ArrayList<>();
+        
+        // Personal markers
+        UserMapMarkersStore personalStore = resolveStore(world, player, false);
+        if (personalStore != null) {
+            result.addAll(personalStore.getUserMapMarkers());
         }
         
-        invalidatePlayerCache(player, world);
+        // Shared markers
+        UserMapMarkersStore sharedStore = resolveStore(world, player, true);
+        if (sharedStore != null) {
+            result.addAll(sharedStore.getUserMapMarkers());
+        }
         
-        if (world.isInThread()) {
-            ensureLoaded(player, world);
-        } else {
-            world.execute(() -> ensureLoaded(player, world));
-        }
+        return result;
     }
 
-    private static List<MapMarker> getGlobalMarkers(@Nonnull String worldName, @Nonnull Player player) {
-        if (persistence == null) {
-            return Collections.emptyList();
-        }
-        List<StoredWaypoint> stored = persistence.loadGlobal();
-        if (stored.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<MapMarker> markers = new ArrayList<>();
-        for (StoredWaypoint waypoint : stored) {
-            if (waypoint.world == null || !worldName.equalsIgnoreCase(waypoint.world)) {
-                continue;
-            }
-            MapMarker marker = toMarker(waypoint, player);
-            if (marker != null) {
-                markers.add(marker);
-            }
-        }
-        return markers;
-    }
+    /**
+     * Creates a new marker with the given parameters.
+     */
+    public static void addMarker(@Nonnull Player player, 
+                                 @Nonnull String name, 
+                                 @Nonnull String icon,
+                                 float x, 
+                                 float z,
+                                 @Nullable Color tint,
+                                 boolean shared) {
+        World world = player.getWorld();
+        if (world == null || !isTrackedWorld(world)) return;
 
-    private static void savePersonalMarker(@Nonnull Player player, @Nonnull World world, @Nonnull MapMarker marker) {
-        if (persistence == null) return;
+        UserMapMarkersStore store = resolveStore(world, player, shared);
+        if (store == null) return;
+
+        UserMapMarker marker = new UserMapMarker();
+        marker.setId((shared ? SHARED_ID_PREFIX : PERSONAL_ID_PREFIX) + UUID.randomUUID());
+        marker.setName(name);
+        marker.setIcon(normalizeIcon(icon));
+        marker.setPosition(x, z);
+        marker.setColorTint(tint != null ? tint : new Color((byte) 0, (byte) 0, (byte) 0));
+        marker.withCreatedByName(player.getDisplayName());
+        marker.withCreatedByUuid(((CommandSender) player).getUuid());
         
-        UUID uuid = ((CommandSender) player).getUuid();
-        String worldName = world.getName();
-        List<StoredWaypoint> existing = persistence.loadPlayer(uuid, player.getDisplayName(), worldName);
-        
-        List<MapMarker> newMarkerList = new ArrayList<>();
-        for (StoredWaypoint waypoint : existing) {
-            MapMarker m = toMarker(waypoint, player);
-            if (m != null) {
-                newMarkerList.add(m);
+        store.addUserMapMarker(marker);
+    }
+
+    /**
+     * Removes a marker by ID or name.
+     */
+    public static boolean removeMarker(@Nonnull Player player, @Nonnull String idOrName) {
+        World world = player.getWorld();
+        if (world == null || !isTrackedWorld(world)) return false;
+
+        MarkerEntry entry = findMarkerEntry(player, world, idOrName);
+        if (entry == null) {
+            return false;
+        }
+
+        entry.store.removeUserMapMarker(entry.marker.getId());
+        return true;
+    }
+
+    /**
+     * Updates a marker's properties.
+     */
+    public static boolean updateMarker(@Nonnull Player player, 
+                                       @Nonnull String id, 
+                                       @Nullable String newName, 
+                                       @Nullable String newIcon,
+                                       @Nullable Float newX,
+                                       @Nullable Float newZ,
+                                       @Nullable Color newTint) {
+        World world = player.getWorld();
+        if (world == null || !isTrackedWorld(world)) return false;
+
+        MarkerEntry entry = findMarkerEntry(player, world, id);
+        if (entry == null) {
+            return false;
+        }
+
+        List<UserMapMarker> markers = new ArrayList<>(entry.store.getUserMapMarkers());
+        boolean updated = false;
+        for (int i = 0; i < markers.size(); i++) {
+            UserMapMarker m = markers.get(i);
+            if (!id.equals(m.getId())) continue;
+
+            // Always update all fields to ensure changes are synced
+            if (newName != null && !newName.trim().isEmpty()) {
+                m.setName(newName.trim());
             }
-        }
-        newMarkerList.add(marker);
-
-        persistPersonal(player, worldName, newMarkerList);
-    }
-
-    private static void persistPersonal(@Nonnull Player player, @Nonnull String worldName, @Nonnull List<MapMarker> markers) {
-        if (persistence == null || !ExplorationEventListener.isTrackedWorld(player.getWorld())) {
-            return;
-        }
-        List<StoredWaypoint> stored = new ArrayList<>();
-        for (MapMarker marker : markers) {
-            if (marker == null || marker.id == null) continue;
-            if (isGlobalId(marker.id)) continue;
-            StoredWaypoint waypoint = fromMarker(marker, worldName, player.getDisplayName(), ((CommandSender) player).getUuid(), false);
-            if (waypoint != null) {
-                stored.add(waypoint);
+            if (newIcon != null && !newIcon.trim().isEmpty()) {
+                m.setIcon(normalizeIcon(newIcon.trim()));
             }
-        }
-        UUID uuid = ((CommandSender) player).getUuid();
-        List<String> lastSentIds = persistence.loadLastSentMarkerIds(uuid, worldName);
-        persistence.savePlayer(uuid, player.getDisplayName(), worldName, stored, lastSentIds);
-    }
+            if (newX != null && newZ != null) {
+                m.setPosition(newX, newZ);
+            }
+            if (newTint != null) {
+                m.setColorTint(newTint);
+            }
 
-    private static void saveGlobalMarker(@Nonnull MapMarker marker, @Nonnull World world, @Nonnull Player player) {
-        if (persistence == null || !ExplorationEventListener.isTrackedWorld(world)) {
-            return;
-        }
-        List<StoredWaypoint> existing = persistence.loadGlobal();
-        List<StoredWaypoint> mutable = new ArrayList<>(existing);
-        StoredWaypoint converted = fromMarker(marker, world.getName(), player.getDisplayName(), ((CommandSender) player).getUuid(), true);
-        if (converted == null) {
-            return;
-        }
-        mutable.add(converted);
-        persistence.saveGlobal(mutable);
-        world.execute(() -> refreshAllPlayersMarkers(world));
-    }
-
-    public static void refreshAllPlayersMarkers(@Nonnull World world) {
-        if (world == null || !ExplorationEventListener.isTrackedWorld(world)) {
-            return;
+            updated = true;
+            break;
         }
 
-        for (PlayerRef playerRef : world.getPlayerRefs()) {
-            Ref<EntityStore> ref = playerRef.getReference();
-            if (ref == null || !ref.isValid()) continue;
+        if (updated) {
+            // Force store to re-save the markers list - this triggers the sync
+            entry.store.setUserMapMarkers(markers);
             
-            Player p = ref.getStore().getComponent(ref, Player.getComponentType());
-            if (p == null) continue;
-
-            invalidatePlayerCache(p, world);
-            refreshPlayerMarkers(p);
+            // Force the marker to be re-sent to the client by clearing it from the tracker's cache
+            // This is needed because MapMarkerTracker.doesMarkerNeedNetworkUpdate() doesn't check
+            // for icon or tint changes, only name/position changes
+            forceRefreshMarkerOnClient(player, id);
+        }
+        return updated;
+    }
+    
+    /**
+     * Forces a marker to be re-sent to the client by removing it from the tracker's sent cache.
+     */
+    private static void forceRefreshMarkerOnClient(@Nonnull Player player, @Nonnull String markerId) {
+        try {
+            var tracker = player.getWorldMapTracker();
+            if (tracker == null) return;
+            
+            var sentMarkers = tracker.getSentMarkers();
+            if (sentMarkers != null) {
+                sentMarkers.remove(markerId);
+            }
+        } catch (Exception e) {
+            // Silently ignore - marker will be updated on next natural refresh
         }
     }
 
-    private static boolean removeGlobalMarker(@Nonnull String markerId, @Nonnull String worldName, @Nonnull Player player) {
-        if (persistence == null) {
-            return false;
-        }
-        List<StoredWaypoint> existing = persistence.loadGlobal();
-        List<StoredWaypoint> updated = new ArrayList<>();
-        boolean found = false;
-        for (StoredWaypoint waypoint : existing) {
-            if (waypoint.id != null && waypoint.id.equals(markerId)) {
-                found = true;
-                continue;
-            }
-            updated.add(waypoint);
-        }
-        if (found) {
-            persistence.saveGlobal(updated);
-            World world = Universe.get().getWorld(worldName);
-            if (world != null) {
-                world.execute(() -> refreshAllPlayersMarkers(world));
-            }
-        }
-        return found;
+    /**
+     * Gets a marker by ID.
+     */
+    @Nullable
+    public static UserMapMarker getMarker(@Nonnull Player player, @Nonnull String id) {
+        World world = player.getWorld();
+        if (world == null || !isTrackedWorld(world)) return null;
+
+        MarkerEntry entry = findMarkerEntry(player, world, id);
+        return entry != null ? entry.marker : null;
     }
 
-    private static boolean updateGlobalMarker(@Nonnull String markerId, @Nullable String newName, @Nullable String newIcon, @Nullable Transform newTransform, @Nonnull String worldName, @Nonnull Player actor) {
-        if (persistence == null) {
-            return false;
-        }
-        List<StoredWaypoint> existing = persistence.loadGlobal();
-        boolean found = false;
-        List<StoredWaypoint> rebuilt = new ArrayList<>();
-        for (StoredWaypoint waypoint : existing) {
-            if (waypoint.id != null && waypoint.id.equals(markerId)) {
-                found = true;
-                String iconToUse = newIcon != null ? normalizeIcon(newIcon) : waypoint.icon;
-                
-                String newId = waypoint.id;
-                if (iconToUse != null && !iconToUse.equals(waypoint.icon)) {
-                    newId = GLOBAL_ID_PREFIX + UUID.randomUUID();
-                }
+    /**
+     * Finds a marker by name or ID.
+     */
+    @Nullable
+    public static UserMapMarker findMarker(@Nonnull Player player, @Nonnull String nameOrId) {
+        World world = player.getWorld();
+        if (world == null || !isTrackedWorld(world)) return null;
 
-                double x = waypoint.x;
-                double y = waypoint.y;
-                double z = waypoint.z;
-                if (newTransform != null && newTransform.position != null) {
-                    x = newTransform.position.x;
-                    y = newTransform.position.y;
-                    z = newTransform.position.z;
-                }
-                StoredWaypoint updated = new StoredWaypoint(
-                    newId,
-                    newName != null ? newName : waypoint.name,
-                    iconToUse,
-                    x,
-                    y,
-                    z,
-                    worldName,
-                    true,
-                    waypoint.ownerUuid,
-                    waypoint.ownerName
-                );
-                rebuilt.add(updated);
-            } else {
-                rebuilt.add(waypoint);
-            }
-        }
-        if (found) {
-            persistence.saveGlobal(rebuilt);
-            World world = Universe.get().getWorld(worldName);
-            if (world != null) {
-                world.execute(() -> refreshAllPlayersMarkers(world));
-            }
-        }
-        return found;
+        MarkerEntry entry = findMarkerEntry(player, world, nameOrId);
+        return entry != null ? entry.marker : null;
     }
 
-    private static MapMarker toMarker(@Nonnull StoredWaypoint waypoint, @Nonnull Player player) {
-        Transform transform = PositionUtil.toTransformPacket(new com.hypixel.hytale.math.vector.Transform(waypoint.x, waypoint.y, waypoint.z));
-        ContextMenuItem[] menu = buildContextMenu(player, waypoint.id);
-        return new MapMarker(waypoint.id, waypoint.name, normalizeIcon(waypoint.icon), transform, menu);
+    /**
+     * Checks if marker ID is a shared marker.
+     */
+    public static boolean isSharedId(@Nonnull String id) {
+        return id.startsWith(SHARED_ID_PREFIX);
     }
 
-    private static StoredWaypoint fromMarker(@Nonnull MapMarker marker, @Nonnull String worldName, @Nonnull String ownerName, @Nonnull UUID ownerUuid, boolean shared) {
-        if (marker.transform == null || marker.transform.position == null) {
-            return null;
+    private static UserMapMarkersStore resolveStore(@Nonnull World world, @Nonnull Player player, boolean shared) {
+        if (shared) {
+            return world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
         }
-        return new StoredWaypoint(
-            marker.id,
-            marker.name != null ? marker.name : "Waypoint",
-            normalizeIcon(marker.markerImage),
-            marker.transform.position.x,
-            marker.transform.position.y,
-            marker.transform.position.z,
-            worldName,
-            shared,
-            ownerUuid.toString(),
-            ownerName
-        );
+        return player.getPlayerConfigData().getPerWorldData(world.getName());
+    }
+
+    @Nullable
+    private static MarkerEntry findMarkerEntry(@Nonnull Player player, @Nonnull World world, @Nonnull String nameOrId) {
+        UserMapMarkersStore personal = resolveStore(world, player, false);
+        MarkerEntry personalEntry = locateInStore(personal, nameOrId, false);
+        if (personalEntry != null) {
+            return personalEntry;
+        }
+        UserMapMarkersStore shared = resolveStore(world, player, true);
+        return locateInStore(shared, nameOrId, true);
+    }
+
+    @Nullable
+    private static MarkerEntry locateInStore(@Nullable UserMapMarkersStore store, @Nonnull String nameOrId, boolean shared) {
+        if (store == null) return null;
+        for (UserMapMarker marker : store.getUserMapMarkers()) {
+            if (marker == null || marker.getId() == null) continue;
+            String markerName = marker.getName();
+            boolean matchId = marker.getId().equalsIgnoreCase(nameOrId);
+            boolean matchName = markerName != null && markerName.equalsIgnoreCase(nameOrId);
+            if (matchId || matchName) {
+                return new MarkerEntry(marker, store, shared);
+            }
+        }
+        return null;
+    }
+
+    public static boolean isTrackedWorld(@Nullable World world) {
+        return ExplorationEventListener.isTrackedWorld(world);
     }
 
     private static String normalizeIcon(@Nullable String icon) {
         if (icon == null || icon.isEmpty()) {
-            return "Coordinate.png";
+            return "UserA.png";
         }
         if (icon.endsWith(".png")) {
             return icon;
@@ -561,261 +258,13 @@ public class WaypointManager {
         return icon + ".png";
     }
 
-    public static boolean isGlobalId(@Nonnull String id) {
-        return id.startsWith(GLOBAL_ID_PREFIX);
-    }
-
-    private static String stripColorTags(String input) {
-        if (input == null) return "";
-        return input.replaceAll("<[^>]*>", "");
-    }
-
-    public static boolean isTrackedWorld(@Nullable World world) {
-        return ExplorationEventListener.isTrackedWorld(world);
-    }
-
-    private static String cacheKey(@Nonnull UUID uuid, @Nonnull String worldName) {
-        return uuid + "|" + worldName.toLowerCase(Locale.ROOT);
-    }
-
-    private static void invalidatePlayerCache(@Nonnull Player player, @Nonnull World world) {
-        UUID uuid = ((CommandSender) player).getUuid();
-        loadedPlayers.remove(cacheKey(uuid, world.getName()));
-    }
-
     /**
-     * Sends a full marker update to the client using the UpdateWorldMap packet.
-     * Removes markers that no longer exist and adds/updates the current markers.
-     * Also saves the sent marker IDs to persistence for handling server restarts.
+     * Called when a player joins. No-op now since Hytale handles marker sync.
      */
-    private static void sendMarkersToClient(@Nonnull Player player, @Nonnull MapMarker[] markers, @Nonnull List<String> oldMarkerIds) {
-        World world = player.getWorld();
-        if (world == null) return;
-        
-        Runnable sendTask = () -> {
-            try {
-                Ref<EntityStore> ref = player.getReference();
-                if (ref == null || !ref.isValid()) {
-                    return;
-                }
-                PlayerRef playerRef = ref.getStore().getComponent(ref, PlayerRef.getComponentType());
-                if (playerRef == null) {
-                    return;
-                }
-
-                Set<String> newMarkerIds = new java.util.HashSet<>();
-                for (MapMarker m : markers) {
-                    if (m != null && m.id != null) {
-                        newMarkerIds.add(m.id);
-                    }
-                }
-
-                List<String> idsToRemove = new ArrayList<>();
-                for (String oldId : oldMarkerIds) {
-                    if (!newMarkerIds.contains(oldId)) {
-                        idsToRemove.add(oldId);
-                    }
-                }
-
-                UpdateWorldMap packet = new UpdateWorldMap(
-                    null,
-                    markers,
-                    idsToRemove.isEmpty() ? null : idsToRemove.toArray(new String[0])
-                );
-                playerRef.getPacketHandler().write(packet);
-                
-                if (persistence != null) {
-                    UUID uuid = ((CommandSender) player).getUuid();
-                    String worldName = world.getName();
-                    List<StoredWaypoint> personalWaypoints = persistence.loadPlayer(uuid, player.getDisplayName(), worldName);
-                    persistence.savePlayer(uuid, player.getDisplayName(), worldName, personalWaypoints, new ArrayList<>(newMarkerIds));
-                }
-            } catch (Exception e) {
-                LOGGER.warning("Failed to send markers to client for " + player.getDisplayName() + ": " + e.getMessage());
-            }
-        };
-        
-        if (world.isInThread()) {
-            sendTask.run();
-        } else {
-            world.execute(sendTask);
-        }
+    public static void onPlayerJoin(@Nonnull Player player) {
+        // Hytale's PersonalMarkersProvider and SharedMarkersProvider handle sending markers
     }
 
-    private static final class WaypointPersistence {
-        private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        private final Path dataRoot;
-        private final Path globalFile;
-
-        WaypointPersistence(@Nonnull Path baseDir) {
-            this.dataRoot = baseDir.resolve("data");
-            this.globalFile = this.dataRoot.resolve("global-pings.json");
-        }
-
-        List<StoredWaypoint> loadPlayer(@Nonnull UUID playerUuid, @Nonnull String playerName, @Nonnull String worldName) {
-            try {
-                Path dir = dataRoot.resolve(worldName);
-                if (!Files.exists(dir)) {
-                    return Collections.emptyList();
-                }
-                Path file = dir.resolve(playerUuid + "-pings.json");
-                if (!Files.exists(file)) {
-                    return Collections.emptyList();
-                }
-                try (BufferedReader reader = Files.newBufferedReader(file)) {
-                    PlayerWaypointFile data = gson.fromJson(reader, PlayerWaypointFile.class);
-                    if (data == null || data.waypoints == null) {
-                        return Collections.emptyList();
-                    }
-                    return new ArrayList<>(Arrays.asList(data.waypoints));
-                }
-            } catch (Exception e) {
-                LOGGER.warning("Failed to load waypoints for " + playerName + ": " + e.getMessage());
-                return Collections.emptyList();
-            }
-        }
-
-        List<String> loadLastSentMarkerIds(@Nonnull UUID playerUuid, @Nonnull String worldName) {
-            try {
-                Path dir = dataRoot.resolve(worldName);
-                if (!Files.exists(dir)) {
-                    return Collections.emptyList();
-                }
-                Path file = dir.resolve(playerUuid + "-pings.json");
-                if (!Files.exists(file)) {
-                    return Collections.emptyList();
-                }
-                try (BufferedReader reader = Files.newBufferedReader(file)) {
-                    PlayerWaypointFile data = gson.fromJson(reader, PlayerWaypointFile.class);
-                    if (data == null || data.lastSentMarkerIds == null) {
-                        return Collections.emptyList();
-                    }
-                    return new ArrayList<>(Arrays.asList(data.lastSentMarkerIds));
-                }
-            } catch (Exception e) {
-                return Collections.emptyList();
-            }
-        }
-
-        void savePlayer(@Nonnull UUID playerUuid, @Nonnull String playerName, @Nonnull String worldName, @Nonnull List<StoredWaypoint> waypoints, @Nonnull List<String> lastSentMarkerIds) {
-            try {
-                Path dir = dataRoot.resolve(worldName);
-                Files.createDirectories(dir);
-                Path file = dir.resolve(playerUuid + "-pings.json");
-                PlayerWaypointFile data = new PlayerWaypointFile(
-                    playerUuid.toString(), 
-                    playerName, 
-                    waypoints.toArray(new StoredWaypoint[0]),
-                    lastSentMarkerIds.toArray(new String[0])
-                );
-                try (BufferedWriter writer = Files.newBufferedWriter(file)) {
-                    gson.toJson(data, writer);
-                }
-            } catch (IOException e) {
-                LOGGER.warning("Failed to save waypoints for " + playerName + ": " + e.getMessage());
-            }
-        }
-
-        List<StoredWaypoint> loadGlobal() {
-            try {
-                if (!Files.exists(globalFile)) {
-                    return new ArrayList<>();
-                }
-                try (BufferedReader reader = Files.newBufferedReader(globalFile)) {
-                    GlobalWaypointFile data = gson.fromJson(reader, GlobalWaypointFile.class);
-                    if (data == null || data.waypoints == null) {
-                        return new ArrayList<>();
-                    }
-                    return new ArrayList<>(Arrays.asList(data.waypoints));
-                }
-            } catch (Exception e) {
-                LOGGER.warning("Failed to load global waypoints: " + e.getMessage());
-                return new ArrayList<>();
-            }
-        }
-
-        void saveGlobal(@Nonnull List<StoredWaypoint> waypoints) {
-            try {
-                Files.createDirectories(dataRoot);
-                GlobalWaypointFile data = new GlobalWaypointFile(waypoints.toArray(new StoredWaypoint[0]));
-                try (BufferedWriter writer = Files.newBufferedWriter(globalFile)) {
-                    gson.toJson(data, writer);
-                }
-            } catch (IOException e) {
-                LOGGER.warning("Failed to save global waypoints: " + e.getMessage());
-            }
-        }
-    }
-
-    private static final class StoredWaypoint {
-        @SerializedName("Id")
-        private final String id;
-
-        @SerializedName("Name")
-        private final String name;
-
-        @SerializedName("Icon")
-        private final String icon;
-
-        @SerializedName("X")
-        private final double x;
-
-        @SerializedName("Y")
-        private final double y;
-
-        @SerializedName("Z")
-        private final double z;
-
-        @SerializedName("World")
-        private final String world;
-
-        @SerializedName("Shared")
-        private final boolean shared;
-
-        @SerializedName("OwnerUuid")
-        private final String ownerUuid;
-
-        @SerializedName("OwnerName")
-        private final String ownerName;
-
-        StoredWaypoint(String id, String name, String icon, double x, double y, double z, String world, boolean shared, String ownerUuid, String ownerName) {
-            this.id = id;
-            this.name = name;
-            this.icon = icon;
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.world = world;
-            this.shared = shared;
-            this.ownerUuid = ownerUuid != null ? ownerUuid.toString() : null;
-            this.ownerName = ownerName;
-        }
-    }
-
-    private static final class PlayerWaypointFile {
-        @SerializedName("PlayerUuid")
-        private final String playerUuid;
-        @SerializedName("PlayerName")
-        private final String playerName;
-        @SerializedName("Waypoints")
-        private final StoredWaypoint[] waypoints;
-        @SerializedName("LastSentMarkerIds")
-        private final String[] lastSentMarkerIds;
-
-        PlayerWaypointFile(String playerUuid, String playerName, StoredWaypoint[] waypoints, String[] lastSentMarkerIds) {
-            this.playerUuid = playerUuid;
-            this.playerName = playerName;
-            this.waypoints = waypoints;
-            this.lastSentMarkerIds = lastSentMarkerIds;
-        }
-    }
-
-    private static final class GlobalWaypointFile {
-        @SerializedName("Waypoints")
-        private final StoredWaypoint[] waypoints;
-
-        GlobalWaypointFile(StoredWaypoint[] waypoints) {
-            this.waypoints = waypoints;
-        }
+    private record MarkerEntry(UserMapMarker marker, UserMapMarkersStore store, boolean shared) {
     }
 }

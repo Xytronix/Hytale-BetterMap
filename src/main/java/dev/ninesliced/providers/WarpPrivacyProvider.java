@@ -2,19 +2,14 @@ package dev.ninesliced.providers;
 
 import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
 import com.hypixel.hytale.builtin.teleport.Warp;
-import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
-import com.hypixel.hytale.server.core.util.PositionUtil;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.listeners.ExplorationEventListener;
@@ -36,10 +31,10 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
     private static final String MARKER_LABEL_PREFIX = "Warp: ";
     private static final String MARKER_ICON = "Warp.png";
 
-    public void update(World world, MapMarkerTracker tracker,
-                       int viewRadius, int chunkX, int chunkZ) {
+    @Override
+    public void update(World world, Player viewer, MarkersCollector collector) {
         try {
-            if (world == null || tracker == null) {
+            if (world == null) {
                 return;
             }
 
@@ -57,7 +52,6 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
 //                return;
 //            }
 
-            Player viewer = tracker.getPlayer();
             String viewerName = viewer.getDisplayName();
 
             BetterMapConfig config = BetterMapConfig.getInstance();
@@ -103,17 +97,11 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 Vector3f rotation = transform.getRotation();
                 float yaw = rotation != null ? rotation.getYaw() : 0.0f;
 
-                tracker.trySendMarker(
-                    viewRadius,
-                    chunkX,
-                    chunkZ,
-                    transform.getPosition(),
-                    yaw,
-                    buildMarkerId(warp),
-                    buildMarkerName(warp),
-                    warp,
-                    WarpPrivacyProvider::createMarker
-                );
+                if (!collector.isInViewDistance(transform.getPosition().x, transform.getPosition().z)) {
+                    continue;
+                }
+
+                collector.add(createMarker(buildMarkerId(warp), buildMarkerName(warp), warp, yaw));
             }
         } catch (Exception e) {
             LOGGER.warning("Error in WarpPrivacyProvider.update: " + e.getMessage());
@@ -160,13 +148,15 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
         return id != null ? MARKER_LABEL_PREFIX + id : MARKER_LABEL_PREFIX + "Unknown";
     }
 
-    private static MapMarker createMarker(String id, String name, Warp warp) {
-        return new MapMarker(
-            id,
-            name,
-            MARKER_ICON,
-            PositionUtil.toTransformPacket(warp.getTransform()),
-            null
+    private static MapMarker createMarker(String id, String name, Warp warp, float yaw) {
+        Transform transform = warp.getTransform();
+        com.hypixel.hytale.math.vector.Transform vecTransform = new com.hypixel.hytale.math.vector.Transform(
+            transform.getPosition(),
+            new Vector3f(0, yaw, 0)
         );
+
+        return new MapMarkerBuilder(id, MARKER_ICON, vecTransform)
+            .withCustomName(name)
+            .build();
     }
 }

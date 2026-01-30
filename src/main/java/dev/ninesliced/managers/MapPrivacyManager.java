@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import dev.ninesliced.BetterMap;
 import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.utils.PermissionsUtil;
