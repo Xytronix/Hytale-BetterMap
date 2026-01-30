@@ -88,37 +88,32 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
 
             ui.append(WAYPOINT_LIST_PATH, "Pages/BetterMap/WaypointItem.ui");
             
-            // Name
             String name = marker.getName();
             ui.set(itemPath + " #NameLabel.Text", name != null && !name.isEmpty() ? name : "Unnamed");
             
-            // Icon
             String icon = marker.getIcon();
             ui.set(itemPath + " #IconLabel.Text", "[" + formatIcon(icon) + "]");
             
-            // Shared status
             boolean isShared = WaypointManager.isSharedId(marker.getId());
             ui.set(itemPath + " #SharedLabel.Text", isShared ? "(Shared)" : "(Personal)");
 
-            // World name
             String worldName = player.getWorld() != null ? player.getWorld().getName() : "-";
             if (worldName == null || worldName.isEmpty()) {
                 worldName = "-";
             }
             ui.set(itemPath + " #WorldValue.Text", worldName);
 
-            // Coordinates (UserMapMarker only has x, z - no y)
             ui.set(itemPath + " #XValue.Text", String.format(Locale.ROOT, "%.1f", marker.getX()));
             ui.set(itemPath + " #ZValue.Text", String.format(Locale.ROOT, "%.1f", marker.getZ()));
 
-            // Creator info
             String createdBy = marker.getCreatedByName();
             ui.set(itemPath + " #CreatorValue.Text", createdBy != null && !createdBy.isEmpty() ? createdBy : "-");
 
-            // Color tint
+            String iconPath = icon != null && !icon.isEmpty() ? icon : "UserA.png";
+            ui.set(itemPath + " #IconPreview.Background", "Common/" + iconPath);
             Color tint = marker.getColorTint();
             if (tint != null) {
-                ui.set(itemPath + " #TintPreview.Background", String.format("#%02X%02X%02X", tint.red & 0xFF, tint.green & 0xFF, tint.blue & 0xFF));
+                ui.set(itemPath + " #IconPreview.Background.Color", String.format("#%02X%02X%02X", tint.red & 0xFF, tint.green & 0xFF, tint.blue & 0xFF));
             }
 
             ui.set(itemPath + " #TeleportButton.Visible", canTeleport);
@@ -166,7 +161,6 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
         if (icon == null || icon.isEmpty()) {
             return "Default";
         }
-        // Remove .png extension for display
         if (icon.endsWith(".png")) {
             return icon.substring(0, icon.length() - 4);
         }
@@ -225,7 +219,6 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                 if (data.targetId != null && !data.targetId.isEmpty()) {
                     UserMapMarker marker = WaypointManager.getMarker(player, data.targetId);
                     if (marker != null) {
-                        // UserMapMarker has only x, z - use current y for teleport
                         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
                         double currentY = transform != null ? transform.getPosition().y : 64.0;
                         

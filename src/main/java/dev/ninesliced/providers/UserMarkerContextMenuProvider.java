@@ -31,13 +31,11 @@ public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProv
     
     @Override
     public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
-        // Personal markers
         PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
         for (UserMapMarker marker : perWorldData.getUserMapMarkers()) {
             collector.add(buildMarkerWithContextMenu(marker));
         }
         
-        // Shared markers
         WorldMarkersResource worldMarkersResource = world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
         for (UserMapMarker marker : worldMarkersResource.getUserMapMarkers()) {
             collector.add(buildMarkerWithContextMenu(marker));
@@ -69,7 +67,6 @@ public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProv
             ));
         }
         
-        // Add "Edit" context menu option - command without leading slash
         builder.withContextMenuItem(new ContextMenuItem("Edit", "bettermap waypoint edit " + marker.getId()));
         
         return builder.build();

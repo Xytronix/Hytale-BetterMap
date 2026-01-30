@@ -11,9 +11,9 @@ Group #WaypointItem {
     LayoutMode: Left;
     Anchor: (Height: 24);
 
-    Panel #TintPreview {
-      Anchor: (Width: 16, Height: 16, Top: 4);
-      Background: #FFFFFF;
+    Panel #IconPreview {
+      Anchor: (Width: 20, Height: 20, Top: 2);
+      Background: "Common/UserA.png";
     }
 
     Panel { Anchor: (Width: 8, Height: 1); }

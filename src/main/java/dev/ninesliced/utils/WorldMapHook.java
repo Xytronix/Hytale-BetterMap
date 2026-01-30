@@ -347,7 +347,6 @@ public class WorldMapHook {
             packet.allowTeleportToCoordinates = tracker.isAllowTeleportToCoordinates();
             packet.allowTeleportToMarkers = tracker.isAllowTeleportToMarkers();
 
-            // Preserve marker creation settings from world config (like Hytale does)
             WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
             packet.allowCreatingMapMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowCreatingMarkers();
             packet.allowRemovingOtherPlayersMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowDeleteOtherPlayersSharedMarkers();

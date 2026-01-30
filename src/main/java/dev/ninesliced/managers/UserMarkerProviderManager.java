@@ -51,7 +51,6 @@ public class UserMarkerProviderManager {
             return;
         }
         
-        // Register event handlers to catch worlds as they become available
         plugin.getEventRegistry().registerGlobal(PlayerConnectEvent.class, event -> {
             World world = event.getWorld();
             if (world != null) {
@@ -68,7 +67,6 @@ public class UserMarkerProviderManager {
             }
         });
         
-        // Also schedule a periodic check to ensure providers stay replaced
         HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(() -> {
             try {
                 for (World world : monitoredWorlds) {
@@ -80,14 +78,12 @@ public class UserMarkerProviderManager {
             }
         }, 5L, 30L, TimeUnit.SECONDS);
         
-        // Try to replace in any already-loaded worlds
         try {
             for (World world : Universe.get().getWorlds().values()) {
                 monitoredWorlds.add(world);
                 replaceProviders(world);
             }
         } catch (Exception e) {
-            // Universe may not be ready yet, that's fine - events will catch it
         }
         
         LOGGER.info("UserMarkerProviderManager initialized - added Edit context menu to markers");
@@ -116,26 +112,22 @@ public class UserMarkerProviderManager {
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
             if (providers == null) return;
             
-            // Check if we've already replaced the providers
             if (providers.containsKey(BETTERMAP_PROVIDER_KEY)) {
-                return; // Already replaced
+                return;
             }
             
-            // Remove and backup the personal provider
             WorldMapManager.MarkerProvider existingPersonal = providers.remove(PERSONAL_PROVIDER_KEY);
             if (existingPersonal != null && !(existingPersonal instanceof UserMarkerContextMenuProvider)) {
                 backedUpPersonalProviders.put(world, existingPersonal);
                 LOGGER.info("Backed up personal provider for world " + world.getName());
             }
             
-            // Remove and backup the shared provider
             WorldMapManager.MarkerProvider existingShared = providers.remove(SHARED_PROVIDER_KEY);
             if (existingShared != null && !(existingShared instanceof UserMarkerContextMenuProvider)) {
                 backedUpSharedProviders.put(world, existingShared);
                 LOGGER.info("Backed up shared provider for world " + world.getName());
             }
             
-            // Add our combined provider
             providers.put(BETTERMAP_PROVIDER_KEY, UserMarkerContextMenuProvider.INSTANCE);
             
             LOGGER.info("Replaced personal/shared marker providers with BetterMap provider in world " + world.getName());
@@ -156,10 +148,8 @@ public class UserMarkerProviderManager {
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
             if (providers == null) return;
             
-            // Remove our provider
             providers.remove(BETTERMAP_PROVIDER_KEY);
             
-            // Restore originals
             WorldMapManager.MarkerProvider originalPersonal = backedUpPersonalProviders.remove(world);
             if (originalPersonal != null) {
                 providers.put(PERSONAL_PROVIDER_KEY, originalPersonal);

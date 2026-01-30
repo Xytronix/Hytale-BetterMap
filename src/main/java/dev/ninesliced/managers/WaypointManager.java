@@ -35,7 +35,6 @@ public class WaypointManager {
      * No-op now that we rely on Hytale's built-in marker storage.
      */
     public static void initialize(@Nonnull Path configDir) {
-        // No-op - Hytale handles persistence
     }
 
     /**
@@ -50,13 +49,11 @@ public class WaypointManager {
 
         List<UserMapMarker> result = new ArrayList<>();
         
-        // Personal markers
         UserMapMarkersStore personalStore = resolveStore(world, player, false);
         if (personalStore != null) {
             result.addAll(personalStore.getUserMapMarkers());
         }
         
-        // Shared markers
         UserMapMarkersStore sharedStore = resolveStore(world, player, true);
         if (sharedStore != null) {
             result.addAll(sharedStore.getUserMapMarkers());
@@ -133,7 +130,6 @@ public class WaypointManager {
             UserMapMarker m = markers.get(i);
             if (!id.equals(m.getId())) continue;
 
-            // Always update all fields to ensure changes are synced
             if (newName != null && !newName.trim().isEmpty()) {
                 m.setName(newName.trim());
             }
@@ -152,12 +148,8 @@ public class WaypointManager {
         }
 
         if (updated) {
-            // Force store to re-save the markers list - this triggers the sync
             entry.store.setUserMapMarkers(markers);
             
-            // Force the marker to be re-sent to the client by clearing it from the tracker's cache
-            // This is needed because MapMarkerTracker.doesMarkerNeedNetworkUpdate() doesn't check
-            // for icon or tint changes, only name/position changes
             forceRefreshMarkerOnClient(player, id);
         }
         return updated;
@@ -176,7 +168,6 @@ public class WaypointManager {
                 sentMarkers.remove(markerId);
             }
         } catch (Exception e) {
-            // Silently ignore - marker will be updated on next natural refresh
         }
     }
 
@@ -262,7 +253,6 @@ public class WaypointManager {
      * Called when a player joins. No-op now since Hytale handles marker sync.
      */
     public static void onPlayerJoin(@Nonnull Player player) {
-        // Hytale's PersonalMarkersProvider and SharedMarkersProvider handle sending markers
     }
 
     private record MarkerEntry(UserMapMarker marker, UserMapMarkersStore store, boolean shared) {

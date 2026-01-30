@@ -50,7 +50,6 @@ public class BetterMapWaypointUpdateCommand extends AbstractPlayerCommand {
         UserMapMarker marker = WaypointManager.findMarker(player, target);
         
         if (marker != null) {
-            // Update marker with new name, keeping existing icon, position and tint
             WaypointManager.updateMarker(player, marker.getId(), newNameRaw, marker.getIcon(), marker.getX(), marker.getZ(), marker.getColorTint());
             String oldName = marker.getName() != null ? marker.getName() : "Unnamed";
             context.sendMessage(Message.raw("Updated waypoint: " + oldName + " -> " + newNameRaw));

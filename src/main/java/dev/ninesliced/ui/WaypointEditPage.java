@@ -19,8 +19,10 @@ import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.BetterMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Logger;
 import javax.annotation.Nullable;
 import javax.annotation.Nonnull;
 
@@ -57,6 +59,8 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     
     private boolean initialized = false;
 
+    private static final Logger LOGGER = Logger.getLogger("WaypointEditPage");
+
     public WaypointEditPage(@Nonnull PlayerRef playerRef, @Nullable String targetId) {
         super(playerRef, CustomPageLifetime.CanDismiss, EditData.CODEC);
         this.targetId = targetId;
@@ -77,8 +81,18 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     this.inputX = String.format(Locale.ROOT, "%.2f", marker.getX());
                     this.inputZ = String.format(Locale.ROOT, "%.2f", marker.getZ());
                     this.shared = WaypointManager.isSharedId(targetId);
-                    this.selectedIconIndex = getIconIndex(marker.getIcon());
-                    this.selectedTintIndex = getTintIndex(marker.getColorTint());
+                    
+                    String markerIcon = marker.getIcon();
+                    Color markerTint = marker.getColorTint();
+                    this.selectedIconIndex = getIconIndex(markerIcon);
+                    this.selectedTintIndex = getTintIndex(markerTint);
+                    
+                    LOGGER.info("[WaypointEdit] Loading marker: id=" + targetId + 
+                        ", icon=" + markerIcon + ", iconIndex=" + this.selectedIconIndex +
+                        ", tint=" + (markerTint != null ? String.format("#%02X%02X%02X", markerTint.red & 0xFF, markerTint.green & 0xFF, markerTint.blue & 0xFF) : "null") + 
+                        ", tintIndex=" + this.selectedTintIndex);
+                } else {
+                    LOGGER.warning("[WaypointEdit] Marker not found for id: " + targetId);
                 }
             } else {
                 TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
@@ -95,15 +109,16 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         ui.set("#InputX.Value", this.inputX);
         ui.set("#InputZ.Value", this.inputZ);
 
-        // Icon selection
         String iconName = AVAILABLE_ICONS[selectedIconIndex];
         ui.set("#IconLabel.Text", getIconDisplayName(iconName));
-        ui.set("#IconPreview.Background", "../../Common/" + iconName);
+        ui.set("#IconPreview.Background", "Common/" + iconName);
         
-        // Tint/Color selection
         ui.set("#ColorLabel.Text", getTintDisplayName(selectedTintIndex));
         Color tintColor = AVAILABLE_TINTS[selectedTintIndex];
-        ui.set("#ColorPreview.Background", String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF));
+        String tintHex = String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF);
+        ui.set("#IconPreview.Background.Color", tintHex);
+        ui.set("#ColorPreview.Background", "Common/" + iconName);
+        ui.set("#ColorPreview.Background.Color", tintHex);
 
         boolean canShared = PermissionsUtil.canUseGlobalWaypoints(player);
         ui.set("#GlobalRow.Visible", canShared);
@@ -111,7 +126,6 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
             ui.set("#GlobalCheckbox.Value", this.shared);
         }
 
-        // Input bindings
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#NameInput",  
             new EventData().put(EditData.KEY_NAME_INPUT, "#NameInput.Value"), false);
 
@@ -121,19 +135,16 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputZ", 
             new EventData().put(EditData.KEY_INPUT_Z, "#InputZ.Value"), false);
         
-        // Icon navigation
         events.addEventBinding(CustomUIEventBindingType.Activating, "#IconPrev", 
             new EventData().put(EditData.KEY_ACTION, Action.ICON_PREV.name()), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#IconNext", 
             new EventData().put(EditData.KEY_ACTION, Action.ICON_NEXT.name()), false);
 
-        // Tint navigation
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TintPrev", 
             new EventData().put(EditData.KEY_ACTION, Action.TINT_PREV.name()), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TintNext", 
             new EventData().put(EditData.KEY_ACTION, Action.TINT_NEXT.name()), false);
 
-        // Action buttons
         events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton", 
             new EventData().put(EditData.KEY_ACTION, Action.BACK.name()), false);
 
@@ -217,15 +228,12 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     boolean wasShared = WaypointManager.isSharedId(targetId);
                     
                     if (wantsShared != wasShared && existing != null) {
-                        // Sharing status changed: remove old and create new
                         WaypointManager.removeMarker(player, targetId);
                         WaypointManager.addMarker(player, newName, selectedIcon, x, z, selectedTint, wantsShared);
                     } else if (existing != null) {
-                        // Update existing marker
                         WaypointManager.updateMarker(player, targetId, newName, selectedIcon, x, z, selectedTint);
                     }
                 } else {
-                    // Create new marker
                     WaypointManager.addMarker(player, newName, selectedIcon, x, z, selectedTint, wantsShared);
                 }
                 
@@ -245,26 +253,92 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
     private int getTintIndex(@Nullable Color tint) {
         if (tint == null) return 0;
+        
         for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
             Color t = AVAILABLE_TINTS[i];
             if (t.red == tint.red && t.green == tint.green && t.blue == tint.blue) return i;
         }
-        return 0;
+        
+        int r = tint.red & 0xFF;
+        int g = tint.green & 0xFF;
+        int b = tint.blue & 0xFF;
+        float[] inputHsl = rgbToHsl(r, g, b);
+        
+        int closestIndex = 0;
+        float closestDistance = Float.MAX_VALUE;
+        
+        for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
+            Color t = AVAILABLE_TINTS[i];
+            int tr = t.red & 0xFF;
+            int tg = t.green & 0xFF;
+            int tb = t.blue & 0xFF;
+            float[] targetHsl = rgbToHsl(tr, tg, tb);
+            
+            float hueDiff = Math.abs(inputHsl[0] - targetHsl[0]);
+            if (hueDiff > 0.5f) hueDiff = 1.0f - hueDiff;
+            
+            float satDiff = Math.abs(inputHsl[1] - targetHsl[1]);
+            float litDiff = Math.abs(inputHsl[2] - targetHsl[2]);
+            
+            float distance = hueDiff * 3.0f + satDiff * 1.0f + litDiff * 0.5f;
+            
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+        
+        return closestIndex;
+    }
+    
+    /**
+     * Convert RGB to HSL color space.
+     * @return float array [hue (0-1), saturation (0-1), lightness (0-1)]
+     */
+    private float[] rgbToHsl(int r, int g, int b) {
+        float rf = r / 255.0f;
+        float gf = g / 255.0f;
+        float bf = b / 255.0f;
+        
+        float max = Math.max(rf, Math.max(gf, bf));
+        float min = Math.min(rf, Math.min(gf, bf));
+        float h, s, l;
+        
+        l = (max + min) / 2.0f;
+        
+        if (max == min) {
+            h = s = 0.0f; // achromatic (gray)
+        } else {
+            float d = max - min;
+            s = l > 0.5f ? d / (2.0f - max - min) : d / (max + min);
+            
+            if (max == rf) {
+                h = (gf - bf) / d + (gf < bf ? 6.0f : 0.0f);
+            } else if (max == gf) {
+                h = (bf - rf) / d + 2.0f;
+            } else {
+                h = (rf - gf) / d + 4.0f;
+            }
+            h /= 6.0f;
+        }
+        
+        return new float[] { h, s, l };
     }
 
     private void refreshIconAndTint(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         UICommandBuilder ui = new UICommandBuilder();
         UIEventBuilder events = new UIEventBuilder();
         
-        // Update icon label and preview
         String iconName = AVAILABLE_ICONS[selectedIconIndex];
         ui.set("#IconLabel.Text", getIconDisplayName(iconName));
-        ui.set("#IconPreview.Background", "../../Common/" + iconName);
+        ui.set("#IconPreview.Background", "Common/" + iconName);
         
-        // Update tint label and preview
         ui.set("#ColorLabel.Text", getTintDisplayName(selectedTintIndex));
         Color tintColor = AVAILABLE_TINTS[selectedTintIndex];
-        ui.set("#ColorPreview.Background", String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF));
+        String tintHex = String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF);
+        ui.set("#IconPreview.Background.Color", tintHex);
+        ui.set("#ColorPreview.Background", "Common/" + iconName);
+        ui.set("#ColorPreview.Background.Color", tintHex);
         
         sendUpdate(ui, events, false);
     }

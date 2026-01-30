@@ -57,7 +57,6 @@ public class BetterMapWaypointTeleportCommand extends AbstractPlayerCommand {
             return;
         }
 
-        // UserMapMarker only has x, z - use current Y for teleport
         TransformComponent transform = player.getTransformComponent();
         double currentY = transform != null ? transform.getPosition().y : 64.0;
         

@@ -46,14 +46,12 @@ public class BetterMapWaypointEditCommand extends AbstractPlayerCommand {
         
         String id = this.idArg.get(context);
         
-        // Check if marker exists
         UserMapMarker marker = WaypointManager.getMarker(player, id);
         if (marker == null) {
             context.sendMessage(Message.raw("Waypoint not found: " + id).color("#FF4444"));
             return;
         }
         
-        // Open the edit page for this marker
         WaypointEditPage editPage = new WaypointEditPage(playerRef, id);
         player.getPageManager().openCustomPage(ref, store, editPage);
     }

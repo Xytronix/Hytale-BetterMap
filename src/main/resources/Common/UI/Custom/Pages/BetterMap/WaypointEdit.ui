@@ -80,7 +80,7 @@ $C.@PageOverlay {
           
           Panel #IconPreview {
             Anchor: (Width: 24, Height: 24, Left: 10);
-            Background: "../../Common/UserA.png"; 
+            Background: "Common/UserA.png";
           }
           
           Label #IconLabel {
@@ -118,7 +118,7 @@ $C.@PageOverlay {
           
           Panel #ColorPreview {
             Anchor: (Width: 24, Height: 24, Left: 10);
-            Background: #FFFFFF;
+            Background: "Common/UserA.png";
           }
           
           Label #ColorLabel {

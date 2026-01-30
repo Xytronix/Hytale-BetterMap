@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.7-pre-release-2026.01.29-301e13929
+
+* Fix issue with the new release changes in the marker API (map not becoming black)
+* Added "Edit" context menu option for waypoints
+* Waypoint menu now have the marker from hytale itself instead of our system
+
 ## v1.2.6
 
 * Fix the issue with the new release changes in the marker API (map not becoming black)
