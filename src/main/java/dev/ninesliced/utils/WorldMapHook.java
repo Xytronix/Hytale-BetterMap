@@ -2,8 +2,10 @@ package dev.ninesliced.utils;
 
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
+import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
+import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
@@ -19,20 +21,116 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
+import dev.ninesliced.managers.CaveModeManager;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.MapExpansionManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WorldBorderManager;
+import dev.ninesliced.providers.CaveModeImageBuilder;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 /**
  * Hooks into the Hytale WorldMap system to provide custom exploration behavior.
+ * 
+ * DYNAMIC CAVE MODE SYSTEM:
+ * - Automatically detects when player goes underground (below Y=100 with ceiling)
+ * - Shows cave view in a radius (default 8 chunks) around the player
+ * - Y-levels are divided into layers (0-10, 10-20, 20-30, etc.)
+ * - Normal surface map is always shown for explored areas
+ * - Cave overlay appears seamlessly when underground
+ * - Previously explored cave chunks persist per layer
+ * - When returning to surface, cave overlay disappears automatically
  */
 public class WorldMapHook {
     private static final Logger LOGGER = Logger.getLogger(WorldMapHook.class.getName());
+    
+    private static final Map<String, Set<Long>> caveModeLoadedChunks = new java.util.concurrent.ConcurrentHashMap<>();
+        
+    private static final Map<String, Set<Long>> caveModeFailedChunks = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    private static final Map<String, Set<Long>> caveModeTargetChunks = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    private static final Map<String, Set<Long>> caveModePendingChunks = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    private static final Map<String, CompletableFuture<CaveModeImageBuilder>> pendingCaveModeFutures = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    private static final Map<String, Integer> caveModeRetryCounter = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    /**
+     * Gets or creates the cave mode loaded chunks set for a player.
+     */
+    private static Set<Long> getCaveModeLoadedChunks(String playerName) {
+        return caveModeLoadedChunks.computeIfAbsent(playerName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
+    }
+    
+    /**
+     * Gets or creates the cave mode failed chunks set for a player (for retry).
+     */
+    private static Set<Long> getCaveModeFailedChunks(String playerName) {
+        return caveModeFailedChunks.computeIfAbsent(playerName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
+    }
+    
+    /**
+     * Gets or creates the cave mode target chunks set for a player.
+     */
+    private static Set<Long> getCaveModeTargetChunks(String playerName) {
+        return caveModeTargetChunks.computeIfAbsent(playerName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
+    }
+    
+    /**
+     * Gets or creates the cave mode pending chunks set for a player.
+     */
+    private static Set<Long> getCaveModePendingChunks(String playerName) {
+        return caveModePendingChunks.computeIfAbsent(playerName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
+    }
+    
+    /**
+     * Clears the cave mode loaded chunks for a player.
+     */
+    public static void clearCaveModeLoadedChunks(String playerName) {
+        Set<Long> chunks = caveModeLoadedChunks.get(playerName);
+        if (chunks != null) {
+            chunks.clear();
+        }
+        Set<Long> failed = caveModeFailedChunks.get(playerName);
+        if (failed != null) {
+            failed.clear();
+        }
+        Set<Long> targets = caveModeTargetChunks.get(playerName);
+        if (targets != null) {
+            targets.clear();
+        }
+        Set<Long> pending = caveModePendingChunks.get(playerName);
+        if (pending != null) {
+            for (Long idx : pending) {
+                pendingCaveModeFutures.remove(playerName + "_" + idx);
+            }
+            pending.clear();
+        }
+        caveModeRetryCounter.remove(playerName);
+    }
+    
+    /**
+     * Removes a player from cave mode tracking (on disconnect).
+     */
+    public static void removeCaveModePlayer(String playerName) {
+        Set<Long> pending = caveModePendingChunks.get(playerName);
+        if (pending != null) {
+            for (Long idx : pending) {
+                pendingCaveModeFutures.remove(playerName + "_" + idx);
+            }
+        }
+        caveModeLoadedChunks.remove(playerName);
+        caveModeFailedChunks.remove(playerName);
+        caveModeTargetChunks.remove(playerName);
+        caveModePendingChunks.remove(playerName);
+        caveModeRetryCounter.remove(playerName);
+    }
 
     /**
      * Injects a custom RestrictedSpiralIterator into the player's world map tracker.
@@ -162,6 +260,7 @@ public class WorldMapHook {
 
     /**
      * Updates the exploration state for a player, updating boundaries and forcing a tracker update if moved.
+     * Now uses DYNAMIC cave mode - automatically shows cave view when underground.
      *
      * @param player  The player.
      * @param tracker The tracker.
@@ -174,8 +273,11 @@ public class WorldMapHook {
             ExplorationTracker.PlayerExplorationData explorationData = explorationTracker.getPlayerData(player);
 
             if (explorationData == null) {
-                LOGGER.info("[DEBUG] No exploration data for " + player.getDisplayName() + " in updateExplorationState");
-                return;
+                explorationData = explorationTracker.getOrCreatePlayerData(player);
+                if (explorationData == null) {
+                    LOGGER.warning("[DEBUG] Could not create exploration data for " + player.getDisplayName());
+                    return;
+                }
             }
 
             World world = player.getWorld();
@@ -185,17 +287,67 @@ public class WorldMapHook {
 
             int playerChunkX = ChunkUtil.blockToChunkCoord(x);
             int playerChunkZ = ChunkUtil.blockToChunkCoord(z);
-
             boolean hasMoved = explorationData.hasMovedToNewChunk(playerChunkX, playerChunkZ);
 
+            TransformComponent transform = player.getTransformComponent();
+            int playerY = transform != null ? (int) transform.getPosition().y : 100;
+            boolean hasCeiling = checkForCeiling(world, player, x, playerY, z);
+            
+            CaveModeManager caveManager = CaveModeManager.getInstance();
+            boolean stateChanged = caveManager.updateUndergroundState(player, playerY, hasCeiling);
+            boolean isUnderground = caveManager.isPlayerUnderground(player);
+            
             if (hasMoved) {
                 int explorationRadius = ModConfig.getInstance().getExplorationRadius();
-
+                int beforeCount = explorationData.getExploredChunks().getExploredCount();
                 explorationData.getMapExpansion().updateBoundaries(playerChunkX, playerChunkZ, explorationRadius);
                 explorationData.setLastChunkPosition(playerChunkX, playerChunkZ);
+                int afterCount = explorationData.getExploredChunks().getExploredCount();
+                
+                if (afterCount > beforeCount) {
+                    LOGGER.info("[EXPLORATION] Added " + (afterCount - beforeCount) + " new chunks. Total: " + afterCount + 
+                               " (underground: " + isUnderground + ")");
+                }
+            }
 
+            if (stateChanged && world != null) {
+                CaveModeManager.DynamicCaveModeState state = caveManager.getState(player);
+                
+                if (isUnderground) {
+                    LOGGER.info("[DYNAMIC CAVE] Activating cave overlay for " + player.getDisplayName() + 
+                               " at layer " + state.getCurrentLayer() + "-" + (state.getCurrentLayer() + state.getLayerSize()));
+                    
+                } else {
+                    LOGGER.info("[DYNAMIC CAVE] Deactivating cave overlay for " + player.getDisplayName());
+                    
+                    clearCaveModeOverlay(player, world, tracker);
+                }
+            }
+            
+            boolean layerChanged = caveManager.didLayerChange(player);
+            if (layerChanged && isUnderground && world != null) {
+                CaveModeManager.DynamicCaveModeState state = caveManager.getState(player);
+                int previousLayer = caveManager.getPreviousLayer(player);
+                int currentLayer = state.getCurrentLayer();
+                
+                LOGGER.info("[DYNAMIC CAVE] Layer change: " + previousLayer + " -> " + currentLayer + 
+                           ". Will regenerate cave images for new Y level.");
+                
+                state.setNeedsLayerRefresh(true);
+                
+                String playerName = player.getDisplayName();
+                for (Long pendingIdx : new ArrayList<>(state.getPendingCaveChunks())) {
+                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
+                }
+                state.getPendingCaveChunks().clear();
+            }
+
+            if (isUnderground && world != null) {
+                CaveModeManager.DynamicCaveModeState state = caveManager.getState(player);
+                updateDynamicCaveOverlay(player, world, tracker, x, z, state);
+                
+            } else if (hasMoved) {
                 forceTrackerUpdate(player, tracker, x, z);
-
                 int mapChunkX = playerChunkX >> 1;
                 int mapChunkZ = playerChunkZ >> 1;
                 manageLoadedChunks(player, tracker, mapChunkX, mapChunkZ);
@@ -203,6 +355,217 @@ public class WorldMapHook {
         } catch (Exception e) {
             LOGGER.warning("[DEBUG] Exception in updateExplorationState: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Checks if there's a ceiling (solid blocks) above the player.
+     * Used to detect if player is actually underground vs just at low Y.
+     * 
+     * For now, we use a simplified approach: if player is below the threshold,
+     * we assume they're in a cave. A more sophisticated check would scan actual blocks.
+     */
+    private static boolean checkForCeiling(@Nullable World world, @Nullable Player player, double x, int y, double z) {
+        if (world == null) return false;
+        
+        int threshold = CaveModeManager.getConfigUndergroundThreshold();
+        if (player != null) {
+            CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(player);
+            if (state != null) {
+                threshold = state.getUndergroundThreshold();
+            }
+        }
+        
+        return y < threshold;
+            
+    }
+    
+    /**
+     * Updates the dynamic cave mode overlay around the player.
+     * Only shows cave view in a radius around the player, not the entire explored area.
+     */
+    private static void updateDynamicCaveOverlay(@Nonnull Player player, @Nonnull World world,
+                                                   @Nonnull WorldMapTracker tracker,
+                                                   double playerX, double playerZ,
+                                                   @Nonnull CaveModeManager.DynamicCaveModeState state) {
+        try {
+            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
+            float imageScale = settings.getImageScale();
+            int imageSize = MathUtil.fastFloor(32.0F * imageScale);
+            
+            int playerMapChunkX = ((int) Math.floor(playerX)) >> 5;
+            int playerMapChunkZ = ((int) Math.floor(playerZ)) >> 5;
+            
+            int caveRadius = state.getCaveRadius();
+            int yLevel = state.getRenderYLevel();
+            int verticalRange = state.getVerticalRange();
+            int currentLayer = state.getCurrentLayer();
+            
+            Set<Long> loadedCaveChunks = state.getLoadedCaveChunks();
+            Set<Long> pendingCaveChunks = state.getPendingCaveChunks();
+            Set<Long> exploredInLayer = state.getExploredCaveChunks(currentLayer);
+            
+            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+            @SuppressWarnings("unchecked")
+            Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
+            
+            Set<Long> targetCaveChunks = new HashSet<>();
+            for (int dx = -caveRadius; dx <= caveRadius; dx++) {
+                for (int dz = -caveRadius; dz <= caveRadius; dz++) {
+                    if (dx * dx + dz * dz <= caveRadius * caveRadius) {
+                        int mx = playerMapChunkX + dx;
+                        int mz = playerMapChunkZ + dz;
+                        long idx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
+                        targetCaveChunks.add(idx);
+                    }
+                }
+            }
+            
+            targetCaveChunks.addAll(exploredInLayer);
+            
+            List<MapChunk> chunksToSend = new ArrayList<>();
+            String playerName = player.getDisplayName();
+            
+            boolean needsRefresh = state.needsLayerRefresh();
+            if (needsRefresh) {
+                LOGGER.info("[DYNAMIC CAVE] Refreshing " + loadedCaveChunks.size() + " chunks for new Y level: " + yLevel);
+                
+                int refreshCount = 0;
+                for (Long chunkIdx : new ArrayList<>(loadedCaveChunks)) {
+                    CompletableFuture<CaveModeImageBuilder> future = CaveModeImageBuilder.build(
+                        chunkIdx, imageSize, imageSize, world, yLevel, verticalRange);
+                    
+                    if (future.isDone()) {
+                        CaveModeImageBuilder builder = future.getNow(null);
+                        if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
+                            int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
+                            int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
+                            chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
+                            state.markCaveChunkExplored(currentLayer, chunkIdx);
+                            refreshCount++;
+                        }
+                    } else {
+                        pendingCaveChunks.add(chunkIdx);
+                        pendingCaveModeFutures.put(playerName + "_" + chunkIdx, future);
+                    }
+                }
+                
+                state.setNeedsLayerRefresh(false);
+                LOGGER.info("[DYNAMIC CAVE] Refreshed " + refreshCount + " chunks immediately, " + 
+                           pendingCaveChunks.size() + " pending");
+            }
+            
+            for (Long pendingIdx : new ArrayList<>(pendingCaveChunks)) {
+                CompletableFuture<CaveModeImageBuilder> future = pendingCaveModeFutures.get(playerName + "_" + pendingIdx);
+                if (future != null && future.isDone()) {
+                    pendingCaveChunks.remove(pendingIdx);
+                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
+                    
+                    CaveModeImageBuilder builder = future.getNow(null);
+                    if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
+                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(pendingIdx);
+                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(pendingIdx);
+                        chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
+                        loadedCaveChunks.add(pendingIdx);
+                        trackerLoaded.add(pendingIdx);
+                        
+                        state.markCaveChunkExplored(currentLayer, pendingIdx);
+                    }
+                }
+            }
+            
+            List<Long> sortedTargets = new ArrayList<>(targetCaveChunks);
+            sortedTargets.sort(Comparator.comparingDouble(idx -> {
+                int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                return Math.pow(mx - playerMapChunkX, 2) + Math.pow(mz - playerMapChunkZ, 2);
+            }));
+            
+            int maxGeneration = 20;
+            for (Long chunkIdx : sortedTargets) {
+                if (maxGeneration <= 0) break;
+                if (loadedCaveChunks.contains(chunkIdx) || pendingCaveChunks.contains(chunkIdx)) continue;
+                
+                CompletableFuture<CaveModeImageBuilder> future = CaveModeImageBuilder.build(
+                    chunkIdx, imageSize, imageSize, world, yLevel, verticalRange);
+                
+                if (future.isDone()) {
+                    CaveModeImageBuilder builder = future.getNow(null);
+                    if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
+                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
+                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
+                        chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
+                        loadedCaveChunks.add(chunkIdx);
+                        trackerLoaded.add(chunkIdx);
+                        state.markCaveChunkExplored(currentLayer, chunkIdx);
+                    }
+                } else {
+                    pendingCaveChunks.add(chunkIdx);
+                    pendingCaveModeFutures.put(playerName + "_" + chunkIdx, future);
+                    maxGeneration--;
+                }
+            }
+            
+            if (!chunksToSend.isEmpty()) {
+                int batchSize = 25;
+                for (int i = 0; i < chunksToSend.size(); i += batchSize) {
+                    int end = Math.min(i + batchSize, chunksToSend.size());
+                    List<MapChunk> batch = chunksToSend.subList(i, end);
+                    UpdateWorldMap packet = new UpdateWorldMap(batch.toArray(new MapChunk[0]), null, null);
+                    sendPacket(player, packet);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warning("[DYNAMIC CAVE] Error updating overlay: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Clears the cave mode overlay chunks only - does NOT reset the entire map.
+     * Only the cave overlay chunks are removed and replaced with normal surface chunks.
+     */
+    private static void clearCaveModeOverlay(@Nonnull Player player, @Nonnull World world,
+                                              @Nonnull WorldMapTracker tracker) {
+        try {
+            CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(player);
+            if (state == null) return;
+            
+            Set<Long> loadedCaveChunks = new HashSet<>(state.getLoadedCaveChunks());
+            String playerName = player.getDisplayName();
+            
+            if (loadedCaveChunks.isEmpty()) {
+                LOGGER.info("[DYNAMIC CAVE] No cave chunks to clear for " + playerName);
+                return;
+            }
+            
+            for (Long pendingIdx : state.getPendingCaveChunks()) {
+                pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
+            }
+            state.getPendingCaveChunks().clear();
+            
+            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+            @SuppressWarnings("unchecked")
+            Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
+            
+            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
+            float imageScale = settings.getImageScale();
+            int imageSize = MathUtil.fastFloor(32.0F * imageScale);
+            
+            List<MapChunk> surfaceChunks = new ArrayList<>();
+            
+            for (Long caveChunkIdx : loadedCaveChunks) {
+                int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(caveChunkIdx);
+                int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(caveChunkIdx);
+                
+                trackerLoaded.remove(caveChunkIdx);
+            }
+            
+            state.clearLoadedCaveChunks();
+            
+            LOGGER.info("[DYNAMIC CAVE] Marked " + loadedCaveChunks.size() + " cave chunks for surface regeneration");
+            
+        } catch (Exception e) {
+            LOGGER.warning("[DYNAMIC CAVE] Error clearing overlay: " + e.getMessage());
         }
     }
 
@@ -275,6 +638,242 @@ public class WorldMapHook {
             ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
         } catch (Exception e) {
             LOGGER.warning("[DEBUG] Failed to force tracker update: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Forces a full map refresh for a player.
+     * This properly clears the client map and server state, then regenerates.
+     * Uses native Hytale methods where possible for proper synchronization.
+     *
+     * @param player The player to refresh.
+     */
+    public static void forceFullMapRefresh(@Nonnull Player player) {
+        try {
+            World world = player.getWorld();
+            if (world == null) return;
+
+            WorldMapTracker tracker = player.getWorldMapTracker();
+            if (tracker == null) return;
+
+            CaveModeManager caveManager = CaveModeManager.getInstance();
+            boolean isUnderground = caveManager.isPlayerUnderground(player);
+            
+            LOGGER.info("[MAP REFRESH] Starting full map refresh for " + player.getDisplayName() + 
+                       " (underground: " + isUnderground + ")");
+
+            Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
+            if (spiralIterator instanceof RestrictedSpiralIterator restrictedIterator) {
+                restrictedIterator.setCaveModeActive(false);
+                LOGGER.info("[MAP REFRESH] Set RestrictedSpiralIterator cave mode to: false (dynamic overlay mode)");
+                
+                restrictedIterator.resetState();
+            }
+
+            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+            if (loadedObj instanceof Set<?> loadedSet) {
+                loadedSet.clear();
+                LOGGER.info("[MAP REFRESH] Cleared loaded chunks set");
+            }
+            
+            clearCaveModeLoadedChunks(player.getDisplayName());
+            
+            CaveModeManager.DynamicCaveModeState state = caveManager.getState(player);
+            if (state != null) {
+                state.clearLoadedCaveChunks();
+            }
+
+            tracker.clear();
+            
+            ReflectionHelper.setFieldValueRecursive(tracker, "sentViewRadius", 0);
+            
+            ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
+            
+            TransformComponent transform = player.getTransformComponent();
+            if (transform != null) {
+                var pos = transform.getPosition();
+                int chunkX = (int) Math.floor(pos.x) >> 5;
+                int chunkZ = (int) Math.floor(pos.z) >> 5;
+                
+                if (spiralIterator instanceof RestrictedSpiralIterator restrictedIterator) {
+                    restrictedIterator.init(chunkX, chunkZ, 0, 999);
+                }
+                
+                forceTrackerUpdate(player, tracker, pos.x, pos.z);
+                
+                if (isUnderground && state != null) {
+                    LOGGER.info("[DYNAMIC CAVE] Starting cave overlay at layer " + state.getCurrentLayer());
+                    updateDynamicCaveOverlay(player, world, tracker, pos.x, pos.z, state);
+                }
+                    
+                LOGGER.info("[MAP REFRESH] Re-initialized map at chunk " + chunkX + ", " + chunkZ);
+            }
+
+            LOGGER.info("[MAP REFRESH] Completed for " + player.getDisplayName());
+        } catch (Exception e) {
+            LOGGER.warning("Failed to force full map refresh for " + player.getDisplayName() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Generates cave mode images and sends them to the player PROGRESSIVELY.
+     * Works like the base map: only sends chunks that are ready, skips those that aren't.
+     * This prevents freezing by not waiting for all futures to complete.
+     *
+     * @param player  The player.
+     * @param world   The world.
+     * @param tracker The world map tracker.
+     * @param playerX Player X position.
+     * @param playerZ Player Z position.
+     * @param yLevel  The Y level for cave mode.
+     * @param range   The vertical range.
+     * @param maxGeneration Maximum number of pending generations allowed (like base map)
+     * @return Number of remaining generation slots
+     */
+    private static int generateCaveModeImagesProgressive(@Nonnull Player player, @Nonnull World world,
+                                                          @Nonnull WorldMapTracker tracker,
+                                                          double playerX, double playerZ,
+                                                          int yLevel, int range, int maxGeneration) {
+        try {
+            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
+            float imageScale = settings.getImageScale();
+            int imageSize = MathUtil.fastFloor(32.0F * imageScale);
+            
+            int playerMapChunkX = ((int) Math.floor(playerX)) >> 5;
+            int playerMapChunkZ = ((int) Math.floor(playerZ)) >> 5;
+            
+            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+            @SuppressWarnings("unchecked")
+            final Set<Long> loaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
+            
+            String playerName = player.getDisplayName();
+            Set<Long> caveModeLoaded = getCaveModeLoadedChunks(playerName);
+            Set<Long> caveModeFailed = getCaveModeFailedChunks(playerName);
+            Set<Long> caveModeTarget = getCaveModeTargetChunks(playerName);
+            Set<Long> caveModePending = getCaveModePendingChunks(playerName);
+            
+            ExplorationTracker.PlayerExplorationData explorationData = ExplorationTracker.getInstance().getPlayerData(player);
+            if (explorationData == null) {
+                return maxGeneration;
+            }
+
+            Set<Long> exploredWorldChunks;
+            if (ModConfig.getInstance().isShareAllExploration()) {
+                String worldName = world.getName();
+                exploredWorldChunks = ExplorationManager.getInstance().getAllExploredChunks(worldName);
+            } else {
+                exploredWorldChunks = explorationData.getExploredChunks().getExploredChunks();
+            }
+
+            if (exploredWorldChunks == null || exploredWorldChunks.isEmpty()) {
+                return maxGeneration;
+            }
+
+            Set<Long> mapChunksSet = new HashSet<>();
+            for (Long chunkIdx : exploredWorldChunks) {
+                int wx = ChunkUtil.indexToChunkX(chunkIdx);
+                int wz = ChunkUtil.indexToChunkZ(chunkIdx);
+                int mx = wx >> 1;
+                int mz = wz >> 1;
+                long mapChunkIdx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
+                mapChunksSet.add(mapChunkIdx);
+            }
+
+            List<Long> sortedChunks = new ArrayList<>(mapChunksSet);
+            sortedChunks.sort(Comparator.comparingDouble(idx -> {
+                int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                return Math.pow(mx - playerMapChunkX, 2) + Math.pow(mz - playerMapChunkZ, 2);
+            }));
+            
+            caveModeTarget.clear();
+            caveModeTarget.addAll(mapChunksSet);
+            
+            List<Long> completedPending = new ArrayList<>();
+            List<MapChunk> chunksToSend = new ArrayList<>();
+            
+            for (Long pendingIdx : new ArrayList<>(caveModePending)) {
+                CompletableFuture<CaveModeImageBuilder> future = pendingCaveModeFutures.get(playerName + "_" + pendingIdx);
+                if (future != null && future.isDone()) {
+                    completedPending.add(pendingIdx);
+                    caveModePending.remove(pendingIdx);
+                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
+                    
+                    CaveModeImageBuilder builder = future.getNow(null);
+                    if (builder != null) {
+                        MapImage image = builder.getImage();
+                        if (image != null && image.data != null) {
+                            int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(pendingIdx);
+                            int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(pendingIdx);
+                            chunksToSend.add(new MapChunk(mx, mz, image));
+                            loaded.add(pendingIdx);
+                            caveModeLoaded.add(pendingIdx);
+                            caveModeFailed.remove(pendingIdx);
+                        } else {
+                            caveModeFailed.add(pendingIdx);
+                        }
+                    } else {
+                        caveModeFailed.add(pendingIdx);
+                    }
+                }
+            }
+            
+            for (Long chunkIdx : sortedChunks) {
+                if (maxGeneration <= 0) break;
+                
+                if (caveModeLoaded.contains(chunkIdx) || caveModePending.contains(chunkIdx)) {
+                    continue;
+                }
+                
+                CompletableFuture<CaveModeImageBuilder> future = CaveModeImageBuilder.build(
+                    chunkIdx, imageSize, imageSize, world, yLevel, range);
+                
+                if (future.isDone()) {
+                    CaveModeImageBuilder builder = future.getNow(null);
+                    if (builder != null) {
+                        MapImage image = builder.getImage();
+                        if (image != null && image.data != null) {
+                            int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
+                            int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
+                            chunksToSend.add(new MapChunk(mx, mz, image));
+                            loaded.add(chunkIdx);
+                            caveModeLoaded.add(chunkIdx);
+                            caveModeFailed.remove(chunkIdx);
+                        } else {
+                            caveModeFailed.add(chunkIdx);
+                        }
+                    } else {
+                        caveModeFailed.add(chunkIdx);
+                    }
+                } else {
+                    caveModePending.add(chunkIdx);
+                    pendingCaveModeFutures.put(playerName + "_" + chunkIdx, future);
+                    maxGeneration--;
+                }
+            }
+            
+            if (!chunksToSend.isEmpty()) {
+                int batchSize = 25;
+                for (int i = 0; i < chunksToSend.size(); i += batchSize) {
+                    int end = Math.min(i + batchSize, chunksToSend.size());
+                    List<MapChunk> batch = chunksToSend.subList(i, end);
+                    
+                    UpdateWorldMap packet = new UpdateWorldMap(
+                            batch.toArray(new MapChunk[0]),
+                            null,
+                            null
+                    );
+                    sendPacket(player, packet);
+                }
+                
+                LOGGER.fine("[CAVE MODE] Sent " + chunksToSend.size() + " chunks (pending: " + caveModePending.size() + ")");
+            }
+            
+            return maxGeneration;
+        } catch (Exception e) {
+            LOGGER.warning("[CAVE MODE] Error in progressive generation: " + e.getMessage());
+            return maxGeneration;
         }
     }
 
@@ -399,6 +998,7 @@ public class WorldMapHook {
         private volatile int currentGoalRadius;
         private volatile boolean stopped = false;
         private volatile boolean initialized = false;
+        private volatile boolean caveModeActive = false;
         private volatile int centerX;
         private volatile int centerZ;
         private volatile int currentRadius;
@@ -413,6 +1013,30 @@ public class WorldMapHook {
             this.currentIterator = Collections.emptyIterator();
             this.initialized = true;
         }
+        
+        /**
+         * Enables or disables cave mode. When cave mode is active, this iterator
+         * will return no chunks, allowing the cave mode system to handle map generation.
+         *
+         * @param active Whether cave mode should be active.
+         */
+        public void setCaveModeActive(boolean active) {
+            synchronized (lock) {
+                this.caveModeActive = active;
+                if (active) {
+                    this.currentIterator = Collections.emptyIterator();
+                }
+            }
+        }
+        
+        /**
+         * Checks if cave mode is active.
+         *
+         * @return true if cave mode is active.
+         */
+        public boolean isCaveModeActive() {
+            return caveModeActive;
+        }
 
         public void stop() {
             synchronized (lock) {
@@ -421,6 +1045,22 @@ public class WorldMapHook {
                 try {
                     super.init(0, 0, 0, 1);
                 } catch (Exception ignored) {}
+            }
+        }
+        
+        /**
+         * Resets the iterator state to allow fresh chunk loading.
+         * Called when switching between cave mode and normal mode.
+         */
+        public void resetState() {
+            synchronized (lock) {
+                this.stopped = false;
+                this.initialized = true;
+                this.currentIterator = Collections.emptyIterator();
+                this.targetMapChunks = new ArrayList<>();
+                this.currentGoalRadius = 0;
+                this.currentRadius = 0;
+                this.cleanupTimer = 0;
             }
         }
 
@@ -440,7 +1080,7 @@ public class WorldMapHook {
             } catch (Exception ignored) {}
 
             synchronized (lock) {
-                if (stopped) {
+                if (stopped || caveModeActive) {
                     this.currentIterator = Collections.emptyIterator();
                     this.initialized = true;
                     return;
@@ -571,7 +1211,7 @@ public class WorldMapHook {
 
         @Override
         public boolean hasNext() {
-            if (stopped) return false;
+            if (stopped || caveModeActive) return false;
             Iterator<Long> iter = currentIterator;
             return iter != null && iter.hasNext();
         }
@@ -595,7 +1235,7 @@ public class WorldMapHook {
 
         @Override
         public int getCompletedRadius() {
-            return stopped ? currentGoalRadius : currentRadius;
+            return (stopped || caveModeActive) ? currentGoalRadius : currentRadius;
         }
     }
 }

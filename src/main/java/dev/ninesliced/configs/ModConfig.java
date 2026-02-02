@@ -43,6 +43,11 @@ public class ModConfig {
     private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
     private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
+    
+    private boolean caveModeEnabled = true;
+    private int caveModeLayerSize = 5;
+    private int caveModeUndergroundThreshold = 100;
+    private int caveModeRadius = 4;
 
     private boolean worldBorderEnabled = false;
     private int worldBorderRadius = 5000;
@@ -242,6 +247,30 @@ public class ModConfig {
 
                     if (jsonObject.has("allowedWorlds") && loaded.allowedWorlds != null) {
                         this.allowedWorlds = loaded.allowedWorlds;
+                    } else {
+                        needsSave = true;
+                    }
+                    
+                    if (jsonObject.has("caveModeEnabled")) {
+                        this.caveModeEnabled = loaded.caveModeEnabled;
+                    } else {
+                        needsSave = true;
+                    }
+                    
+                    if (jsonObject.has("caveModeLayerSize")) {
+                        this.caveModeLayerSize = loaded.caveModeLayerSize;
+                    } else {
+                        needsSave = true;
+                    }
+                    
+                    if (jsonObject.has("caveModeUndergroundThreshold")) {
+                        this.caveModeUndergroundThreshold = loaded.caveModeUndergroundThreshold;
+                    } else {
+                        needsSave = true;
+                    }
+                    
+                    if (jsonObject.has("caveModeRadius")) {
+                        this.caveModeRadius = loaded.caveModeRadius;
                     } else {
                         needsSave = true;
                     }
@@ -810,6 +839,82 @@ public class ModConfig {
      */
     public void setFirstLaunch(boolean firstLaunch) {
         this.firstLaunch = firstLaunch;
+    }
+    
+    /**
+     * Checks if cave mode feature is enabled.
+     *
+     * @return True if enabled.
+     */
+    public boolean isCaveModeEnabled() {
+        return caveModeEnabled;
+    }
+    
+    /**
+     * Sets whether cave mode feature is enabled.
+     *
+     * @param enabled The new status.
+     */
+    public void setCaveModeEnabled(boolean enabled) {
+        this.caveModeEnabled = enabled;
+        save();
+    }
+    
+    /**
+     * Gets the cave mode layer size (Y blocks per layer).
+     *
+     * @return The layer size.
+     */
+    public int getCaveModeLayerSize() {
+        return caveModeLayerSize;
+    }
+    
+    /**
+     * Sets the cave mode layer size.
+     *
+     * @param layerSize The layer size (1-20).
+     */
+    public void setCaveModeLayerSize(int layerSize) {
+        this.caveModeLayerSize = Math.max(1, Math.min(layerSize, 20));
+        save();
+    }
+    
+    /**
+     * Gets the underground threshold Y level.
+     *
+     * @return The Y threshold.
+     */
+    public int getCaveModeUndergroundThreshold() {
+        return caveModeUndergroundThreshold;
+    }
+    
+    /**
+     * Sets the underground threshold Y level.
+     *
+     * @param threshold The Y threshold (0-319).
+     */
+    public void setCaveModeUndergroundThreshold(int threshold) {
+        this.caveModeUndergroundThreshold = Math.max(0, Math.min(threshold, 319));
+        save();
+    }
+    
+    /**
+     * Gets the cave view radius in chunks.
+     *
+     * @return The radius in chunks.
+     */
+    public int getCaveModeRadius() {
+        return caveModeRadius;
+    }
+    
+    /**
+     * Sets the cave view radius in chunks.
+     *
+     * @param radius The radius (1-16).
+     */
+    public void setCaveModeRadius(int radius) {
+        this.caveModeRadius = Math.max(1, Math.min(radius, 16));
+        save();
     }
 
     /**

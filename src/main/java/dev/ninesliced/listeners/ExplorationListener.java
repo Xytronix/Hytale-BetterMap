@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.exploration.*;
+import dev.ninesliced.managers.CaveModeManager;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
@@ -103,17 +104,23 @@ public class ExplorationListener {
             playerWorlds.put(playerName, worldName);
 
             if (isTrackedWorld(world)) {
-                ExplorationTracker.getInstance().getOrCreatePlayerData(player);
+                ExplorationTracker.PlayerExplorationData explorationData = ExplorationTracker.getInstance().getOrCreatePlayerData(player);
+                
                 ExplorationManager.getInstance().loadPlayerData(player);
+                
+                LOGGER.info("[DEBUG] Loaded exploration data for " + playerName + 
+                           ", explored chunks: " + explorationData.getExploredChunks().getExploredChunks().size());
 
                 WorldMapTracker tracker = player.getWorldMapTracker();
                 WorldMapHook.hookPlayerMapTracker(player, tracker);
                 WorldMapHook.hookWorldMapResolution(world);
 
                 PlayerRadarManager.getInstance().registerForPlayer(player);
-WorldBorderManager.getInstance().registerForPlayer(player);
+                WorldBorderManager.getInstance().registerForPlayer(player);
 
                 WaypointManager.onPlayerJoin(player);
+                
+                initDynamicCaveMode(player);
 
                 LOGGER.info("Exploration tracking initialized for player: " + playerName);
             } else {
@@ -310,15 +317,17 @@ WorldBorderManager.getInstance().registerForPlayer(player);
 
             LOGGER.info("[DEBUG] Player " + playerName + " disconnecting from server");
 
+            cleanupCaveModeStateByName(playerName);
+
             ExplorationTracker.PlayerExplorationData data = ExplorationTracker.getInstance().getPlayerData(playerName);
             LOGGER.info("[DEBUG] Exploration data exists: " + (data != null));
 
             if (data != null) {
                 LOGGER.info("[DEBUG] Data still exists, performing fallback save");
-                Ref<EntityStore> ref = playerRef.getReference();
-                if (ref != null && ref.isValid()) {
+                Ref<EntityStore> fallbackRef = playerRef.getReference();
+                if (fallbackRef != null && fallbackRef.isValid()) {
                     try {
-                        Store<EntityStore> store = ref.getStore();
+                        Store<EntityStore> store = fallbackRef.getStore();
                         World world = store.getExternalData().getWorld();
                         String worldName = world.getName();
 
@@ -350,5 +359,46 @@ WorldBorderManager.getInstance().registerForPlayer(player);
             return false;
         }
         return ModConfig.getInstance().isTrackedWorld(world.getName());
+    }
+
+    /**
+     * Initializes the dynamic cave mode for a player (creates their state).
+     * The new system is automatic - no need to restore from config.
+     *
+     * @param player The player.
+     */
+    private static void initDynamicCaveMode(@Nonnull Player player) {
+        try {
+            CaveModeManager caveManager = CaveModeManager.getInstance();
+            caveManager.getOrCreateState(player);
+            LOGGER.info("Initialized dynamic cave mode for " + player.getDisplayName());
+        } catch (Exception e) {
+            LOGGER.warning("Failed to initialize dynamic cave mode for " + player.getDisplayName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Cleans up cave mode state for a player.
+     *
+     * @param player The player.
+     */
+    private static void cleanupCaveModeState(@Nonnull Player player) {
+        cleanupCaveModeStateByName(player.getDisplayName());
+    }
+    
+    /**
+     * Cleans up cave mode state for a player by name.
+     * Use this when the Player object might not be available (e.g., on disconnect).
+     *
+     * @param playerName The player's display name.
+     */
+    private static void cleanupCaveModeStateByName(@Nonnull String playerName) {
+        try {
+            CaveModeManager.getInstance().removePlayerByName(playerName);
+            WorldMapHook.removeCaveModePlayer(playerName);
+            LOGGER.fine("Cleaned up cave mode state for " + playerName);
+        } catch (Exception e) {
+            LOGGER.warning("Failed to cleanup cave mode state for " + playerName + ": " + e.getMessage());
+        }
     }
 }

@@ -38,6 +38,10 @@ public class ConfigCommand extends AbstractCommandCollection {
         this.addSubCommand(new WorldBorderToggleCommand());
         this.addSubCommand(new WorldBorderRadiusCommand());
         this.addSubCommand(new WorldBorderOffsetCommand());
+        this.addSubCommand(new CaveModeToggleCommand());
+        this.addSubCommand(new CaveModeLayerCommand());
+        this.addSubCommand(new CaveModeThresholdCommand());
+        this.addSubCommand(new CaveModeRadiusCommand());
     }
 
     @Override
