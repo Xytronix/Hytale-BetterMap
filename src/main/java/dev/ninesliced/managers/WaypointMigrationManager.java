@@ -45,6 +45,7 @@ public class WaypointMigrationManager {
     
     /**
      * Called when a player joins. Checks for and migrates legacy waypoint files.
+     * Checks both "Data" and "data" folders for case-sensitivity compatibility.
      */
     public static void onPlayerJoin(@Nonnull Player player) {
         World world = player.getWorld();
@@ -53,18 +54,66 @@ public class WaypointMigrationManager {
         }
         
         Path serverRoot = Paths.get(".").toAbsolutePath().normalize();
-        Path dataDir = serverRoot.resolve("mods").resolve("BetterMap").resolve("Data");
+        Path betterMapDir = serverRoot.resolve("mods").resolve("BetterMap");
         
-        if (!Files.exists(dataDir)) {
+        Path dataDirUppercase = betterMapDir.resolve("Data");
+        Path dataDirLowercase = betterMapDir.resolve("data");
+        
+        List<Path> dataDirs = new ArrayList<>();
+        if (Files.exists(dataDirUppercase)) {
+            dataDirs.add(dataDirUppercase);
+        }
+        if (Files.exists(dataDirLowercase) && !dataDirUppercase.equals(dataDirLowercase)) {
+            dataDirs.add(dataDirLowercase);
+        }
+        
+        if (dataDirs.isEmpty()) {
             return;
         }
         
         if (!globalMigrationDone) {
-            migrateGlobalWaypoints(world, dataDir);
+            for (Path dataDir : dataDirs) {
+                migrateGlobalWaypoints(world, dataDir);
+            }
             globalMigrationDone = true;
         }
         
-        migratePersonalWaypoints(player, world, dataDir);
+        for (Path dataDir : dataDirs) {
+            migratePersonalWaypoints(player, world, dataDir);
+        }
+        
+        if (Files.exists(dataDirLowercase) && !dataDirUppercase.equals(dataDirLowercase)) {
+            deleteDirectoryRecursively(dataDirLowercase);
+        }
+    }
+    
+    /**
+     * Recursively deletes a directory and all its contents.
+     * Used for cleaning up the lowercase "data" folder.
+     */
+    private static void deleteDirectoryRecursively(@Nonnull Path directory) {
+        try {
+            if (!Files.exists(directory)) {
+                return;
+            }
+            
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+                for (Path entry : stream) {
+                    if (Files.isDirectory(entry)) {
+                        deleteDirectoryRecursively(entry);
+                    } else {
+                        Files.delete(entry);
+                        LOGGER.info("[Migration] Deleted file: " + entry.getFileName());
+                    }
+                }
+            }
+            
+            Files.delete(directory);
+            LOGGER.info("[Migration] Deleted directory: " + directory.getFileName());
+            
+        } catch (IOException e) {
+            LOGGER.warning("[Migration] Failed to delete directory " + directory + ": " + e.getMessage());
+        }
     }
     
     /**
@@ -385,11 +434,20 @@ public class WaypointMigrationManager {
             LOGGER.info("[Migration] Deleted legacy file: " + file.getFileName());
             
             Path parent = file.getParent();
-            if (parent != null && !parent.getFileName().toString().equals("Data")) {
+            while (parent != null) {
+                String folderName = parent.getFileName().toString();
+                
+                if (folderName.equals("Data")) {
+                    break;
+                }
+                
                 try (DirectoryStream<Path> stream = Files.newDirectoryStream(parent)) {
                     if (!stream.iterator().hasNext()) {
                         Files.delete(parent);
-                        LOGGER.info("[Migration] Deleted empty directory: " + parent.getFileName());
+                        LOGGER.info("[Migration] Deleted empty directory: " + folderName);
+                        parent = parent.getParent();
+                    } else {
+                        break;
                     }
                 }
             }
