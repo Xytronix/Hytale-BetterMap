@@ -130,6 +130,35 @@ $C.@PageOverlay {
             }
           }
 
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 32, Top: 16);
+            Background: #5c8a5c(0.15);
+            Padding: (Left: 10);
+
+            Label {
+              Text: "Cave Mode";
+              Style: (FontSize: 18, TextColor: #5c8a5c, RenderBold: true);
+            }
+          }
+
+          @SectionCard {
+            Anchor: (Top: 8);
+            Background: #1a2a1a(0.6);
+            OutlineColor: #3a5a3a(0.5);
+
+            @CheckboxRow {
+              $C.@CheckBox #PlayerCaveModeEnabled { }
+              Label { Text: "Enable Cave Mode (Personal)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
+
+            Label {
+              Anchor: (Top: 4);
+              Text: "Note: Server must have cave mode enabled globally";
+              Style: (FontSize: 11, TextColor: #7a8a7a);
+            }
+          }
+
           TextButton #OpenWaypointsBtn {
             Anchor: (Height: 32, Top: 8);
             Text: "OPEN WAYPOINT MENU";
@@ -330,6 +359,47 @@ $C.@PageOverlay {
             Label { Text: "Allowed Worlds (comma separated)"; Style: @FieldLabelStyle; }
             $C.@TextField #AllowedWorldList { Anchor: (Height: 28, Top: 4); }
             TextButton #AddCurrentWorldBtn { Anchor: (Height: 28, Top: 4); Text: "ADD CURRENT WORLD"; Style: @NavButtonStyle; }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 32, Top: 16);
+            Background: #5c8a5c(0.15);
+            Padding: (Left: 10);
+
+            Label {
+              Text: "Cave Mode Settings";
+              Style: (FontSize: 18, TextColor: #5c8a5c, RenderBold: true);
+            }
+          }
+
+          @SectionCard {
+            Anchor: (Top: 8);
+            Background: #1a2a1a(0.6);
+            OutlineColor: #3a5a3a(0.5);
+
+            @CheckboxRow {
+              $C.@CheckBox #CaveModeEnabled { }
+              Label { Text: "Enable Cave Mode (Global)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Layer Size (Y blocks)"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #CaveModeLayerSize { Anchor: (Width: 120, Height: 28); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Underground Threshold (Y)"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #CaveModeThreshold { Anchor: (Width: 120, Height: 28); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Cave Radius (chunks)"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #CaveModeRadius { Anchor: (Width: 120, Height: 28); }
+            }
           }
 
           Group {

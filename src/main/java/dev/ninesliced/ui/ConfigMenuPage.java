@@ -27,6 +27,7 @@ import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WorldBorderManager;
+import dev.ninesliced.managers.CaveModeManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.WorldMapHook;
 
@@ -60,9 +61,13 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         PlayerConfig pConfig = PlayerConfigManager.getInstance().getPlayerConfig(((CommandSender) player).getUuid());
         ui.set("#PlayerMinScale.Value", pConfig.getMinScale());
         ui.set("#PlayerMaxScale.Value", pConfig.getMaxScale());
+        
+        boolean serverCaveModeEnabled = ModConfig.getInstance().isCaveModeEnabled();
+        ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled() && serverCaveModeEnabled);
 
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
+        bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
         bindClick(events, "#OpenWaypointsBtn", "open_waypoints");
@@ -102,6 +107,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#WorldBorderOffsetX.Value", gConfig.getWorldBorderOffsetX());
              ui.set("#WorldBorderOffsetZ.Value", gConfig.getWorldBorderOffsetZ());
 
+             ui.set("#CaveModeEnabled.Value", gConfig.isCaveModeEnabled());
+             ui.set("#CaveModeLayerSize.Value", gConfig.getCaveModeLayerSize());
+             ui.set("#CaveModeThreshold.Value", gConfig.getCaveModeUndergroundThreshold());
+             ui.set("#CaveModeRadius.Value", gConfig.getCaveModeRadius());
+
              bindChange(events, "#AdminExplorationRadius", "admin_exp_radius", BindingType.NUMBER);
              bindClick(events, "#AdminMapQualityInfo", "admin_map_quality");
              bindChange(events, "#AdminMaxChunksToLoad", "admin_max_chunks", BindingType.NUMBER);
@@ -130,6 +140,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#WorldBorderRadius", "admin_world_border_radius", BindingType.NUMBER);
              bindChange(events, "#WorldBorderOffsetX", "admin_world_border_offset_x", BindingType.NUMBER);
              bindChange(events, "#WorldBorderOffsetZ", "admin_world_border_offset_z", BindingType.NUMBER);
+
+             bindChange(events, "#CaveModeEnabled", "admin_cavemode_enabled", BindingType.BOOLEAN);
+             bindChange(events, "#CaveModeLayerSize", "admin_cavemode_layer", BindingType.NUMBER);
+             bindChange(events, "#CaveModeThreshold", "admin_cavemode_threshold", BindingType.NUMBER);
+             bindChange(events, "#CaveModeRadius", "admin_cavemode_radius", BindingType.NUMBER);
         }
     }
 
@@ -227,6 +242,24 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
                     if (world != null)
                         world.execute(() -> WorldMapHook.sendMapSettingsToPlayer(player));
+                    break;
+                case "player_cavemode":
+                    if (!ModConfig.getInstance().isCaveModeEnabled()) {
+                        break;
+                    }
+                    boolean enabled = Boolean.parseBoolean(val);
+                    pConfig.setCaveModeEnabled(enabled);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(player);
+                    if (state != null) {
+                        state.setDynamicModeEnabled(enabled);
+                        if (!enabled) {
+                            state.setCurrentlyUnderground(false);
+                        }
+                    }
+                    if (world != null) {
+                        world.execute(() -> WorldMapHook.forceFullMapRefresh(player));
+                    }
                     break;
             }
             PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
@@ -400,6 +433,44 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     if (val != null) {
                         gConfig.setWorldBorderOffsetZ(Integer.parseInt(val));
                         WorldBorderManager.getInstance().clearAllCaches();
+                    }
+                    break;
+                case "admin_cavemode_enabled":
+                    if (val != null) {
+                        boolean caveEnabled = Boolean.parseBoolean(val);
+                        gConfig.setCaveModeEnabled(caveEnabled);
+                        CaveModeManager.DynamicCaveModeState caveState = CaveModeManager.getInstance().getState(player);
+                        if (caveState != null) {
+                            caveState.setDynamicModeEnabled(caveEnabled);
+                            if (!caveEnabled) {
+                                caveState.setCurrentlyUnderground(false);
+                            }
+                        }
+                        World caveWorld = player.getWorld();
+                        if (caveWorld != null) {
+                            caveWorld.execute(() -> WorldMapHook.forceFullMapRefresh(player));
+                        }
+                    }
+                    break;
+                case "admin_cavemode_layer":
+                    if (val != null) {
+                        int layerSize = Integer.parseInt(val);
+                        layerSize = Math.max(1, Math.min(layerSize, 20));
+                        gConfig.setCaveModeLayerSize(layerSize);
+                    }
+                    break;
+                case "admin_cavemode_threshold":
+                    if (val != null) {
+                        int threshold = Integer.parseInt(val);
+                        threshold = Math.max(0, Math.min(threshold, 319));
+                        gConfig.setCaveModeUndergroundThreshold(threshold);
+                    }
+                    break;
+                case "admin_cavemode_radius":
+                    if (val != null) {
+                        int radius = Integer.parseInt(val);
+                        radius = Math.max(1, Math.min(radius, 16));
+                        gConfig.setCaveModeRadius(radius);
                     }
                     break;
             }
