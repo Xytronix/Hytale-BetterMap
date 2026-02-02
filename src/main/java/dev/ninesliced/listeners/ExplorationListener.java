@@ -317,8 +317,6 @@ public class ExplorationListener {
 
             LOGGER.info("[DEBUG] Player " + playerName + " disconnecting from server");
 
-            cleanupCaveModeStateByName(playerName);
-
             ExplorationTracker.PlayerExplorationData data = ExplorationTracker.getInstance().getPlayerData(playerName);
             LOGGER.info("[DEBUG] Exploration data exists: " + (data != null));
 
@@ -346,6 +344,8 @@ public class ExplorationListener {
             } else {
                 LOGGER.info("Player " + playerName + " disconnect - data already saved");
             }
+
+            cleanupCaveModeStateByName(playerName);
 
             playerWorlds.remove(playerName);
             LOGGER.info("[DEBUG] Removed world tracking for " + playerName);

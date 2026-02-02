@@ -100,6 +100,14 @@ public class CaveModeManager {
     }
     
     /**
+     * Gets the dynamic cave mode state by player name.
+     */
+    @Nullable
+    public DynamicCaveModeState getStateByName(@Nonnull String playerName) {
+        return playerStates.get(playerName);
+    }
+    
+    /**
      * Gets or creates the dynamic cave mode state for a player.
      * Initializes with values from global config and player config.
      */
@@ -368,7 +376,7 @@ public class CaveModeManager {
         private int layerSize = 5;
         private int undergroundThreshold = 100;
         
-        private final Map<Integer, Set<Long>> exploredCaveChunks = new ConcurrentHashMap<>();
+        private final Set<Long> exploredCaveChunks = ConcurrentHashMap.newKeySet();
         
         private final Set<Long> loadedCaveChunks = ConcurrentHashMap.newKeySet();
         
@@ -470,24 +478,27 @@ public class CaveModeManager {
         }
         
         /**
-         * Gets the explored cave chunks for a specific layer.
+         * Gets all explored cave chunks (flat set, no layer separation).
          */
-        public Set<Long> getExploredCaveChunks(int layer) {
-            return exploredCaveChunks.computeIfAbsent(layer, k -> ConcurrentHashMap.newKeySet());
+        public Set<Long> getExploredCaveChunks() {
+            return exploredCaveChunks;
         }
         
         /**
-         * Marks a chunk as explored in a layer.
+         * Loads persisted cave exploration data.
+         * @param chunks Set of explored chunk indices
          */
-        public void markCaveChunkExplored(int layer, long chunkIdx) {
-            getExploredCaveChunks(layer).add(chunkIdx);
+        public void loadExploredChunks(Set<Long> chunks) {
+            if (chunks != null) {
+                exploredCaveChunks.addAll(chunks);
+            }
         }
         
         /**
-         * Gets all explored cave chunks for the current layer.
+         * Marks a chunk as explored in caves.
          */
-        public Set<Long> getCurrentLayerExploredChunks() {
-            return getExploredCaveChunks(currentLayer);
+        public void markCaveChunkExplored(long chunkIdx) {
+            exploredCaveChunks.add(chunkIdx);
         }
         
         public Set<Long> getLoadedCaveChunks() {
