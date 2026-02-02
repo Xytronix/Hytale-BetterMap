@@ -124,7 +124,7 @@ public class ExplorationManager {
         if (persistenceEnabled && persistence != null) {
             persistence.load(player, worldName);
         }
-        if (persistenceEnabled && cavePersistence != null) {
+        if (persistenceEnabled && cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
             cavePersistence.load(player, worldName);
         }
     }
@@ -138,7 +138,7 @@ public class ExplorationManager {
         if (persistenceEnabled && persistence != null) {
             persistence.save(player);
         }
-        if (persistenceEnabled && cavePersistence != null) {
+        if (persistenceEnabled && cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
             cavePersistence.save(player);
         }
     }
@@ -153,7 +153,7 @@ public class ExplorationManager {
     public void savePlayerData(String playerName, UUID playerUUID, String worldName) {
         if (persistenceEnabled) {
             persistence.save(playerName, playerUUID, worldName);
-            if (cavePersistence != null) {
+            if (cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
                 cavePersistence.save(playerName, playerUUID, worldName);
             }
         }
@@ -270,10 +270,10 @@ public class ExplorationManager {
         if (!persistenceEnabled) return;
 
         persistence.saveAllPlayers();
-        if (cavePersistence != null) {
+        if (cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
             cavePersistence.saveAllPlayers();
         }
-        LOGGER.info("Auto-saved exploration and cave data for all players.");
+        LOGGER.info("Auto-saved exploration" + (ModConfig.getInstance().isCaveModeEnabled() ? " and cave" : "") + " data for all players.");
     }
 
     /**

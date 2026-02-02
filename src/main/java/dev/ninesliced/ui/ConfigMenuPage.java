@@ -63,7 +63,13 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#PlayerMaxScale.Value", pConfig.getMaxScale());
         
         boolean serverCaveModeEnabled = ModConfig.getInstance().isCaveModeEnabled();
-        ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled() && serverCaveModeEnabled);
+        
+        if (serverCaveModeEnabled) {
+            ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
+        } else {
+            ui.set("#PlayerCaveModeHeader.Visible", false);
+            ui.set("#PlayerCaveModeCard.Visible", false);
+        }
 
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
