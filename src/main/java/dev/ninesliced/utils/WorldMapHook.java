@@ -563,8 +563,8 @@ public class WorldMapHook {
                 return Math.pow(mx - playerMapChunkX, 2) + Math.pow(mz - playerMapChunkZ, 2);
             }));
             
-            int maxNewGenerations = 3;
-            int maxImmediateLoads = 2;
+            int maxNewGenerations = 10;
+            int maxImmediateLoads = 8;
             int immediateLoads = 0;
             
             for (Long chunkIdx : sortedTargets) {
@@ -593,7 +593,7 @@ public class WorldMapHook {
             }
             
             if (!chunksToSend.isEmpty()) {
-                int batchSize = 5;
+                int batchSize = 15;
                 for (int i = 0; i < chunksToSend.size(); i += batchSize) {
                     int end = Math.min(i + batchSize, chunksToSend.size());
                     List<MapChunk> batch = chunksToSend.subList(i, end);
