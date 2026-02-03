@@ -1,5 +1,6 @@
 package dev.ninesliced.managers;
 
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
@@ -84,7 +85,7 @@ public class CaveModeManager {
         if (!isConfigEnabled()) {
             return false;
         }
-        PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(player.getUuid());
+        PlayerConfig playerConfig = PlayerConfigManager.getInstance().getPlayerConfig(((CommandSender) player).getUuid());
         if (playerConfig != null) {
             return playerConfig.isCaveModeEnabled();
         }

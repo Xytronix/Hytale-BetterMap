@@ -151,6 +151,12 @@ $C.@PageOverlay {
               $C.@CheckBox #PlayerCaveModeEnabled { }
               Label { Text: "Enable Cave Mode (Personal)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
+
+            @CheckboxRow {
+              Anchor: (Top: 4);
+              $C.@CheckBox #PlayerDiscoverSurface { }
+              Label { Text: "Discover Surface While Underground"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
           }
 
           TextButton #OpenWaypointsBtn {

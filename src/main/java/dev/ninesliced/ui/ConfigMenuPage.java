@@ -66,6 +66,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         
         if (serverCaveModeEnabled) {
             ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
+            ui.set("#PlayerDiscoverSurface.Value", pConfig.isDiscoverSurfaceUnderground());
         } else {
             ui.set("#PlayerCaveModeHeader.Visible", false);
             ui.set("#PlayerCaveModeCard.Visible", false);
@@ -74,6 +75,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerDiscoverSurface", "player_discover_surface", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
         bindClick(events, "#OpenWaypointsBtn", "open_waypoints");
@@ -266,6 +268,14 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     if (world != null) {
                         world.execute(() -> WorldMapHook.forceFullMapRefresh(player));
                     }
+                    break;
+                case "player_discover_surface":
+                    if (!ModConfig.getInstance().isCaveModeEnabled()) {
+                        break;
+                    }
+                    boolean discoverSurface = Boolean.parseBoolean(val);
+                    pConfig.setDiscoverSurfaceUnderground(discoverSurface);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
                     break;
             }
             PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());

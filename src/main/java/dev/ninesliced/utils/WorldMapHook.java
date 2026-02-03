@@ -297,7 +297,10 @@ public class WorldMapHook {
             int playerChunkZ = ChunkUtil.blockToChunkCoord(z);
             boolean hasMoved = explorationData.hasMovedToNewChunk(playerChunkX, playerChunkZ);
 
-            TransformComponent transform = player.getTransformComponent();
+            Ref<EntityStore> playerRef = player.getReference();
+            TransformComponent transform = (playerRef != null && playerRef.isValid()) 
+                ? playerRef.getStore().getComponent(playerRef, TransformComponent.getComponentType()) 
+                : null;
             int playerY = transform != null ? (int) transform.getPosition().y : 100;
             boolean hasCeiling = checkForCeiling(world, player, x, playerY, z);
             
@@ -313,7 +316,10 @@ public class WorldMapHook {
                 isUnderground = caveManager.isPlayerUnderground(player);
             }
             
-            if (hasMoved && (!caveModeGloballyEnabled || !isUnderground)) {
+            PlayerConfig pConfig = PlayerConfigManager.getInstance().getPlayerConfig(((CommandSender)player).getUuid());
+            boolean discoverSurfaceUnderground = pConfig != null && pConfig.isDiscoverSurfaceUnderground();
+            
+            if (hasMoved && (!caveModeGloballyEnabled || !isUnderground || discoverSurfaceUnderground)) {
                 int explorationRadius = ModConfig.getInstance().getExplorationRadius();
                 int beforeCount = explorationData.getExploredChunks().getExploredCount();
                 explorationData.getMapExpansion().updateBoundaries(playerChunkX, playerChunkZ, explorationRadius);
@@ -655,7 +661,10 @@ public class WorldMapHook {
                 restrictedIterator.resetState();
             }
             
-            TransformComponent transform = player.getTransformComponent();
+            Ref<EntityStore> playerRef = player.getReference();
+            TransformComponent transform = (playerRef != null && playerRef.isValid()) 
+                ? playerRef.getStore().getComponent(playerRef, TransformComponent.getComponentType()) 
+                : null;
             if (transform != null) {
                 var pos = transform.getPosition();
                 forceTrackerUpdate(player, tracker, pos.x, pos.z);
@@ -796,7 +805,10 @@ public class WorldMapHook {
             
             ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 0.0f);
             
-            TransformComponent transform = player.getTransformComponent();
+            Ref<EntityStore> playerRef = player.getReference();
+            TransformComponent transform = (playerRef != null && playerRef.isValid()) 
+                ? playerRef.getStore().getComponent(playerRef, TransformComponent.getComponentType()) 
+                : null;
             if (transform != null) {
                 var pos = transform.getPosition();
                 int chunkX = (int) Math.floor(pos.x) >> 5;
