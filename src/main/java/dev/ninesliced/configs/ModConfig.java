@@ -48,6 +48,8 @@ public class ModConfig {
     private int caveModeLayerSize = 5;
     private int caveModeUndergroundThreshold = 100;
     private int caveModeRadius = 4;
+    private boolean discoverSurfaceUnderground = false;
+    private boolean caveFogOfWar = false;
 
     private boolean worldBorderEnabled = false;
     private int worldBorderRadius = 5000;
@@ -271,6 +273,18 @@ public class ModConfig {
                     
                     if (jsonObject.has("caveModeRadius")) {
                         this.caveModeRadius = loaded.caveModeRadius;
+                    } else {
+                        needsSave = true;
+                    }
+                    
+                    if (jsonObject.has("discoverSurfaceUnderground")) {
+                        this.discoverSurfaceUnderground = loaded.discoverSurfaceUnderground;
+                    } else {
+                        needsSave = true;
+                    }
+                    
+                    if (jsonObject.has("caveFogOfWar")) {
+                        this.caveFogOfWar = loaded.caveFogOfWar;
                     } else {
                         needsSave = true;
                     }
@@ -914,6 +928,46 @@ public class ModConfig {
      */
     public void setCaveModeRadius(int radius) {
         this.caveModeRadius = Math.max(1, Math.min(radius, 16));
+        save();
+    }
+
+    /**
+     * Gets whether surface exploration is enabled while underground.
+     * When enabled, walking underground will also discover surface map chunks.
+     *
+     * @return True if surface discovery while underground is enabled.
+     */
+    public boolean isDiscoverSurfaceUnderground() {
+        return discoverSurfaceUnderground;
+    }
+
+    /**
+     * Sets whether surface exploration is enabled while underground.
+     *
+     * @param discoverSurfaceUnderground True to enable surface discovery while underground.
+     */
+    public void setDiscoverSurfaceUnderground(boolean discoverSurfaceUnderground) {
+        this.discoverSurfaceUnderground = discoverSurfaceUnderground;
+        save();
+    }
+
+    /**
+     * Gets whether cave fog of war is enabled.
+     * When enabled, only discovered cave chunks are shown while underground (normal surface chunks are hidden).
+     *
+     * @return True if cave fog of war is enabled.
+     */
+    public boolean isCaveFogOfWar() {
+        return caveFogOfWar;
+    }
+
+    /**
+     * Sets whether cave fog of war is enabled.
+     *
+     * @param caveFogOfWar True to enable cave fog of war.
+     */
+    public void setCaveFogOfWar(boolean caveFogOfWar) {
+        this.caveFogOfWar = caveFogOfWar;
         save();
     }
 

@@ -11,7 +11,6 @@ public class PlayerConfig {
     private float maxScale;
     private boolean locationEnabled;
     private boolean caveModeEnabled;
-    private boolean discoverSurfaceUnderground;
 
     public PlayerConfig(UUID playerUuid, float minScale, float maxScale, boolean locationEnabled) {
         this.playerUuid = playerUuid;
@@ -19,7 +18,6 @@ public class PlayerConfig {
         this.maxScale = maxScale;
         this.locationEnabled = locationEnabled;
         this.caveModeEnabled = true;
-        this.discoverSurfaceUnderground = false;
     }
 
     public float getMinScale() {
@@ -68,21 +66,6 @@ public class PlayerConfig {
      */
     public void setCaveModeEnabled(boolean caveModeEnabled) {
         this.caveModeEnabled = caveModeEnabled;
-    }
-
-    /**
-     * Gets whether surface exploration is enabled while underground.
-     * When enabled, walking underground will also discover surface map chunks.
-     */
-    public boolean isDiscoverSurfaceUnderground() {
-        return discoverSurfaceUnderground;
-    }
-
-    /**
-     * Sets whether surface exploration is enabled while underground.
-     */
-    public void setDiscoverSurfaceUnderground(boolean discoverSurfaceUnderground) {
-        this.discoverSurfaceUnderground = discoverSurfaceUnderground;
     }
 
     /**
