@@ -84,8 +84,8 @@ public class LocationHud extends CustomUIHud {
                 Biome biome = result.getBiome();
                 Zone zone = result.getZoneResult().getZone();
 
-                this.biomeName = biome != null ? biome.getName() : "Unknown Biome";
-                this.zoneName = zone != null ? zone.name() : "Unknown Zone";
+                this.biomeName = biome != null ? formatBiomeName(biome.getName()) : "Unknown Biome";
+                this.zoneName = zone != null ? formatZoneName(zone.name()) : "Unknown Zone";
             } catch (Exception e) {
                 this.biomeName = "Error";
                 this.zoneName = "Error";
@@ -94,6 +94,47 @@ public class LocationHud extends CustomUIHud {
             this.biomeName = "N/A";
             this.zoneName = "N/A";
         }
+    }
+
+    /**
+     * Formats a biome name by replacing underscores with spaces and capitalizing each word.
+     * Example: "deep_forest_hills" -> "Deep Forest Hills"
+     */
+    private String formatBiomeName(String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            return "Unknown";
+        }
+        String[] words = rawName.replace("_", " ").split(" ");
+        StringBuilder formatted = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                if (formatted.length() > 0) formatted.append(" ");
+                formatted.append(Character.toUpperCase(word.charAt(0)))
+                         .append(word.substring(1).toLowerCase());
+            }
+        }
+        return formatted.toString();
+    }
+
+    /**
+     * Formats a zone name from "Zone1_Tier2" format to "Zone 1 - Tier 2".
+     * Example: "Zone1_Tier2" -> "Zone 1 - Tier 2"
+     */
+    private String formatZoneName(String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            return "Unknown";
+        }
+
+        // Handle Zone#_Tier# format
+        if (rawName.matches("Zone\\d+_Tier\\d+")) {
+            String[] parts = rawName.split("_");
+            String zonePart = parts[0].replaceAll("(Zone)(\\d+)", "$1 $2");
+            String tierPart = parts[1].replaceAll("(Tier)(\\d+)", "$1 $2");
+            return zonePart + " - " + tierPart;
+        }
+
+        // Fallback: replace underscores with spaces and capitalize
+        return formatBiomeName(rawName);
     }
 
     @Override
