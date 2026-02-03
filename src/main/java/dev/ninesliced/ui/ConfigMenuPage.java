@@ -473,6 +473,22 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         int layerSize = Integer.parseInt(val);
                         layerSize = Math.max(1, Math.min(layerSize, 20));
                         gConfig.setCaveModeLayerSize(layerSize);
+                        final int finalLayerSize = layerSize;
+                        World layerWorld = player.getWorld();
+                        if (layerWorld != null) {
+                            for (PlayerRef pRef : layerWorld.getPlayerRefs()) {
+                                var pHolder = pRef.getHolder();
+                                if (pHolder != null) {
+                                    Player p = pHolder.getComponent(Player.getComponentType());
+                                    if (p != null) {
+                                        CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(p);
+                                        if (state != null) {
+                                            state.setLayerSize(finalLayerSize);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
                 case "admin_cavemode_threshold":
@@ -480,6 +496,22 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         int threshold = Integer.parseInt(val);
                         threshold = Math.max(0, Math.min(threshold, 319));
                         gConfig.setCaveModeUndergroundThreshold(threshold);
+                        final int finalThreshold = threshold;
+                        World threshWorld = player.getWorld();
+                        if (threshWorld != null) {
+                            for (PlayerRef pRef : threshWorld.getPlayerRefs()) {
+                                var pHolder = pRef.getHolder();
+                                if (pHolder != null) {
+                                    Player p = pHolder.getComponent(Player.getComponentType());
+                                    if (p != null) {
+                                        CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(p);
+                                        if (state != null) {
+                                            state.setUndergroundThreshold(finalThreshold);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
                 case "admin_cavemode_radius":
@@ -487,6 +519,22 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         int radius = Integer.parseInt(val);
                         radius = Math.max(1, Math.min(radius, 16));
                         gConfig.setCaveModeRadius(radius);
+                        final int finalRadius = radius;
+                        World radiusWorld = player.getWorld();
+                        if (radiusWorld != null) {
+                            for (PlayerRef pRef : radiusWorld.getPlayerRefs()) {
+                                var pHolder = pRef.getHolder();
+                                if (pHolder != null) {
+                                    Player p = pHolder.getComponent(Player.getComponentType());
+                                    if (p != null) {
+                                        CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(p);
+                                        if (state != null) {
+                                            state.setCaveRadius(finalRadius);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
             }

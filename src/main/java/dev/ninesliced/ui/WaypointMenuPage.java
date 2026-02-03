@@ -51,6 +51,12 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             new EventData().put(WaypointGuiData.KEY_ACTION, Action.CLOSE.name()),
             false
         );
+        events.addEventBinding(
+            CustomUIEventBindingType.Activating,
+            "#ConfigButton",
+            new EventData().put(WaypointGuiData.KEY_ACTION, Action.CONFIG.name()),
+            false
+        );
 
         buildWaypointList(ref, store, ui, events);
     }
@@ -187,6 +193,11 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             return;
         }
 
+        if (action == Action.CONFIG) {
+            player.getPageManager().openCustomPage(ref, store, new ConfigMenuPage(this.playerRef));
+            return;
+        }
+
         switch (action) {
             case CREATE -> {
                 player.getPageManager().openCustomPage(ref, store, new WaypointEditPage(this.playerRef, null));
@@ -252,7 +263,8 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
         EDIT,
         DELETE,
         TELEPORT,
-        CLOSE;
+        CLOSE,
+        CONFIG;
 
         static Action from(String raw) {
             if (raw == null) {

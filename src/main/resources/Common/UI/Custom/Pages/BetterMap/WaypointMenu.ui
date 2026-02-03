@@ -1,5 +1,12 @@
 $C = "../../Common.ui";
 
+@NavButtonStyle = TextButtonStyle(
+  Default: (Background: $C.@DefaultSquareButtonDefaultBackground, LabelStyle: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: $C.@DefaultSquareButtonPressedBackground, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds
+);
+
 $C.@PageOverlay {
   $C.@DecoratedContainer {
     Anchor: (Width: 600, Height: 600);
@@ -27,16 +34,22 @@ $C.@PageOverlay {
       Group #ButtonRow {
         LayoutMode: Left;
         Anchor: (Height: 40);
+        Padding: (Bottom: 10);
         
         TextButton #CreateButton {
-            Text: "Add Waypoint";
-            Style: TextButtonStyle(
-              Default: (Background: $C.@DefaultSquareButtonDefaultBackground, LabelStyle: $C.@DefaultButtonLabelStyle),
-              Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: $C.@DefaultButtonLabelStyle),
-              Pressed: (Background: $C.@DefaultSquareButtonPressedBackground, LabelStyle: $C.@DefaultButtonLabelStyle),
-              Disabled: (Background: $C.@DefaultSquareButtonDisabledBackground, LabelStyle: $C.@DefaultButtonDisabledLabelStyle),
-              Sounds: $C.@ButtonSounds,
-            );
+            FlexWeight: 1;
+            Anchor: (Height: 32);
+            Text: "ADD WAYPOINT";
+            Style: @NavButtonStyle;
+        }
+        
+        Group { Anchor: (Width: 10); }
+        
+        TextButton #ConfigButton {
+            FlexWeight: 1;
+            Anchor: (Height: 32);
+            Text: "BETTERMAP CONFIG";
+            Style: @NavButtonStyle;
         }
       }
 
