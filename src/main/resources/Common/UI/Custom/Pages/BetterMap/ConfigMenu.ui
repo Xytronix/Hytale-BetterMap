@@ -180,12 +180,6 @@ $C.@PageOverlay {
               $C.@CheckBox #PlayerCaveModeEnabled { }
               Label { Text: "Enable Cave Mode (Personal)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
-
-            @CheckboxRow {
-              Anchor: (Top: 4);
-              $C.@CheckBox #PlayerDiscoverSurface { }
-              Label { Text: "Discover Surface While Underground"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
-            }
           }
 
           TextButton #OpenWaypointsBtn {
@@ -423,6 +417,18 @@ $C.@PageOverlay {
             @CheckboxRow {
               $C.@CheckBox #CaveModeEnabled { }
               Label { Text: "Enable Cave Mode (Global)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
+
+            @CheckboxRow {
+              Anchor: (Top: 4);
+              $C.@CheckBox #DiscoverSurfaceUnderground { }
+              Label { Text: "Discover Surface While Underground"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
+
+            @CheckboxRow {
+              Anchor: (Top: 4);
+              $C.@CheckBox #CaveFogOfWar { }
+              Label { Text: "Cave Fog of War (Hide Surface Chunks)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
 
             @FieldRow {

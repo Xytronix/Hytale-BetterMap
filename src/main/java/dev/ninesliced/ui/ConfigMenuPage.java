@@ -38,10 +38,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
 public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.ConfigEventData> {
 
+    private static final Logger LOGGER = Logger.getLogger(ConfigMenuPage.class.getName());
     private enum BindingType { STRING, NUMBER, BOOLEAN }
 
     private static final String LAYOUT_PATH = "Pages/BetterMap/ConfigMenu.ui";
@@ -78,7 +80,6 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
         if (serverCaveModeEnabled) {
             ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
-            ui.set("#PlayerDiscoverSurface.Value", pConfig.isDiscoverSurfaceUnderground());
         } else {
             ui.set("#PlayerCaveModeHeader.Visible", false);
             ui.set("#PlayerCaveModeCard.Visible", false);
@@ -89,7 +90,6 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         bindChange(events, "#PlayerLocationEnabled", "player_location", BindingType.BOOLEAN);
         bindChange(events, "#PlayerLocationPosition", "player_location_pos", BindingType.STRING);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
-        bindChange(events, "#PlayerDiscoverSurface", "player_discover_surface", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
         bindClick(events, "#OpenWaypointsBtn", "open_waypoints");
@@ -132,6 +132,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#WorldBorderOffsetZ.Value", gConfig.getWorldBorderOffsetZ());
 
              ui.set("#CaveModeEnabled.Value", gConfig.isCaveModeEnabled());
+             ui.set("#DiscoverSurfaceUnderground.Value", gConfig.isDiscoverSurfaceUnderground());
+             ui.set("#CaveFogOfWar.Value", gConfig.isCaveFogOfWar());
              ui.set("#CaveModeLayerSize.Value", gConfig.getCaveModeLayerSize());
              ui.set("#CaveModeThreshold.Value", gConfig.getCaveModeUndergroundThreshold());
              ui.set("#CaveModeRadius.Value", gConfig.getCaveModeRadius());
@@ -168,6 +170,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#WorldBorderOffsetZ", "admin_world_border_offset_z", BindingType.NUMBER);
 
              bindChange(events, "#CaveModeEnabled", "admin_cavemode_enabled", BindingType.BOOLEAN);
+             bindChange(events, "#DiscoverSurfaceUnderground", "admin_discover_surface", BindingType.BOOLEAN);
+             bindChange(events, "#CaveFogOfWar", "admin_cave_fog_of_war", BindingType.BOOLEAN);
              bindChange(events, "#CaveModeLayerSize", "admin_cavemode_layer", BindingType.NUMBER);
              bindChange(events, "#CaveModeThreshold", "admin_cavemode_threshold", BindingType.NUMBER);
              bindChange(events, "#CaveModeRadius", "admin_cavemode_radius", BindingType.NUMBER);
@@ -320,14 +324,6 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     if (world != null) {
                         world.execute(() -> WorldMapHook.forceFullMapRefresh(player));
                     }
-                    break;
-                case "player_discover_surface":
-                    if (!ModConfig.getInstance().isCaveModeEnabled()) {
-                        break;
-                    }
-                    boolean discoverSurface = Boolean.parseBoolean(val);
-                    pConfig.setDiscoverSurfaceUnderground(discoverSurface);
-                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
                     break;
             }
             PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
@@ -528,6 +524,36 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         World caveWorld = player.getWorld();
                         if (caveWorld != null) {
                             caveWorld.execute(() -> WorldMapHook.forceFullMapRefresh(player));
+                        }
+                    }
+                    break;
+                case "admin_discover_surface":
+                    if (val != null) {
+                        boolean discoverSurface = Boolean.parseBoolean(val);
+                        gConfig.setDiscoverSurfaceUnderground(discoverSurface);
+                    }
+                    break;
+                case "admin_cave_fog_of_war":
+                    if (val != null) {
+                        boolean fogOfWar = Boolean.parseBoolean(val);
+                        gConfig.setCaveFogOfWar(fogOfWar);
+                        World fogWorld = player.getWorld();
+                        if (fogWorld != null) {
+                            fogWorld.execute(() -> {
+                                for (PlayerRef pRef : fogWorld.getPlayerRefs()) {
+                                    var pHolder = pRef.getHolder();
+                                    if (pHolder != null) {
+                                        Player p = pHolder.getComponent(Player.getComponentType());
+                                        if (p != null) {
+                                            try {
+                                                WorldMapHook.forceFullMapRefresh(p);
+                                            } catch (Exception e) {
+                                                LOGGER.warning("Failed to refresh map for fog of war: " + e.getMessage());
+                                            }
+                                        }
+                                    }
+                                }
+                            });
                         }
                     }
                     break;
