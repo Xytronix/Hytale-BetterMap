@@ -550,6 +550,7 @@ public class ModConfig {
 
     public void setLocationEnabled(boolean locationEnabled) {
         this.locationEnabled = locationEnabled;
+        save();
     }
 
     /**

@@ -96,4 +96,16 @@ public class PlayerConfig {
         }
         return this.caveModeEnabled;
     }
+
+    /**
+     * Checks if the location HUD is effectively enabled for this player.
+     * Returns true only if BOTH the server config AND the player config have it enabled.
+     * If the server disables location HUD globally, the player cannot enable it.
+     */
+    public boolean isLocationEffectivelyEnabled() {
+        if (!ModConfig.getInstance().isLocationEnabled()) {
+            return false;
+        }
+        return this.locationEnabled;
+    }
 }

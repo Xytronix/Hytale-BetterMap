@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.compat.MultiHudCompat;
 import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.hud.EmptyHud;
 import dev.ninesliced.hud.LocationHud;
 import dev.ninesliced.managers.PlayerConfigManager;
 
@@ -40,10 +41,12 @@ public class LocationHudProvider {
     private final Map<PlayerRef, LocationHud> huds = new HashMap<>();
     private final Set<UUID> warnedMissingMultiHud = new HashSet<>();
     private final Set<UUID> attachedHuds = new HashSet<>();
+    private final Set<UUID> visibleHuds = new HashSet<>();
 
     /**
      * Updates and displays the HUD for a player entity.
      * Creates the HUD if it doesn't exist and attaches it using MultipleHUD when available.
+     * Hides the HUD if the feature is disabled.
      *
      * @param dt             time delta since last tick
      * @param index          entity index in the chunk
@@ -63,9 +66,10 @@ public class LocationHudProvider {
 
         UUID playerUuid = playerRef.getUuid();
         PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
-        boolean isEnabled = config != null && config.isLocationEnabled();
+        boolean isEnabled = config != null && config.isLocationEffectivelyEnabled();
 
         if (!isEnabled) {
+            hideHudIfVisible(player, playerRef, playerUuid);
             return;
         }
 
@@ -75,9 +79,33 @@ public class LocationHudProvider {
 
         if (MultiHudCompat.isAvailable()) {
             MultiHudCompat.setCustomHud(player, playerRef, HUD_IDENTIFIER, hud);
+            this.visibleHuds.add(playerUuid);
         } else {
             attachVanillaHud(player, playerRef, playerUuid, hud);
         }
+    }
+
+    /**
+     * Hides the HUD if it's currently visible for the player.
+     */
+    private void hideHudIfVisible(Player player, PlayerRef playerRef, UUID playerUuid) {
+        if (!this.visibleHuds.contains(playerUuid) && !this.attachedHuds.contains(playerUuid)) {
+            return;
+        }
+
+        LocationHud hud = this.huds.get(playerRef);
+        if (hud != null) {
+            hud.setEnabled(false);
+        }
+
+        if (MultiHudCompat.isAvailable()) {
+            MultiHudCompat.hideCustomHud(player, playerRef, HUD_IDENTIFIER);
+        } else if (this.attachedHuds.contains(playerUuid)) {
+            player.getHudManager().setCustomHud(playerRef, new EmptyHud(playerRef));
+        }
+
+        this.visibleHuds.remove(playerUuid);
+        this.attachedHuds.remove(playerUuid);
     }
 
     /**
@@ -104,6 +132,7 @@ public class LocationHudProvider {
         UUID playerUuid = playerRef.getUuid();
         this.huds.remove(playerRef);
         this.attachedHuds.remove(playerUuid);
+        this.visibleHuds.remove(playerUuid);
         this.warnedMissingMultiHud.remove(playerUuid);
     }
 
@@ -115,16 +144,9 @@ public class LocationHudProvider {
      */
     public void removeHud(@Nonnull Player player, @Nonnull PlayerRef playerRef) {
         UUID playerUuid = playerRef.getUuid();
-
-        if (this.attachedHuds.contains(playerUuid)) {
-            if (MultiHudCompat.isAvailable()) {
-                MultiHudCompat.hideCustomHud(player, playerRef, HUD_IDENTIFIER);
-            } else {
-                player.getHudManager().setCustomHud(playerRef, null);
-            }
-        }
-
-        removeHud(playerRef);
+        hideHudIfVisible(player, playerRef, playerUuid);
+        this.huds.remove(playerRef);
+        this.warnedMissingMultiHud.remove(playerUuid);
     }
 
     /**
@@ -158,6 +180,7 @@ public class LocationHudProvider {
             } catch (Exception e) {
                 this.huds.remove(playerRef);
                 this.attachedHuds.remove(playerUuid);
+                this.visibleHuds.remove(playerUuid);
                 if (config != null) {
                     config.setLocationEnabled(false);
                 }
@@ -175,6 +198,7 @@ public class LocationHudProvider {
     private void attachHud(Player player, PlayerRef playerRef, UUID playerUuid, LocationHud hud) {
         if (MultiHudCompat.isAvailable()) {
             MultiHudCompat.setCustomHud(player, playerRef, HUD_IDENTIFIER, hud);
+            this.visibleHuds.add(playerUuid);
         } else if (!this.attachedHuds.contains(playerUuid)) {
             player.getHudManager().setCustomHud(playerRef, hud);
             this.attachedHuds.add(playerUuid);
@@ -196,7 +220,18 @@ public class LocationHudProvider {
     }
 
     /**
-     * Disables the location HUD for a player.
+     * Disables the location HUD for a player and hides it from screen.
+     *
+     * @param player    player entity
+     * @param playerRef player reference
+     */
+    public void disableHudForPlayer(@Nonnull Player player, @Nonnull PlayerRef playerRef) {
+        UUID playerUuid = playerRef.getUuid();
+        hideHudIfVisible(player, playerRef, playerUuid);
+    }
+
+    /**
+     * Disables the location HUD for a player (legacy method without hiding).
      *
      * @param playerRef player reference
      */
@@ -213,6 +248,7 @@ public class LocationHudProvider {
     public void cleanup() {
         huds.clear();
         attachedHuds.clear();
+        visibleHuds.clear();
         warnedMissingMultiHud.clear();
     }
 }

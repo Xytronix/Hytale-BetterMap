@@ -1,9 +1,20 @@
 package dev.ninesliced.commands.bettermap;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.ninesliced.BetterMap;
+import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.providers.LocationHudProvider;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -35,8 +46,12 @@ public class PlayerLocationCommand extends AbstractCommand {
     @NullableDecl
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext commandContext) {
-        /**
-         * if (!commandContext.isPlayer()) {
+        if (!ModConfig.getInstance().isLocationEnabled()) {
+            commandContext.sendMessage(Message.raw("Location HUD is disabled on this server.").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        if (!commandContext.isPlayer()) {
             return CompletableFuture.completedFuture(null);
         }
 
@@ -45,15 +60,14 @@ public class PlayerLocationCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        var store = ref.getStore();
-
+        Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
 
         return CompletableFuture.runAsync(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            Player player = store.getComponent(ref, Player.getComponentType());
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
 
-            if (playerComponent == null || playerRef == null) {
+            if (player == null || playerRef == null) {
                 return;
             }
 
@@ -64,16 +78,15 @@ public class PlayerLocationCommand extends AbstractCommand {
 
             PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid());
             if (config.isLocationEnabled()) {
-                provider.disableHudForPlayer(playerRef);
+                provider.disableHudForPlayer(player, playerRef);
                 config.setLocationEnabled(false);
+                player.sendMessage(Message.raw("Location HUD disabled.").color(Color.YELLOW));
             } else {
-                provider.enableHudForPlayer(playerComponent, playerRef);
+                provider.enableHudForPlayer(player, playerRef);
                 config.setLocationEnabled(true);
+                player.sendMessage(Message.raw("Location HUD enabled.").color(Color.GREEN));
             }
+            PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
         }, world);
-        */
-
-       commandContext.sendMessage(Message.raw("This feature is currently disabled. We are working on a fix.").color(Color.RED));
-       return CompletableFuture.completedFuture(null);
     }
 }

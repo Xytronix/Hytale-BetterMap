@@ -62,8 +62,16 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#PlayerMinScale.Value", pConfig.getMinScale());
         ui.set("#PlayerMaxScale.Value", pConfig.getMaxScale());
         
+        boolean serverLocationEnabled = ModConfig.getInstance().isLocationEnabled();
         boolean serverCaveModeEnabled = ModConfig.getInstance().isCaveModeEnabled();
-        
+
+        if (serverLocationEnabled) {
+            ui.set("#PlayerLocationEnabled.Value", pConfig.isLocationEnabled());
+        } else {
+            ui.set("#PlayerLocationHeader.Visible", false);
+            ui.set("#PlayerLocationCard.Visible", false);
+        }
+
         if (serverCaveModeEnabled) {
             ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
             ui.set("#PlayerDiscoverSurface.Value", pConfig.isDiscoverSurfaceUnderground());
@@ -74,6 +82,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
+        bindChange(events, "#PlayerLocationEnabled", "player_location", BindingType.BOOLEAN);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
         bindChange(events, "#PlayerDiscoverSurface", "player_discover_surface", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
@@ -96,6 +105,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
              ui.set("#DebugMode.Value", gConfig.isDebug());
+             ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
              ui.set("#RadarEnabled.Value", gConfig.isRadarEnabled());
              ui.set("#HidePlayers.Value", gConfig.isHidePlayersOnMap());
              ui.set("#HideOtherWarps.Value", gConfig.isHideOtherWarpsOnMap());
@@ -129,6 +139,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AllowWaypointTeleport", "admin_wp_teleport", BindingType.BOOLEAN);
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
              bindChange(events, "#DebugMode", "admin_debug", BindingType.BOOLEAN);
+             bindChange(events, "#LocationHudEnabled", "admin_location_enabled", BindingType.BOOLEAN);
 
              bindChange(events, "#RadarEnabled", "admin_radar_enabled", BindingType.BOOLEAN);
              bindChange(events, "#RadarRange", "admin_radar_range", BindingType.NUMBER);
@@ -251,6 +262,14 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     if (world != null)
                         world.execute(() -> WorldMapHook.sendMapSettingsToPlayer(player));
                     break;
+                case "player_location":
+                    if (!ModConfig.getInstance().isLocationEnabled()) {
+                        break;
+                    }
+                    boolean locationEnabled = Boolean.parseBoolean(val);
+                    pConfig.setLocationEnabled(locationEnabled);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    break;
                 case "player_cavemode":
                     if (!ModConfig.getInstance().isCaveModeEnabled()) {
                         break;
@@ -355,6 +374,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_debug":
                      if (val != null) gConfig.setDebug(Boolean.parseBoolean(val));
+                    break;
+                case "admin_location_enabled":
+                    if (val != null) gConfig.setLocationEnabled(Boolean.parseBoolean(val));
                     break;
                 case "admin_radar_enabled":
                      if (val != null) gConfig.setRadarEnabled(Boolean.parseBoolean(val));

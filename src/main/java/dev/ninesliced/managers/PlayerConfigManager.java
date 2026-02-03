@@ -100,7 +100,7 @@ public class PlayerConfigManager {
         return new PlayerConfig(uuid,
                 mainConfig.getMinScale(),
                 mainConfig.getMaxScale(),
-                mainConfig.isLocationEnabled()
+                false
         );
     }
 }
