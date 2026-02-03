@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.exploration.*;
 import dev.ninesliced.managers.CaveModeManager;
+import dev.ninesliced.managers.ChunkStreamingManager;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
@@ -314,6 +315,12 @@ public class ExplorationListener {
             UUID playerUUID = playerRef.getUuid();
 
             PlayerConfigManager.getInstance().unloadPlayerConfig(playerUUID);
+
+            // Clean up waypoint cache for this player
+            WaypointManager.onPlayerDisconnect(playerUUID);
+
+            // Clean up chunk streaming state for this player
+            ChunkStreamingManager.getInstance().removeState(playerName);
 
             LOGGER.info("[DEBUG] Player " + playerName + " disconnecting from server");
 

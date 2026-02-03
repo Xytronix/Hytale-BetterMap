@@ -18,11 +18,13 @@ import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.managers.ChunkStreamingManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.providers.LocationHudProvider;
+import dev.ninesliced.systems.LocationSystem;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Path;
@@ -131,9 +133,9 @@ public class BetterMap extends JavaPlugin {
             this.getCommandRegistry().registerCommand(new WaypointCommand());
             LOGGER.info("Mod Command: REGISTERED");
 
-            //this.locationHudProvider = new LocationHudProvider();
-            //this.getEntityStoreRegistry().registerSystem(new LocationSystem());
-            //LOGGER.info("Location Display: INITIALIZED");
+            this.locationHudProvider = new LocationHudProvider();
+            this.getEntityStoreRegistry().registerSystem(new LocationSystem());
+            LOGGER.info("Location Display: INITIALIZED");
 
             PlayerRadarManager.getInstance();
             LOGGER.info("Player Radar: INITIALIZED");
@@ -164,11 +166,22 @@ public class BetterMap extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        LOGGER.info("Shutting down BetterMap plugin...");
+        
+        ExplorationTicker.getInstance().stop();
+        
+        ExplorationManager.getInstance().shutdown();
+        
         if (this.locationHudProvider != null) {
             this.locationHudProvider.cleanup();
         }
+        
         PlayerRadarManager.getInstance().cleanup();
         WorldBorderManager.getInstance().cleanup();
+        ChunkStreamingManager.getInstance().cleanup();
+        WaypointManager.cleanup();
+        
+        LOGGER.info("BetterMap plugin shutdown complete.");
         super.shutdown();
     }
 }

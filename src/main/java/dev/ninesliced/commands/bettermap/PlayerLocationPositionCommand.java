@@ -6,43 +6,38 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.ninesliced.BetterMap;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.hud.HudPosition;
 import dev.ninesliced.managers.PlayerConfigManager;
-import dev.ninesliced.providers.LocationHudProvider;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
-
 /**
- * Handles the "location" command which allows players to toggle the visibility of the location HUD.
+ * Command to change the Location HUD position.
+ * Usage: /bettermap locationpos <position>
  */
-public class PlayerLocationCommand extends AbstractCommand {
+public class PlayerLocationPositionCommand extends AbstractCommand {
 
-    public PlayerLocationCommand() {
-        super("location", "Toggle the location HUD display");
+    private final RequiredArg<String> positionArg;
+
+    public PlayerLocationPositionCommand() {
+        super("locationpos", "Change the location HUD position");
         this.setPermissionGroup(GameMode.Adventure);
         this.setPermissionGroup(GameMode.Creative);
+        this.positionArg = this.withRequiredArg("position",
+                "Position: " + HudPosition.getAllIds(), ArgTypes.STRING);
     }
 
-    /**
-     * Executes the toggle command logic.
-     * <p>
-     * Verifies that the sender is a player, retrieves the player's context, and asynchronously
-     * toggles the HUD visibility state on the world thread.
-     * </p>
-     *
-     * @param commandContext The context of the executed command.
-     * @return A CompletableFuture representing the asynchronous execution of the command.
-     */
     @NullableDecl
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext commandContext) {
@@ -52,6 +47,23 @@ public class PlayerLocationCommand extends AbstractCommand {
         }
 
         if (!commandContext.isPlayer()) {
+            commandContext.sendMessage(Message.raw("This command can only be used by players.").color(Color.RED));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        String positionInput = this.positionArg.get(commandContext);
+        if (positionInput == null || positionInput.isBlank()) {
+            commandContext.sendMessage(Message.raw("Usage: /bettermap locationpos <position>").color(Color.YELLOW));
+            commandContext.sendMessage(Message.raw("Positions: " + HudPosition.getAllIds()).color(Color.GRAY));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        String normalized = positionInput.trim().toLowerCase();
+        HudPosition newPosition = HudPosition.fromId(normalized);
+
+        // Check if the input was valid
+        if (!normalized.equals(newPosition.getId())) {
+            commandContext.sendMessage(Message.raw("Invalid position. Available: " + HudPosition.getAllIds()).color(Color.RED));
             return CompletableFuture.completedFuture(null);
         }
 
@@ -71,22 +83,13 @@ public class PlayerLocationCommand extends AbstractCommand {
                 return;
             }
 
-            LocationHudProvider provider = BetterMap.get().getLocationHudProvider();
-            if (provider == null) {
-                return;
-            }
-
             PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid());
-            if (config.isLocationEnabled()) {
-                provider.disableHudForPlayer(player, playerRef);
-                config.setLocationEnabled(false);
-                player.sendMessage(Message.raw("Location HUD disabled.").color(Color.YELLOW));
-            } else {
-                provider.enableHudForPlayer(player, playerRef);
-                config.setLocationEnabled(true);
-                player.sendMessage(Message.raw("Location HUD enabled.").color(Color.GREEN));
-            }
+            config.setLocationHudPosition(newPosition.getId());
             PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
+
+            player.sendMessage(Message.raw("Location HUD position set to: ")
+                    .color(Color.GREEN)
+                    .insert(Message.raw(newPosition.getDisplayName()).color(Color.CYAN)));
         }, world);
     }
 }

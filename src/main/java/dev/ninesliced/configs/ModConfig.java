@@ -29,6 +29,7 @@ public class ModConfig {
     private float maxScale = 256.0f;
     private boolean debug = false;
     private boolean locationEnabled = false;
+    private String locationHudPosition = "top_right";
     private boolean shareAllExploration = false;
     private int maxChunksToLoad = 10000;
     private boolean radarEnabled = true;
@@ -553,17 +554,18 @@ public class ModConfig {
         save();
     }
 
-    /**
-     * Gets the active map quality setting.
-     *
-     * @return The active map quality.
-     */
-    public MapQuality getActiveMapQualitySetting() {
-        return activeMapQuality;
-    }
-
     public void setLocationEnabled(boolean locationEnabled) {
         this.locationEnabled = locationEnabled;
+        save();
+    }
+
+    public String getLocationHudPosition() {
+        return locationHudPosition;
+    }
+
+    public void setLocationHudPosition(String locationHudPosition) {
+        this.locationHudPosition = locationHudPosition;
+        save();
     }
 
     /**
@@ -1051,9 +1053,9 @@ public class ModConfig {
      * Enum representing different map quality settings.
      */
     public enum MapQuality {
-        LOW(0.25f, 30000),
-        MEDIUM(0.5f, 10000),
-        HIGH(1.0f, 3000);
+        LOW(0.25f, 80000),
+        MEDIUM(0.5f, 25000),
+        HIGH(1.0f, 8000);
 
         public final float scale;
         public final int maxChunks;

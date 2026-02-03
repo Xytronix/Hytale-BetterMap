@@ -19,11 +19,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
+import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.ModConfig.MapQuality;
 import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.hud.HudPosition;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WorldBorderManager;
@@ -64,8 +67,17 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#PlayerMinScale.Value", pConfig.getMinScale());
         ui.set("#PlayerMaxScale.Value", pConfig.getMaxScale());
         
+        boolean serverLocationEnabled = ModConfig.getInstance().isLocationEnabled();
         boolean serverCaveModeEnabled = ModConfig.getInstance().isCaveModeEnabled();
-        
+
+        if (serverLocationEnabled) {
+            ui.set("#PlayerLocationEnabled.Value", pConfig.isLocationEnabled());
+            applyLocationPositionDropdown(ui, pConfig.getEffectiveLocationHudPosition(), "#PlayerLocationPosition");
+        } else {
+            ui.set("#PlayerLocationHeader.Visible", false);
+            ui.set("#PlayerLocationCard.Visible", false);
+        }
+
         if (serverCaveModeEnabled) {
             ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
         } else {
@@ -75,6 +87,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
+        bindChange(events, "#PlayerLocationEnabled", "player_location", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerLocationPosition", "player_location_pos", BindingType.STRING);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
@@ -87,7 +101,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ModConfig gConfig = ModConfig.getInstance();
 
              ui.set("#AdminExplorationRadius.Value", gConfig.getExplorationRadius());
-             ui.set("#AdminMapQualityInfo.Text", gConfig.getMapQuality().name());
+             applyMapQualityDropdown(ui, gConfig.getMapQuality(), "#AdminMapQuality");
              ui.set("#AdminMaxChunksToLoad.Value", gConfig.getMaxChunksToLoad());
 
              ui.set("#AdminMinScale.Value", (int) gConfig.getMinScale());
@@ -96,6 +110,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
              ui.set("#DebugMode.Value", gConfig.isDebug());
+             ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
+             applyLocationPositionDropdown(ui, gConfig.getLocationHudPosition(), "#AdminLocationPosition");
              ui.set("#RadarEnabled.Value", gConfig.isRadarEnabled());
              ui.set("#HidePlayers.Value", gConfig.isHidePlayersOnMap());
              ui.set("#HideOtherWarps.Value", gConfig.isHideOtherWarpsOnMap());
@@ -123,7 +139,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#CaveModeRadius.Value", gConfig.getCaveModeRadius());
 
              bindChange(events, "#AdminExplorationRadius", "admin_exp_radius", BindingType.NUMBER);
-             bindClick(events, "#AdminMapQualityInfo", "admin_map_quality");
+             bindChange(events, "#AdminMapQuality", "admin_map_quality", BindingType.STRING);
              bindChange(events, "#AdminMaxChunksToLoad", "admin_max_chunks", BindingType.NUMBER);
              bindChange(events, "#AdminMinScale", "admin_min_scale", BindingType.NUMBER);
              bindChange(events, "#AdminMaxScale", "admin_max_scale", BindingType.NUMBER);
@@ -131,6 +147,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AllowWaypointTeleport", "admin_wp_teleport", BindingType.BOOLEAN);
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
              bindChange(events, "#DebugMode", "admin_debug", BindingType.BOOLEAN);
+             bindChange(events, "#LocationHudEnabled", "admin_location_enabled", BindingType.BOOLEAN);
+             bindChange(events, "#AdminLocationPosition", "admin_location_pos", BindingType.STRING);
 
              bindChange(events, "#RadarEnabled", "admin_radar_enabled", BindingType.BOOLEAN);
              bindChange(events, "#RadarRange", "admin_radar_range", BindingType.NUMBER);
@@ -178,6 +196,25 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                 .put("Action", action),
             false
         );
+    }
+
+    private void applyLocationPositionDropdown(UICommandBuilder ui, String currentPosition, String elementId) {
+        List<DropdownEntryInfo> entries = new ArrayList<>();
+        for (HudPosition pos : HudPosition.values()) {
+            entries.add(new DropdownEntryInfo(LocalizableString.fromString(pos.getDisplayName()), pos.getId()));
+        }
+        ui.set(elementId + ".Entries", entries);
+        ui.set(elementId + ".Value", currentPosition != null ? currentPosition : HudPosition.TOP_LEFT.getId());
+    }
+
+    private void applyMapQualityDropdown(UICommandBuilder ui, MapQuality currentQuality, String elementId) {
+        List<DropdownEntryInfo> entries = new ArrayList<>();
+        for (MapQuality quality : MapQuality.values()) {
+            String displayName = quality.name() + " (max " + quality.maxChunks + " chunks)";
+            entries.add(new DropdownEntryInfo(LocalizableString.fromString(displayName), quality.name()));
+        }
+        ui.set(elementId + ".Entries", entries);
+        ui.set(elementId + ".Value", currentQuality != null ? currentQuality.name() : MapQuality.MEDIUM.name());
     }
 
     @Override
@@ -255,6 +292,21 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     if (world != null)
                         world.execute(() -> WorldMapHook.sendMapSettingsToPlayer(player));
                     break;
+                case "player_location":
+                    if (!ModConfig.getInstance().isLocationEnabled()) {
+                        break;
+                    }
+                    boolean locationEnabled = Boolean.parseBoolean(val);
+                    pConfig.setLocationEnabled(locationEnabled);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    break;
+                case "player_location_pos":
+                    if (!ModConfig.getInstance().isLocationEnabled()) {
+                        break;
+                    }
+                    pConfig.setLocationHudPosition(val.trim().toLowerCase());
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    break;
                 case "player_cavemode":
                     if (!ModConfig.getInstance().isCaveModeEnabled()) {
                         break;
@@ -285,14 +337,17 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
             switch (data.action) {
                 case "admin_exp_radius":
                      if (val != null) gConfig.setExplorationRadius(Integer.parseInt(val));
+                     break;
                 case "admin_map_quality":
-                    MapQuality current = gConfig.getMapQuality();
-                    MapQuality next = MapQuality.values()[(current.ordinal() + 1) % MapQuality.values().length];
-                    gConfig.setQuality(next);
-                    ui.set("#AdminMapQualityInfo.Text", next.name());
-                    ui.set("#AdminMaxChunksToLoad.Value", gConfig.getMaxChunksToLoad());
-                    sendUpdate(ui, new UIEventBuilder(), false);
-                    restartRequired = true;
+                    if (val != null && !val.isBlank()) {
+                        try {
+                            MapQuality newQuality = MapQuality.valueOf(val.trim().toUpperCase());
+                            gConfig.setQuality(newQuality);
+                            ui.set("#AdminMaxChunksToLoad.Value", gConfig.getMaxChunksToLoad());
+                            sendUpdate(ui, new UIEventBuilder(), false);
+                            restartRequired = true;
+                        } catch (IllegalArgumentException ignored) {}
+                    }
                     break;
                 case "admin_max_chunks":
                     if (val != null) {
@@ -351,6 +406,14 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_debug":
                      if (val != null) gConfig.setDebug(Boolean.parseBoolean(val));
+                    break;
+                case "admin_location_enabled":
+                    if (val != null) gConfig.setLocationEnabled(Boolean.parseBoolean(val));
+                    break;
+                case "admin_location_pos":
+                    if (val != null && !val.isBlank()) {
+                        gConfig.setLocationHudPosition(val.trim().toLowerCase());
+                    }
                     break;
                 case "admin_radar_enabled":
                      if (val != null) gConfig.setRadarEnabled(Boolean.parseBoolean(val));
