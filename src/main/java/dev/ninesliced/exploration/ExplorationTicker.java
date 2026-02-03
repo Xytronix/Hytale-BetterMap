@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.utils.WorldMapHook;
@@ -52,7 +52,7 @@ public class ExplorationTicker {
             return;
         }
         isRunning = true;
-        int updateRateMs = BetterMapConfig.getInstance().getUpdateRateMs();
+        int updateRateMs = ModConfig.getInstance().getUpdateRateMs();
         scheduler.scheduleAtFixedRate(this::tick, 1000, updateRateMs, TimeUnit.MILLISECONDS);
         LOGGER.info("Exploration Ticker started with update rate: " + updateRateMs + "ms");
     }
