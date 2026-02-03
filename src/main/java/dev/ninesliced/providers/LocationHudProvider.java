@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.compat.MultiHudCompat;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.hud.EmptyHud;
+import dev.ninesliced.hud.HudPosition;
 import dev.ninesliced.hud.LocationHud;
 import dev.ninesliced.managers.PlayerConfigManager;
 
@@ -75,6 +76,7 @@ public class LocationHudProvider {
 
         LocationHud hud = this.huds.computeIfAbsent(playerRef, LocationHud::new);
         hud.setEnabled(true);
+        hud.setPosition(HudPosition.fromId(config.getEffectiveLocationHudPosition()));
         hud.updateHud(dt, index, archetypeChunk, store, commandBuffer);
 
         if (MultiHudCompat.isAvailable()) {

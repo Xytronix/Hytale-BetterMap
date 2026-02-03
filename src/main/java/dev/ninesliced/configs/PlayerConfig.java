@@ -10,6 +10,7 @@ public class PlayerConfig {
     private float minScale;
     private float maxScale;
     private boolean locationEnabled;
+    private String locationHudPosition;
     private boolean caveModeEnabled;
     private boolean discoverSurfaceUnderground;
 
@@ -18,6 +19,7 @@ public class PlayerConfig {
         this.minScale = minScale;
         this.maxScale = maxScale;
         this.locationEnabled = locationEnabled;
+        this.locationHudPosition = null;
         this.caveModeEnabled = true;
         this.discoverSurfaceUnderground = false;
     }
@@ -44,6 +46,33 @@ public class PlayerConfig {
 
     public void setLocationEnabled(boolean locationEnabled) {
         this.locationEnabled = locationEnabled;
+    }
+
+    /**
+     * Gets the player's preferred location HUD position.
+     * May be null if player uses server default.
+     */
+    public String getLocationHudPosition() {
+        return locationHudPosition;
+    }
+
+    /**
+     * Sets the player's preferred location HUD position.
+     * Set to null to use server default.
+     */
+    public void setLocationHudPosition(String locationHudPosition) {
+        this.locationHudPosition = locationHudPosition;
+    }
+
+    /**
+     * Gets the effective location HUD position for this player.
+     * Returns player's preference if set, otherwise server default.
+     */
+    public String getEffectiveLocationHudPosition() {
+        if (this.locationHudPosition != null && !this.locationHudPosition.isEmpty()) {
+            return this.locationHudPosition;
+        }
+        return ModConfig.getInstance().getLocationHudPosition();
     }
 
     public UUID getPlayerUuid() {

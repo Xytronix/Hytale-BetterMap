@@ -19,11 +19,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
+import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.ModConfig.MapQuality;
 import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.hud.HudPosition;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WorldBorderManager;
@@ -67,6 +70,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
         if (serverLocationEnabled) {
             ui.set("#PlayerLocationEnabled.Value", pConfig.isLocationEnabled());
+            applyLocationPositionDropdown(ui, pConfig.getEffectiveLocationHudPosition(), "#PlayerLocationPosition");
         } else {
             ui.set("#PlayerLocationHeader.Visible", false);
             ui.set("#PlayerLocationCard.Visible", false);
@@ -83,6 +87,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerLocationEnabled", "player_location", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerLocationPosition", "player_location_pos", BindingType.STRING);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
         bindChange(events, "#PlayerDiscoverSurface", "player_discover_surface", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
@@ -106,6 +111,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
              ui.set("#DebugMode.Value", gConfig.isDebug());
              ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
+             applyLocationPositionDropdown(ui, gConfig.getLocationHudPosition(), "#AdminLocationPosition");
              ui.set("#RadarEnabled.Value", gConfig.isRadarEnabled());
              ui.set("#HidePlayers.Value", gConfig.isHidePlayersOnMap());
              ui.set("#HideOtherWarps.Value", gConfig.isHideOtherWarpsOnMap());
@@ -140,6 +146,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
              bindChange(events, "#DebugMode", "admin_debug", BindingType.BOOLEAN);
              bindChange(events, "#LocationHudEnabled", "admin_location_enabled", BindingType.BOOLEAN);
+             bindChange(events, "#AdminLocationPosition", "admin_location_pos", BindingType.STRING);
 
              bindChange(events, "#RadarEnabled", "admin_radar_enabled", BindingType.BOOLEAN);
              bindChange(events, "#RadarRange", "admin_radar_range", BindingType.NUMBER);
@@ -185,6 +192,15 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                 .put("Action", action),
             false
         );
+    }
+
+    private void applyLocationPositionDropdown(UICommandBuilder ui, String currentPosition, String elementId) {
+        List<DropdownEntryInfo> entries = new ArrayList<>();
+        for (HudPosition pos : HudPosition.values()) {
+            entries.add(new DropdownEntryInfo(LocalizableString.fromString(pos.getDisplayName()), pos.getId()));
+        }
+        ui.set(elementId + ".Entries", entries);
+        ui.set(elementId + ".Value", currentPosition != null ? currentPosition : HudPosition.TOP_LEFT.getId());
     }
 
     @Override
@@ -268,6 +284,13 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     }
                     boolean locationEnabled = Boolean.parseBoolean(val);
                     pConfig.setLocationEnabled(locationEnabled);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    break;
+                case "player_location_pos":
+                    if (!ModConfig.getInstance().isLocationEnabled()) {
+                        break;
+                    }
+                    pConfig.setLocationHudPosition(val.trim().toLowerCase());
                     PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
                     break;
                 case "player_cavemode":
@@ -377,6 +400,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_location_enabled":
                     if (val != null) gConfig.setLocationEnabled(Boolean.parseBoolean(val));
+                    break;
+                case "admin_location_pos":
+                    if (val != null && !val.isBlank()) {
+                        gConfig.setLocationHudPosition(val.trim().toLowerCase());
+                    }
                     break;
                 case "admin_radar_enabled":
                      if (val != null) gConfig.setRadarEnabled(Boolean.parseBoolean(val));
