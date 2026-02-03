@@ -1,11 +1,16 @@
 package dev.ninesliced.providers;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.HiddenPlayersManager;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.util.PositionUtil;
@@ -36,6 +41,16 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
         try {
             Player viewingPlayer = tracker.getPlayer();
             UUID viewerUuid = ((CommandSender) viewingPlayer).getUuid();
+
+            HiddenPlayersManager hiddenPlayersManager = null;
+            Ref<EntityStore> ref = viewingPlayer.getReference();
+            if (ref != null && ref.isValid()) {
+                Store<EntityStore> store = ref.getStore();
+                PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRefComponent != null) {
+                    hiddenPlayersManager = playerRefComponent.getHiddenPlayersManager();
+                }
+            }
 
             ModConfig config = ModConfig.getInstance();
 
@@ -68,6 +83,15 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
                 }
 
                 try {
+                    if (hiddenPlayersManager != null) {
+                        try {
+                            UUID otherUuid = UUID.fromString(otherData.uuid);
+                            if (hiddenPlayersManager.isPlayerHidden(otherUuid)) {
+                                continue;
+                            }
+                        } catch (IllegalArgumentException e) { }
+                    }
+
                     Vector3d otherPos = otherData.position;
 
                     double dx = otherPos.x - viewerPos.x;
