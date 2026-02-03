@@ -8,40 +8,51 @@ import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.ninesliced.compat.MultiHudCompat;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.hud.LocationHud;
 import dev.ninesliced.managers.PlayerConfigManager;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Manages the lifecycle and state of Location HUDs for all players.
  * <p>
- * This provider handles creating, updating, enabling, and disabling the specific
- * {@link LocationHud} instances for each player. It also persists player-specific
- * settings regarding the visibility of the HUD.
+ * Handles creating, updating, enabling, and disabling {@link LocationHud} instances.
+ * Supports both vanilla Hytale HUD system and MultipleHUD mod for compatibility.
  * </p>
+ *
+ * @see LocationHud
+ * @see MultiHudCompat
  */
 public class LocationHudProvider {
+
+    private static final Logger LOGGER = Logger.getLogger(LocationHudProvider.class.getName());
+    private static final String HUD_IDENTIFIER = "BetterMap_Location";
+
     private final Map<PlayerRef, LocationHud> huds = new HashMap<>();
+    private final Set<UUID> warnedMissingMultiHud = new HashSet<>();
+    private final Set<UUID> attachedHuds = new HashSet<>();
 
     /**
-     * Updates and displays the HUD for a specific player entity.
-     * <p>
-     * If the HUD does not exist for the player, it is created and attached.
-     * The HUD's enabled state is synchronized with the player's settings before updating.
-     * </p>
+     * Updates and displays the HUD for a player entity.
+     * Creates the HUD if it doesn't exist and attaches it using MultipleHUD when available.
      *
-     * @param dt             The time delta since the last tick.
-     * @param index          The index of the entity in the chunk.
-     * @param archetypeChunk The chunk containing the entity data.
-     * @param store          The entity store.
-     * @param commandBuffer  The command buffer for operations.
+     * @param dt             time delta since last tick
+     * @param index          entity index in the chunk
+     * @param archetypeChunk chunk containing entity data
+     * @param store          entity store
+     * @param commandBuffer  command buffer for operations
      */
     public void showHud(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
-                       @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+                        @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         Holder<EntityStore> holder = EntityUtils.toHolder(index, archetypeChunk);
         Player player = holder.getComponent(Player.getComponentType());
         PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
@@ -50,105 +61,158 @@ public class LocationHudProvider {
             return;
         }
 
-        if (!this.huds.containsKey(playerRef)) {
-            LocationHud hud = new LocationHud(playerRef);
-            this.huds.put(playerRef, hud);
-            player.getHudManager().setCustomHud(playerRef, hud);
+        UUID playerUuid = playerRef.getUuid();
+        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
+        boolean isEnabled = config != null && config.isLocationEnabled();
+
+        if (!isEnabled) {
+            return;
         }
 
-        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid());
-
-        LocationHud hud = this.huds.get(playerRef);
-        hud.setEnabled(config != null && config.isLocationEnabled());
-
+        LocationHud hud = this.huds.computeIfAbsent(playerRef, LocationHud::new);
+        hud.setEnabled(true);
         hud.updateHud(dt, index, archetypeChunk, store, commandBuffer);
-        hud.show();
+
+        if (MultiHudCompat.isAvailable()) {
+            MultiHudCompat.setCustomHud(player, playerRef, HUD_IDENTIFIER, hud);
+        } else {
+            attachVanillaHud(player, playerRef, playerUuid, hud);
+        }
     }
 
     /**
-     * Removes the HUD instance and associated settings for a disconnected or cleanly removed player.
+     * Attaches HUD using vanilla Hytale system (single HUD only).
+     */
+    private void attachVanillaHud(Player player, PlayerRef playerRef, UUID playerUuid, LocationHud hud) {
+        if (!this.attachedHuds.contains(playerUuid)) {
+            if (this.warnedMissingMultiHud.add(playerUuid)) {
+                LOGGER.log(Level.WARNING, "MultipleHUD not found, Location HUD may conflict with other mods");
+            }
+            player.getHudManager().setCustomHud(playerRef, hud);
+            this.attachedHuds.add(playerUuid);
+        } else {
+            hud.show();
+        }
+    }
+
+    /**
+     * Removes HUD data for a disconnected player.
      *
-     * @param playerRef The reference to the player to remove.
+     * @param playerRef reference to the player
      */
     public void removeHud(@Nonnull PlayerRef playerRef) {
+        UUID playerUuid = playerRef.getUuid();
         this.huds.remove(playerRef);
+        this.attachedHuds.remove(playerUuid);
+        this.warnedMissingMultiHud.remove(playerUuid);
     }
 
     /**
-     * Checks if a HUD instance exists for the specified player.
+     * Removes and detaches HUD for a connected player.
      *
-     * @param playerRef The player reference to check.
-     * @return true if a HUD exists, false otherwise.
+     * @param player    player entity
+     * @param playerRef reference to the player
+     */
+    public void removeHud(@Nonnull Player player, @Nonnull PlayerRef playerRef) {
+        UUID playerUuid = playerRef.getUuid();
+
+        if (this.attachedHuds.contains(playerUuid)) {
+            if (MultiHudCompat.isAvailable()) {
+                MultiHudCompat.hideCustomHud(player, playerRef, HUD_IDENTIFIER);
+            } else {
+                player.getHudManager().setCustomHud(playerRef, null);
+            }
+        }
+
+        removeHud(playerRef);
+    }
+
+    /**
+     * Checks if a HUD exists for the player.
+     *
+     * @param playerRef player reference to check
+     * @return true if HUD exists
      */
     public boolean hasHudForPlayer(@Nonnull PlayerRef playerRef) {
         return this.huds.containsKey(playerRef);
     }
 
     /**
-     * Enables the location HUD for a player, creating it if necessary.
-     * <p>
-     * This method updates the player's settings to enable the HUD and immediately
-     * initializes and registers the HUD if it is not already present.
-     * </p>
+     * Enables and attaches the location HUD for a player.
      *
-     * @param player    The player entity instance.
-     * @param playerRef The player reference.
+     * @param player    player entity
+     * @param playerRef player reference
      */
     public void enableHudForPlayer(@Nonnull Player player, @Nonnull PlayerRef playerRef) {
-        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid());
+        UUID playerUuid = playerRef.getUuid();
+        PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerUuid);
 
-        if (!this.huds.containsKey(playerRef)) {
+        LocationHud hud = this.huds.get(playerRef);
+
+        if (hud == null) {
             try {
-                LocationHud locationHud = new LocationHud(playerRef);
-                this.huds.put(playerRef, locationHud);
-                locationHud.setEnabled(true);
-
-                player.getHudManager().setCustomHud(playerRef, locationHud);
+                hud = new LocationHud(playerRef);
+                this.huds.put(playerRef, hud);
+                hud.setEnabled(true);
+                attachHud(player, playerRef, playerUuid, hud);
             } catch (Exception e) {
                 this.huds.remove(playerRef);
-                config.setLocationEnabled(false);
+                this.attachedHuds.remove(playerUuid);
+                if (config != null) {
+                    config.setLocationEnabled(false);
+                }
                 throw e;
             }
         } else {
-             LocationHud hud = this.huds.get(playerRef);
-             hud.setEnabled(true);
-             hud.show();
+            hud.setEnabled(true);
+            attachHud(player, playerRef, playerUuid, hud);
         }
     }
 
     /**
-     * Enables the location HUD setting for a player without immediately creating the HUD.
-     * <p>
-     * Use {@link #enableHudForPlayer(Player, PlayerRef)} if immediate creation is required.
-     * </p>
+     * Attaches HUD using appropriate system (MultipleHUD or vanilla).
+     */
+    private void attachHud(Player player, PlayerRef playerRef, UUID playerUuid, LocationHud hud) {
+        if (MultiHudCompat.isAvailable()) {
+            MultiHudCompat.setCustomHud(player, playerRef, HUD_IDENTIFIER, hud);
+        } else if (!this.attachedHuds.contains(playerUuid)) {
+            player.getHudManager().setCustomHud(playerRef, hud);
+            this.attachedHuds.add(playerUuid);
+        } else {
+            hud.show();
+        }
+    }
+
+    /**
+     * Enables location HUD in player settings without immediate attachment.
      *
-     * @param playerRef The player reference to enable the HUD for.
+     * @param playerRef player reference
      */
     public void enableHudForPlayer(@Nonnull PlayerRef playerRef) {
         PlayerConfig config = PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid());
-        config.setLocationEnabled(true);
+        if (config != null) {
+            config.setLocationEnabled(true);
+        }
     }
 
     /**
      * Disables the location HUD for a player.
-     * <p>
-     * This updates the settings to prevent future updates and disables the current HUD instance
-     * if it exists.
-     * </p>
      *
-     * @param playerRef The player to disable the HUD for.
+     * @param playerRef player reference
      */
     public void disableHudForPlayer(@Nonnull PlayerRef playerRef) {
-        if (this.huds.containsKey(playerRef)) {
-            LocationHud hud = this.huds.get(playerRef);
+        LocationHud hud = this.huds.get(playerRef);
+        if (hud != null) {
             hud.setEnabled(false);
         }
     }
 
     /**
-     * Cleans up all managed HUDs. Should be called on server shutdown or reload.
+     * Cleans up all managed HUDs. Call on server shutdown.
      */
     public void cleanup() {
         huds.clear();
+        attachedHuds.clear();
+        warnedMissingMultiHud.clear();
     }
 }
