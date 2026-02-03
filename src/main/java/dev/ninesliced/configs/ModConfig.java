@@ -540,15 +540,6 @@ public class ModConfig {
         save();
     }
 
-    /**
-     * Gets the active map quality setting.
-     *
-     * @return The active map quality.
-     */
-    public MapQuality getActiveMapQualitySetting() {
-        return activeMapQuality;
-    }
-
     public void setLocationEnabled(boolean locationEnabled) {
         this.locationEnabled = locationEnabled;
         save();
@@ -1008,9 +999,9 @@ public class ModConfig {
      * Enum representing different map quality settings.
      */
     public enum MapQuality {
-        LOW(0.25f, 30000),
-        MEDIUM(0.5f, 10000),
-        HIGH(1.0f, 3000);
+        LOW(0.25f, 80000),
+        MEDIUM(0.5f, 25000),
+        HIGH(1.0f, 8000);
 
         public final float scale;
         public final int maxChunks;

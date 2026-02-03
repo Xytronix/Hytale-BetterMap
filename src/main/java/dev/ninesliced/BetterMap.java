@@ -18,6 +18,7 @@ import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.managers.ChunkStreamingManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
@@ -165,11 +166,22 @@ public class BetterMap extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        LOGGER.info("Shutting down BetterMap plugin...");
+        
+        ExplorationTicker.getInstance().stop();
+        
+        ExplorationManager.getInstance().shutdown();
+        
         if (this.locationHudProvider != null) {
             this.locationHudProvider.cleanup();
         }
+        
         PlayerRadarManager.getInstance().cleanup();
         WorldBorderManager.getInstance().cleanup();
+        ChunkStreamingManager.getInstance().cleanup();
+        WaypointManager.cleanup();
+        
+        LOGGER.info("BetterMap plugin shutdown complete.");
         super.shutdown();
     }
 }
