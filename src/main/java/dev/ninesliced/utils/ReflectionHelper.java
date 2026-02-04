@@ -172,13 +172,11 @@ public class ReflectionHelper {
     public static Field getFieldRecursive(@Nonnull Class<?> clazz, @Nonnull String fieldName) {
         String cacheKey = clazz.getName() + "#" + fieldName;
         
-        // Check cache first
         Field cached = RECURSIVE_FIELD_CACHE.get(cacheKey);
         if (cached != null) {
             return cached;
         }
         
-        // Search hierarchy
         Class<?> current = clazz;
         while (current != null) {
             try {

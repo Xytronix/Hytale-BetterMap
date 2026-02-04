@@ -74,7 +74,6 @@ public class ChunkUtil {
     public static Set<Long> getChunksInCircularArea(int centerChunkX, int centerChunkZ, int radiusChunks) {
         int[][] offsets = getCircularOffsets(radiusChunks);
         
-        // Pre-allocate with expected capacity based on offsets count
         Set<Long> chunks = new HashSet<>(offsets.length + offsets.length / 3);
         
         for (int[] offset : offsets) {
@@ -108,7 +107,6 @@ public class ChunkUtil {
         
         int radiusSquared = radiusChunks * radiusChunks;
         
-        // First pass: count how many offsets we need
         int count = 0;
         for (int dx = -radiusChunks; dx <= radiusChunks; dx++) {
             for (int dz = -radiusChunks; dz <= radiusChunks; dz++) {
@@ -118,7 +116,6 @@ public class ChunkUtil {
             }
         }
         
-        // Second pass: populate the array
         int[][] offsets = new int[count][2];
         int index = 0;
         for (int dx = -radiusChunks; dx <= radiusChunks; dx++) {

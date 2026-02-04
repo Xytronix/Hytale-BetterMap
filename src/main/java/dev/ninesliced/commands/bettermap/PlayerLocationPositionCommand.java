@@ -61,7 +61,6 @@ public class PlayerLocationPositionCommand extends AbstractCommand {
         String normalized = positionInput.trim().toLowerCase();
         HudPosition newPosition = HudPosition.fromId(normalized);
 
-        // Check if the input was valid
         if (!normalized.equals(newPosition.getId())) {
             commandContext.sendMessage(Message.raw("Invalid position. Available: " + HudPosition.getAllIds()).color(Color.RED));
             return CompletableFuture.completedFuture(null);

@@ -177,7 +177,6 @@ public class ChunkStreamingManager {
         public ChunkDelta computeDelta(@Nonnull Set<Long> targetChunks, 
                                         int playerChunkX, 
                                         int playerChunkZ) {
-            // Compute chunks to load (for informational purposes - actual loading is done by native tracker)
             List<Long> toLoad = new ArrayList<>();
             for (Long chunk : targetChunks) {
                 if (!sentChunks.contains(chunk)) {
@@ -185,7 +184,6 @@ public class ChunkStreamingManager {
                 }
             }
             
-            // Compute chunks to unload
             List<Long> toUnload = new ArrayList<>();
             for (Long chunk : sentChunks) {
                 if (!targetChunks.contains(chunk) && !unloadQueueSet.contains(chunk)) {

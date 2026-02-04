@@ -316,10 +316,8 @@ public class ExplorationListener {
 
             PlayerConfigManager.getInstance().unloadPlayerConfig(playerUUID);
 
-            // Clean up waypoint cache for this player
             WaypointManager.onPlayerDisconnect(playerUUID);
 
-            // Clean up chunk streaming state for this player
             ChunkStreamingManager.getInstance().removeState(playerName);
 
             LOGGER.info("[DEBUG] Player " + playerName + " disconnecting from server");

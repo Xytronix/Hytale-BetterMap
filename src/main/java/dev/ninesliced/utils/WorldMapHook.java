@@ -200,7 +200,6 @@ public class WorldMapHook {
                 ReflectionHelper.setFieldValueRecursive(tracker, "updateTimer", 999.0f);
             } catch (Exception ignored) {}
             
-            // Clean up streaming manager state for this player
             ChunkStreamingManager.getInstance().removeState(player.getDisplayName());
 
             LOGGER.info("Unhooked map tracker for player: " + player.getDisplayName());
@@ -795,12 +794,10 @@ public class WorldMapHook {
             String playerName = player.getDisplayName();
             ChunkStreamingManager streamingManager = ChunkStreamingManager.getInstance();
             
-            // Use delta updates: compute what needs to change
             ChunkStreamingManager.ChunkDelta delta = streamingManager.computeDelta(
                 playerName, targetSet, cx, cz
             );
             
-            // Queue chunks for loading/unloading with priority
             if (!delta.toLoad.isEmpty()) {
                 streamingManager.queueChunksForLoading(playerName, delta.toLoad, cx, cz);
             }
@@ -809,10 +806,8 @@ public class WorldMapHook {
                 streamingManager.queueChunksForUnloading(playerName, delta.toUnload);
             }
             
-            // Process the queues with bandwidth throttling
             streamingManager.processLoadQueue(player);
             
-            // handle the tracker's loaded set for compatibility
             List<Long> loadedSnapshot = new ArrayList<>(loaded);
             List<Long> toUnload = new ArrayList<>();
             List<MapChunk> unloadPackets = new ArrayList<>();
@@ -830,7 +825,6 @@ public class WorldMapHook {
 
             toUnload.forEach(loaded::remove);
             
-            // Mark as unloaded in streaming manager
             streamingManager.markChunksUnloaded(playerName, toUnload);
 
             UpdateWorldMap packet = new UpdateWorldMap(
@@ -1250,7 +1244,6 @@ public class WorldMapHook {
         private int cleanupTimer = 0;
         private final Object lock = new Object();
         
-        // Cache for sorted chunk lists
         private volatile List<Long> cachedRankedChunks = null;
         private volatile int cachedCenterX = Integer.MIN_VALUE;
         private volatile int cachedCenterZ = Integer.MIN_VALUE;
@@ -1258,9 +1251,7 @@ public class WorldMapHook {
         private volatile int cachedExploredChunksSize = 0;
         private volatile Set<Long> cachedBoundaryChunks = null;
         
-        // Threshold for re-sorting: only re-sort if player moved more than this many map chunks
         private static final int RESORT_DISTANCE_THRESHOLD = 4;
-        // Pre-allocated reusable collections to reduce GC pressure
         private final Set<Long> reusableMapChunks = new HashSet<>(1024);
         private final Set<Long> reusableBoundaryChunks = new HashSet<>(8);
 
@@ -1301,7 +1292,6 @@ public class WorldMapHook {
             synchronized (lock) {
                 this.stopped = true;
                 this.currentIterator = Collections.emptyIterator();
-                // Clear caches on stop
                 this.cachedRankedChunks = null;
                 this.cachedCenterX = Integer.MIN_VALUE;
                 this.cachedCenterZ = Integer.MIN_VALUE;
@@ -1383,13 +1373,11 @@ public class WorldMapHook {
                         return;
                     }
 
-                    // Check if we need to re-sort or can use cached data
                     int currentExploredSize = exploredWorldChunks.size();
                     int currentExploredHash = exploredWorldChunks.hashCode();
                     int distanceFromCachedCenter = (cachedCenterX == Integer.MIN_VALUE) ? Integer.MAX_VALUE :
                             Math.abs(cx - cachedCenterX) + Math.abs(cz - cachedCenterZ);
                     
-                    // Reuse collections instead of creating new ones
                     reusableMapChunks.clear();
                     
                     for (Long chunkIdx : exploredWorldChunks) {
@@ -1413,7 +1401,6 @@ public class WorldMapHook {
                         reusableBoundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.maxX >> 1, bounds.maxZ >> 1));
                     }
 
-                    // Check if boundary chunks changed (need to compare before checking needsResort)
                     boolean boundaryChunksChanged = cachedBoundaryChunks == null ||
                             !reusableBoundaryChunks.equals(cachedBoundaryChunks);
 
@@ -1426,7 +1413,6 @@ public class WorldMapHook {
                     List<Long> rankedChunks;
                     
                     if (needsResort) {
-                        // Full re-sort needed - pre-allocate with expected capacity
                         rankedChunks = new ArrayList<>(reusableMapChunks.size());
                         
                         for (Long chunk : reusableMapChunks) {
@@ -1435,7 +1421,6 @@ public class WorldMapHook {
                             }
                         }
 
-                        // Use squared distance to avoid expensive Math.sqrt()
                         final int sortCenterX = cx;
                         final int sortCenterZ = cz;
                         rankedChunks.sort(Comparator.comparingLong(idx -> {
@@ -1443,10 +1428,9 @@ public class WorldMapHook {
                             int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
                             long dx = (long) mx - sortCenterX;
                             long dz = (long) mz - sortCenterZ;
-                            return dx * dx + dz * dz; // Squared distance - no sqrt needed for ordering
+                            return dx * dx + dz * dz;
                         }));
 
-                        // Update cache
                         this.cachedRankedChunks = rankedChunks;
                         this.cachedCenterX = cx;
                         this.cachedCenterZ = cz;
@@ -1454,7 +1438,6 @@ public class WorldMapHook {
                         this.cachedExploredChunksHash = currentExploredHash;
                         this.cachedBoundaryChunks = new HashSet<>(reusableBoundaryChunks);
                     } else {
-                        // Use cached sorted list
                         rankedChunks = cachedRankedChunks;
                     }
 
@@ -1464,7 +1447,6 @@ public class WorldMapHook {
 
                     List<Long> limitedRankedChunks;
                     if (rankedChunks.size() > searchLimit) {
-                        // Pre-allocate with known size
                         limitedRankedChunks = new ArrayList<>(searchLimit);
                         for (int i = 0; i < searchLimit; i++) {
                             limitedRankedChunks.add(rankedChunks.get(i));
@@ -1473,7 +1455,6 @@ public class WorldMapHook {
                         limitedRankedChunks = rankedChunks;
                     }
 
-                    // Pre-allocate targetMapChunks with known size
                     this.targetMapChunks = new ArrayList<>(reusableBoundaryChunks.size() + limitedRankedChunks.size());
                     this.targetMapChunks.addAll(reusableBoundaryChunks);
                     this.targetMapChunks.addAll(limitedRankedChunks);
