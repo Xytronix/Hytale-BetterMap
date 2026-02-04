@@ -33,6 +33,13 @@ $C = "../../Common.ui";
   OutlineSize: 1;
 };
 
+@BannerButtonStyle = TextButtonStyle(
+    Default: (Background: #000000(0)),
+    Hovered: (Background: #FFFFFF(0.15)),
+    Pressed: (Background: #FFFFFF(0.25)),
+    Sounds: $C.@ButtonSounds
+);
+
 @FieldRow = Group {
   LayoutMode: Left;
   Anchor: (Height: 36);
@@ -489,6 +496,12 @@ $C.@PageOverlay {
               Label { Text: "Border Offset Z"; Style: @FieldLabelStyle; FlexWeight: 1; }
               $C.@NumberField #WorldBorderOffsetZ { Anchor: (Width: 120, Height: 28); }
             }
+          }
+
+          TextButton #HostingBannerBtn {
+            Anchor: (Top: 24, Height: 100);
+            Style: @BannerButtonStyle;
+            Background: "Assets/HostingBanner.png";
           }
         }
       }

@@ -175,6 +175,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#CaveModeLayerSize", "admin_cavemode_layer", BindingType.NUMBER);
              bindChange(events, "#CaveModeThreshold", "admin_cavemode_threshold", BindingType.NUMBER);
              bindChange(events, "#CaveModeRadius", "admin_cavemode_radius", BindingType.NUMBER);
+
+             bindClick(events, "#HostingBannerBtn", "open_hosting_link");
         }
     }
 
@@ -215,6 +217,28 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         }
         ui.set(elementId + ".Entries", entries);
         ui.set(elementId + ".Value", currentQuality != null ? currentQuality.name() : MapQuality.MEDIUM.name());
+    }
+
+    private void sendHostingLink(Player player) {
+        String url = "https://zap-hosting.com/ninesliced?voucher=ninesliced";
+
+        var packetHandler = playerRef.getPacketHandler();
+        var primaryMessage = Message.raw("ZAP-Hosting Partner").color("#00aa00").bold(true);
+        var secondaryMessage = Message.raw("Click the link below to get a discount!").color("#bfcdd5");
+        var icon = new ItemStack("Currency_Emerald", 1).toPacket();
+
+        NotificationUtil.sendNotification(
+            packetHandler,
+            primaryMessage,
+            secondaryMessage,
+            icon
+        );
+
+        Message linkMessage = Message.raw("")
+            .insert(Message.raw("[BetterMap] ").color("#93844c").bold(true))
+            .insert(Message.raw("Click here to get a discount on your game server: ").color("#bfcdd5"))
+            .insert(Message.raw(url).color("#4c9cff").link(url));
+        player.sendMessage(linkMessage);
     }
 
     @Override
@@ -260,6 +284,10 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     );
                 }
                 player.getPageManager().setPage(ref, store, Page.None);
+                return;
+            }
+            case "open_hosting_link" -> {
+                sendHostingLink(player);
                 return;
             }
         }
