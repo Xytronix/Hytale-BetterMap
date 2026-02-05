@@ -345,7 +345,18 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                             gConfig.setQuality(newQuality);
                             ui.set("#AdminMaxChunksToLoad.Value", gConfig.getMaxChunksToLoad());
                             sendUpdate(ui, new UIEventBuilder(), false);
-                            restartRequired = true;
+
+                            var packetHandler = playerRef.getPacketHandler();
+                            var primaryMessage = Message.raw("Restart Required").color("#FF0000");
+                            var secondaryMessage = Message.raw("Map quality changed. Restart server to apply.").color("#FFAA00");
+                            var icon = new ItemStack("Weapon_Spellbook_Demon", 1).toPacket();
+
+                            NotificationUtil.sendNotification(
+                                    packetHandler,
+                                    primaryMessage,
+                                    secondaryMessage,
+                                    icon
+                            );
                         } catch (IllegalArgumentException ignored) {}
                     }
                     break;
