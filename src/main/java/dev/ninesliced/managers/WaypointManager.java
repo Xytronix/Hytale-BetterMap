@@ -1,16 +1,19 @@
 package dev.ninesliced.managers;
 
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarkersStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
-import dev.ninesliced.listeners.ExplorationEventListener;
+import dev.ninesliced.listeners.ExplorationListener;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -180,10 +183,14 @@ public class WaypointManager {
      */
     private static void forceRefreshMarkerOnAllClients(@Nonnull World world, @Nonnull String markerId) {
         try {
-            for (Player worldPlayer : world.getPlayers()) {
-                forceRefreshMarkerOnClient(worldPlayer, markerId);
+            for (PlayerRef worldPlayer : world.getPlayerRefs()) {
+                Holder<EntityStore> holder = worldPlayer.getHolder();
+                if (holder == null) continue;
+                Player player = holder.getComponent(Player.getComponentType());
+                if (player == null) continue;
+                forceRefreshMarkerOnClient(player, markerId);
             }
-        } catch (Exception e) {
+        } catch (Exception _) {
         }
     }
 
@@ -252,7 +259,7 @@ public class WaypointManager {
     }
 
     public static boolean isTrackedWorld(@Nullable World world) {
-        return ExplorationEventListener.isTrackedWorld(world);
+        return ExplorationListener.isTrackedWorld(world);
     }
 
     private static String normalizeIcon(@Nullable String icon) {

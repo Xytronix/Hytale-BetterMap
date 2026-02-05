@@ -183,7 +183,6 @@ public class BetterMap extends JavaPlugin {
         PlayerRadarManager.getInstance().cleanup();
         WorldBorderManager.getInstance().cleanup();
         ChunkStreamingManager.getInstance().cleanup();
-        WaypointManager.cleanup();
 
         LOGGER.info("BetterMap plugin shutdown complete.");
         super.shutdown();

@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import dev.ninesliced.BetterMap;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.providers.UserMarkerContextMenuProvider;
 
 import javax.annotation.Nonnull;
@@ -160,7 +160,7 @@ public class UserMarkerProviderManager {
                 providers.put(SHARED_PROVIDER_KEY, originalShared);
             }
             
-            if (BetterMapConfig.getInstance().isDebug()) {
+            if (ModConfig.getInstance().isDebug()) {
                 LOGGER.info("Restored original marker providers in world " + world.getName());
             }
         } catch (Exception e) {

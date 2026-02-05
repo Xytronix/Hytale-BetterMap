@@ -318,8 +318,6 @@ public class ExplorationListener {
 
             PlayerConfigManager.getInstance().unloadPlayerConfig(playerUUID);
 
-            WaypointManager.onPlayerDisconnect(playerUUID);
-
             ChunkStreamingManager.getInstance().removeState(playerName);
 
             LOGGER.info("[DEBUG] Player " + playerName + " disconnecting from server");

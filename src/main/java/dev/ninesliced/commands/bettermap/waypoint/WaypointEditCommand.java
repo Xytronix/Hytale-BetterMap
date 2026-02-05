@@ -1,4 +1,4 @@
-package dev.ninesliced.commands;
+package dev.ninesliced.commands.bettermap.waypoint;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -21,11 +21,11 @@ import javax.annotation.Nonnull;
  * Command to open the waypoint edit page for a specific marker.
  * Used by the context menu "Edit" option on map markers.
  */
-public class BetterMapWaypointEditCommand extends AbstractPlayerCommand {
+public class WaypointEditCommand extends AbstractPlayerCommand {
     
     private final RequiredArg<String> idArg = this.withRequiredArg("id", "The waypoint ID to edit", ArgTypes.STRING);
     
-    public BetterMapWaypointEditCommand() {
+    public WaypointEditCommand() {
         super("edit", "Edit a waypoint");
     }
     
