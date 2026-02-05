@@ -7,6 +7,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.compat.MultiHudCompat;
 import dev.ninesliced.configs.PlayerConfig;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.lang.reflect.Field;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -38,6 +40,7 @@ public class LocationHudProvider {
 
     private static final Logger LOGGER = Logger.getLogger(LocationHudProvider.class.getName());
     private static final String HUD_IDENTIFIER = "BetterMap_Location";
+    private static final Field MAP_VISIBLE_FIELD = resolveMapVisibleField();
 
     private final Map<PlayerRef, LocationHud> huds = new HashMap<>();
     private final Set<UUID> warnedMissingMultiHud = new HashSet<>();
@@ -70,6 +73,11 @@ public class LocationHudProvider {
         boolean isEnabled = config != null && config.isLocationEffectivelyEnabled();
 
         if (!isEnabled) {
+            hideHudIfVisible(player, playerRef, playerUuid);
+            return;
+        }
+
+        if (isWorldMapVisible(player)) {
             hideHudIfVisible(player, playerRef, playerUuid);
             return;
         }
@@ -136,6 +144,29 @@ public class LocationHudProvider {
         this.attachedHuds.remove(playerUuid);
         this.visibleHuds.remove(playerUuid);
         this.warnedMissingMultiHud.remove(playerUuid);
+    }
+
+    private static Field resolveMapVisibleField() {
+        try {
+            Field field = WorldMapTracker.class.getDeclaredField("clientHasWorldMapVisible");
+            field.setAccessible(true);
+            return field;
+        } catch (NoSuchFieldException ex) {
+            return null;
+        }
+    }
+
+    private boolean isWorldMapVisible(@Nonnull Player player) {
+        try {
+            WorldMapTracker tracker = player.getWorldMapTracker();
+            if (tracker == null || MAP_VISIBLE_FIELD == null) {
+                return false;
+            }
+            Object value = MAP_VISIBLE_FIELD.get(tracker);
+            return value instanceof Boolean && (Boolean) value;
+        } catch (IllegalAccessException ex) {
+            return false;
+        }
     }
 
     /**
