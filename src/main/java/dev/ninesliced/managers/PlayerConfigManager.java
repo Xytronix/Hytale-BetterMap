@@ -2,10 +2,9 @@ package dev.ninesliced.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -97,11 +96,11 @@ public class PlayerConfigManager {
     }
 
     private PlayerConfig createDefaultConfig(UUID uuid) {
-        BetterMapConfig mainConfig = BetterMapConfig.getInstance();
+        ModConfig mainConfig = ModConfig.getInstance();
         return new PlayerConfig(uuid,
                 mainConfig.getMinScale(),
                 mainConfig.getMaxScale(),
-                mainConfig.isLocationEnabled()
+                false
         );
     }
 }

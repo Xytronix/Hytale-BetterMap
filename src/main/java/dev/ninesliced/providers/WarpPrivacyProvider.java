@@ -10,9 +10,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
-import dev.ninesliced.listeners.ExplorationEventListener;
+import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.utils.ChunkUtil;
 import java.util.Map;
@@ -54,10 +54,10 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
 
             String viewerName = viewer.getDisplayName();
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+            ModConfig config = ModConfig.getInstance();
             boolean hideOtherWarps = config.isHideOtherWarpsOnMap();
             boolean hideUnexploredWarps = config.isHideUnexploredWarpsOnMap();
-            if (hideUnexploredWarps && !ExplorationEventListener.isTrackedWorld(world)) {
+            if (hideUnexploredWarps && !ExplorationListener.isTrackedWorld(world)) {
                 hideUnexploredWarps = false;
             }
 

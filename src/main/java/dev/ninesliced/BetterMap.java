@@ -8,20 +8,22 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.ninesliced.commands.BetterMapCommand;
-import dev.ninesliced.commands.WaypointCommand;
+import dev.ninesliced.commands.bettermap.BetterMapCommand;
+import dev.ninesliced.commands.waypoint.WaypointCommand;
 import dev.ninesliced.components.ExplorationComponent;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.exploration.*;
-import dev.ninesliced.listeners.ExplorationEventListener;
+import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.managers.ChunkStreamingManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.managers.UserMarkerProviderManager;
+import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.providers.LocationHudProvider;
 import dev.ninesliced.systems.LocationSystem;
 
@@ -97,7 +99,7 @@ public class BetterMap extends JavaPlugin {
             LOGGER.info("Exploration Setup System: REGISTERED");
 
             Path serverRoot = Paths.get(".").toAbsolutePath().normalize();
-            BetterMapConfig.getInstance().initialize(serverRoot);
+            ModConfig.getInstance().initialize(serverRoot);
 
             PlayerConfigManager.initialize(serverRoot.resolve("mods").resolve("BetterMap"));
             LOGGER.info("Player Config Manager: INITIALIZED");
@@ -114,7 +116,7 @@ public class BetterMap extends JavaPlugin {
             UserMarkerProviderManager.getInstance().initialize();
             LOGGER.info("UserMarkerProviderManager: INITIALIZED");
 
-            Path configDir = BetterMapConfig.getInstance().getConfigDirectory();
+            Path configDir = ModConfig.getInstance().getConfigDirectory();
             if (configDir == null) {
                 configDir = serverRoot.resolve("mods").resolve("BetterMap");
             }
@@ -135,19 +137,22 @@ public class BetterMap extends JavaPlugin {
             this.getCommandRegistry().registerCommand(new WaypointCommand());
             LOGGER.info("Mod Command: REGISTERED");
 
-            //this.locationHudProvider = new LocationHudProvider();
-            //this.getEntityStoreRegistry().registerSystem(new LocationSystem());
-            //LOGGER.info("Location Display: INITIALIZED");
+            this.locationHudProvider = new LocationHudProvider();
+            this.getEntityStoreRegistry().registerSystem(new LocationSystem());
+            LOGGER.info("Location Display: INITIALIZED");
 
             PlayerRadarManager.getInstance();
             LOGGER.info("Player Radar: INITIALIZED");
 
-            this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, ExplorationEventListener::onPlayerReady);
-            this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, ExplorationEventListener::onPlayerQuit);
+            WorldBorderManager.getInstance();
+            LOGGER.info("World Border Manager: INITIALIZED");
 
-            this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, ExplorationEventListener::onPlayerJoinWorld);
+            this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, ExplorationListener::onPlayerReady);
+            this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, ExplorationListener::onPlayerQuit);
 
-            this.getEventRegistry().registerGlobal(DrainPlayerFromWorldEvent.class, ExplorationEventListener::onPlayerLeaveWorld);
+            this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, ExplorationListener::onPlayerJoinWorld);
+
+            this.getEventRegistry().registerGlobal(DrainPlayerFromWorldEvent.class, ExplorationListener::onPlayerLeaveWorld);
             LOGGER.info("Exploration Events: REGISTERED");
 
             LOGGER.info("========================================");
@@ -165,10 +170,22 @@ public class BetterMap extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        LOGGER.info("Shutting down BetterMap plugin...");
+
+        ExplorationTicker.getInstance().stop();
+
+        ExplorationManager.getInstance().shutdown();
+
         if (this.locationHudProvider != null) {
             this.locationHudProvider.cleanup();
         }
+
         PlayerRadarManager.getInstance().cleanup();
+        WorldBorderManager.getInstance().cleanup();
+        ChunkStreamingManager.getInstance().cleanup();
+        WaypointManager.cleanup();
+
+        LOGGER.info("BetterMap plugin shutdown complete.");
         super.shutdown();
     }
 }

@@ -7,9 +7,9 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
-import dev.ninesliced.listeners.ExplorationEventListener;
+import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.utils.ChunkUtil;
 import java.util.List;
@@ -39,14 +39,14 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+            ModConfig config = ModConfig.getInstance();
             if (config.isHideAllPoiOnMap()) {
                 return;
             }
             boolean hideUnexplored = config.isHideUnexploredPoiOnMap();
             List<String> hiddenPoiNames = config.getHiddenPoiNames();
 
-            if (hideUnexplored && !ExplorationEventListener.isTrackedWorld(world)) {
+            if (hideUnexplored && !ExplorationListener.isTrackedWorld(world)) {
                 hideUnexplored = false;
             }
 

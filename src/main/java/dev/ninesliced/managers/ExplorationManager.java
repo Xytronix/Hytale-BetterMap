@@ -2,9 +2,10 @@ package dev.ninesliced.managers;
 
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.Universe;
+import dev.ninesliced.configs.CavePersistence;
 import dev.ninesliced.configs.ExplorationPersistence;
 import dev.ninesliced.exploration.ExplorationTracker;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
@@ -30,6 +31,7 @@ public class ExplorationManager {
     private boolean persistenceEnabled = true;
 
     private ExplorationPersistence persistence;
+    private CavePersistence cavePersistence;
 
     private String persistencePath = "universe/exploration_data";
 
@@ -75,10 +77,12 @@ public class ExplorationManager {
             LOGGER.info("Initializing Exploration System...");
 
             persistence = new ExplorationPersistence();
+            cavePersistence = new CavePersistence();
 
             LOGGER.info("- Exploration Tracker: " + ExplorationTracker.class.getSimpleName());
             LOGGER.info("- Update Rate: " + explorationUpdateRate + " seconds");
             LOGGER.info("- Persistence: " + (persistenceEnabled ? "ENABLED" : "DISABLED"));
+            LOGGER.info("- Cave Persistence: " + (persistenceEnabled ? "ENABLED" : "DISABLED"));
 
             startAutoSave();
 
@@ -120,6 +124,9 @@ public class ExplorationManager {
         if (persistenceEnabled && persistence != null) {
             persistence.load(player, worldName);
         }
+        if (persistenceEnabled && cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
+            cavePersistence.load(player, worldName);
+        }
     }
 
     /**
@@ -130,6 +137,9 @@ public class ExplorationManager {
     public void savePlayerData(@Nonnull Player player) {
         if (persistenceEnabled && persistence != null) {
             persistence.save(player);
+        }
+        if (persistenceEnabled && cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
+            cavePersistence.save(player);
         }
     }
 
@@ -143,6 +153,9 @@ public class ExplorationManager {
     public void savePlayerData(String playerName, UUID playerUUID, String worldName) {
         if (persistenceEnabled) {
             persistence.save(playerName, playerUUID, worldName);
+            if (cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
+                cavePersistence.save(playerName, playerUUID, worldName);
+            }
         }
     }
 
@@ -174,6 +187,44 @@ public class ExplorationManager {
     }
 
     /**
+     * Gets all explored cave chunks for a given world, combining persistence and active data.
+     *
+     * @param worldName The world name.
+     * @return A set of all explored cave chunks.
+     */
+    public java.util.Set<Long> getAllExploredCaveChunks(String worldName) {
+        Set<Long> allChunks = new HashSet<>();
+
+        if (persistenceEnabled && cavePersistence != null) {
+            allChunks.addAll(cavePersistence.loadAllChunks(worldName));
+        }
+
+        Universe universe = Universe.get();
+        if (universe != null && universe.getWorld(worldName) != null) {
+            universe.getWorld(worldName).getPlayerRefs().forEach(playerRef -> {
+                Player player = playerRef.getComponent(Player.getComponentType());
+                if (player != null) {
+                    CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(player);
+                    if (state != null) {
+                        allChunks.addAll(state.getExploredCaveChunks());
+                    }
+                }
+            });
+        }
+
+        return allChunks;
+    }
+
+    /**
+     * Gets the cave persistence instance.
+     *
+     * @return The cave persistence, or null if not initialized.
+     */
+    public dev.ninesliced.configs.CavePersistence getCavePersistence() {
+        return cavePersistence;
+    }
+
+    /**
      * Shuts down the system and clears trackers.
      */
     public synchronized void shutdown() {
@@ -181,6 +232,15 @@ public class ExplorationManager {
             LOGGER.info("Shutting down Exploration System...");
             stopAutoSave();
             autoSaveScheduler.shutdown();
+            try {
+                if (!autoSaveScheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+                    LOGGER.warning("Auto-save scheduler did not terminate in time, forcing shutdown...");
+                    autoSaveScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                autoSaveScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
             ExplorationTracker.getInstance().clear();
             LOGGER.info("Exploration System shutdown complete");
         } catch (Exception e) {
@@ -193,7 +253,7 @@ public class ExplorationManager {
      */
     public synchronized void startAutoSave() {
         stopAutoSave();
-        int interval = BetterMapConfig.getInstance().getAutoSaveInterval();
+        int interval = ModConfig.getInstance().getAutoSaveInterval();
         if (interval > 0) {
             autoSaveTask = autoSaveScheduler.scheduleAtFixedRate(this::autoSave, interval, interval, TimeUnit.MINUTES);
             LOGGER.info("Auto-save scheduled every " + interval + " minutes.");
@@ -219,7 +279,10 @@ public class ExplorationManager {
         if (!persistenceEnabled) return;
 
         persistence.saveAllPlayers();
-        LOGGER.info("Auto-saved exploration data for all players.");
+        if (cavePersistence != null && ModConfig.getInstance().isCaveModeEnabled()) {
+            cavePersistence.saveAllPlayers();
+        }
+        LOGGER.info("Auto-saved exploration" + (ModConfig.getInstance().isCaveModeEnabled() ? " and cave" : "") + " data for all players.");
     }
 
     /**

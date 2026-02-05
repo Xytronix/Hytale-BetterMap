@@ -9,6 +9,8 @@ import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.ui.Anchor;
+import com.hypixel.hytale.server.core.ui.Value;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -24,49 +26,37 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Represents the custom Head-Up Display (HUD) used for displaying location information to the player.
- * <p>
- * This HUD visualizes the player's current coordinates, world name, biome, and zone.
- * It is responsible for updating these values in real-time as the player moves through the world.
- * </p>
+ * Custom HUD displaying location information (coordinates, world, biome, zone).
  */
 public class LocationHud extends CustomUIHud {
-    @Nullable
-    private Vector3d playerPosition;
-    @Nullable
-    private String worldName;
-    @Nullable
-    private String biomeName;
-    @Nullable
-    private String zoneName;
+
+    private static final int HUD_WIDTH = 260;
+    private static final int HUD_HEIGHT = 160;
+    private static final int MARGIN = 20;
+
+    @Nullable private Vector3d playerPosition;
+    @Nullable private String worldName;
+    @Nullable private String biomeName;
+    @Nullable private String zoneName;
 
     private boolean isEnabled = true;
+    private HudPosition position = HudPosition.TOP_LEFT;
 
-    /**
-     * Constructs a new LocationHud instance for the specified player.
-     *
-     * @param playerRef The reference to the player for whom this HUD is created.
-     */
     public LocationHud(@Nonnull PlayerRef playerRef) {
         super(playerRef);
     }
 
-    /**
-     * Updates the HUD data based on the player's current state and surroundings.
-     * <p>
-     * This method retrieves the player's active position and world information, then triggers
-     * an update of the biome and zone data.
-     * </p>
-     *
-     * @param dt             The time delta since the last update.
-     * @param index          The entity index within the archetype chunk.
-     * @param archetypeChunk The chunk containing the entity's data.
-     * @param store          The global entity store.
-     * @param commandBuffer  The command buffer for scheduling updates.
-     */
-    @SuppressWarnings({"unused"})
+    public void setPosition(@Nonnull HudPosition position) {
+        this.position = position;
+    }
+
+    public HudPosition getPosition() {
+        return position;
+    }
+
+    @SuppressWarnings("unused")
     public void updateHud(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
-                         @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+                          @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         if (!this.isEnabled) return;
 
         Holder<EntityStore> holder = EntityUtils.toHolder(index, archetypeChunk);
@@ -76,17 +66,10 @@ public class LocationHud extends CustomUIHud {
         if (player != null && transformComponent != null && player.getWorld() != null) {
             this.playerPosition = transformComponent.getPosition().clone();
             this.worldName = player.getWorld().getName();
-
             updateBiomeAndZone(player.getWorld(), this.playerPosition);
         }
     }
 
-    /**
-     * Calculates and updates the biome and zone information for a specific position in the world.
-     *
-     * @param world    The world instance the player is currently in.
-     * @param position The position vector to check for biome and zone data.
-     */
     private void updateBiomeAndZone(World world, Vector3d position) {
         if (world == null || position == null) return;
 
@@ -101,27 +84,59 @@ public class LocationHud extends CustomUIHud {
                 Biome biome = result.getBiome();
                 Zone zone = result.getZoneResult().getZone();
 
-                this.biomeName = biome != null ? biome.getName() : "Unknown Biome";
-                this.zoneName = zone != null ? zone.name() : "Unknown Zone";
+                this.biomeName = biome != null ? formatBiomeName(biome.getName()) : "Unknown Biome";
+                this.zoneName = zone != null ? formatZoneName(zone.name()) : "Unknown Zone";
             } catch (Exception e) {
-                 this.biomeName = "Error";
-                 this.zoneName = "Error";
+                this.biomeName = "Error";
+                this.zoneName = "Error";
             }
         } else {
-             this.biomeName = "N/A";
-             this.zoneName = "N/A";
+            this.biomeName = "N/A";
+            this.zoneName = "N/A";
         }
     }
 
     /**
-     * Builds the UI elements for this HUD using the provided command builder.
-     * <p>
-     * This method configures the initial state of the UI components, including the background,
-     * content, and information labels. If valid player data is available, it populates the display.
-     * </p>
-     *
-     * @param ui The UI command builder used to construct the HUD interface.
+     * Formats a biome name by replacing underscores with spaces and capitalizing each word.
+     * Example: "deep_forest_hills" -> "Deep Forest Hills"
      */
+    private String formatBiomeName(String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            return "Unknown";
+        }
+        String[] words = rawName.replace("_", " ").split(" ");
+        StringBuilder formatted = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                if (formatted.length() > 0) formatted.append(" ");
+                formatted.append(Character.toUpperCase(word.charAt(0)))
+                         .append(word.substring(1).toLowerCase());
+            }
+        }
+        return formatted.toString();
+    }
+
+    /**
+     * Formats a zone name from "Zone1_Tier2" format to "Zone 1 - Tier 2".
+     * Example: "Zone1_Tier2" -> "Zone 1 - Tier 2"
+     */
+    private String formatZoneName(String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            return "Unknown";
+        }
+
+        // Handle Zone#_Tier# format
+        if (rawName.matches("Zone\\d+_Tier\\d+")) {
+            String[] parts = rawName.split("_");
+            String zonePart = parts[0].replaceAll("(Zone)(\\d+)", "$1 $2");
+            String tierPart = parts[1].replaceAll("(Tier)(\\d+)", "$1 $2");
+            return zonePart + " - " + tierPart;
+        }
+
+        // Fallback: replace underscores with spaces and capitalize
+        return formatBiomeName(rawName);
+    }
+
     @Override
     protected void build(@Nonnull UICommandBuilder ui) {
         if (!this.isEnabled) {
@@ -129,33 +144,60 @@ public class LocationHud extends CustomUIHud {
         }
 
         ui.append("Hud/Location/LocationDisplay.ui");
+        ui.setObject("#LocationHudAnchor.Anchor", computeAnchor());
 
-        ui.set("#Location #Background #Content #InfoPanel #WorldNameLabel.TextSpans", Message.raw("World: Checking..."));
-        ui.set("#Location #Background #Content #InfoPanel #BiomeNameLabel.TextSpans", Message.raw("Biome: Checking..."));
-        ui.set("#Location #Background #Content #InfoPanel #ZoneNameLabel.TextSpans", Message.raw("Zone: Checking..."));
-        ui.set("#Location #Background #Content #InfoPanel #PositionLabel.TextSpans", Message.raw("Checking..."));
+        ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #WorldNameLabel.TextSpans", Message.raw("World: Checking..."));
+        ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #BiomeNameLabel.TextSpans", Message.raw("Biome: Checking..."));
+        ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #ZoneNameLabel.TextSpans", Message.raw("Zone: Checking..."));
+        ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #PositionLabel.TextSpans", Message.raw("Checking..."));
 
         if (this.playerPosition != null) {
             updateInfoDisplay(ui);
         }
     }
 
-    /**
-     * Refreshes the information displayed on the HUD with the latest cached values.
-     * <p>
-     * This includes updating the position coordinates, world name, biome name, and zone name
-     * on the respective UI labels.
-     * </p>
-     *
-     * @param ui The UI command builder to update the UI elements.
-     */
-    private void updateInfoDisplay(@Nonnull UICommandBuilder ui) {
+    private Anchor computeAnchor() {
+        Anchor anchor = new Anchor();
+        anchor.setHeight(Value.of(HUD_HEIGHT));
 
-        if (!this.isEnabled) {
-            return;
+        switch (this.position) {
+            case TOP_LEFT -> {
+                anchor.setWidth(Value.of(HUD_WIDTH));
+                anchor.setLeft(Value.of(MARGIN));
+                anchor.setTop(Value.of(MARGIN));
+            }
+            case TOP_CENTER -> {
+                anchor.setLeft(Value.of(0));
+                anchor.setRight(Value.of(0));
+                anchor.setTop(Value.of(MARGIN));
+            }
+            case TOP_RIGHT -> {
+                anchor.setWidth(Value.of(HUD_WIDTH));
+                anchor.setRight(Value.of(MARGIN));
+                anchor.setTop(Value.of(MARGIN));
+            }
+            case BOTTOM_LEFT -> {
+                anchor.setWidth(Value.of(HUD_WIDTH));
+                anchor.setLeft(Value.of(MARGIN));
+                anchor.setBottom(Value.of(MARGIN));
+            }
+            case BOTTOM_CENTER -> {
+                anchor.setLeft(Value.of(0));
+                anchor.setRight(Value.of(0));
+                anchor.setBottom(Value.of(MARGIN + 100));
+            }
+            case BOTTOM_RIGHT -> {
+                anchor.setWidth(Value.of(HUD_WIDTH));
+                anchor.setRight(Value.of(MARGIN));
+                anchor.setBottom(Value.of(MARGIN));
+            }
         }
 
-        if (this.playerPosition == null) {
+        return anchor;
+    }
+
+    private void updateInfoDisplay(@Nonnull UICommandBuilder ui) {
+        if (!this.isEnabled || this.playerPosition == null) {
             return;
         }
 
@@ -164,26 +206,21 @@ public class LocationHud extends CustomUIHud {
         int z = (int) this.playerPosition.getZ();
 
         String positionText = String.format("Position: %d, %d, %d", x, y, z);
-        ui.set("#Location #Background #Content #InfoPanel #PositionLabel.TextSpans", Message.raw(positionText));
+        ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #PositionLabel.TextSpans", Message.raw(positionText));
 
         if (this.worldName != null) {
-            ui.set("#Location #Background #Content #InfoPanel #WorldNameLabel.TextSpans", Message.raw("World: " + this.worldName));
+            ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #WorldNameLabel.TextSpans", Message.raw("World: " + this.worldName));
         }
 
         if (this.biomeName != null) {
-            ui.set("#Location #Background #Content #InfoPanel #BiomeNameLabel.TextSpans", Message.raw("Biome: " + this.biomeName));
+            ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #BiomeNameLabel.TextSpans", Message.raw("Biome: " + this.biomeName));
         }
 
         if (this.zoneName != null) {
-            ui.set("#Location #Background #Content #InfoPanel #ZoneNameLabel.TextSpans", Message.raw("Zone: " + this.zoneName));
+            ui.set("#LocationHudAnchor #Location #Background #Content #InfoPanel #ZoneNameLabel.TextSpans", Message.raw("Zone: " + this.zoneName));
         }
     }
 
-    /**
-     * Returns a string representation of the LocationHud state.
-     *
-     * @return A string containing the current player position and environment names.
-     */
     @Override
     public String toString() {
         return "LocationHud{" +
@@ -191,16 +228,11 @@ public class LocationHud extends CustomUIHud {
                 ", worldName='" + worldName + '\'' +
                 ", biomeName='" + biomeName + '\'' +
                 ", zoneName='" + zoneName + '\'' +
+                ", position=" + position +
                 '}';
     }
 
-    /**
-     * Sets the enabled state of the HUD.
-     *
-     * @param enabled True to enable the HUD, false to disable it.
-     */
     public void setEnabled(boolean enabled) {
         this.isEnabled = enabled;
     }
 }
-

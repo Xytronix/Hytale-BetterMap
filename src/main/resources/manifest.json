@@ -18,7 +18,9 @@
   "Website": "https://ninesliced.com",
   "ServerVersion": "*",
   "Dependencies": {},
-  "OptionalDependencies": {},
+  "OptionalDependencies": {
+    "Buuz135:MultipleHUD": "*"
+  },
   "DisabledByDefault": false,
   "IncludesAssetPack": true,
   "Main": "dev.ninesliced.BetterMap"

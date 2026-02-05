@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -56,6 +57,12 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             new EventData().put(WaypointGuiData.KEY_ACTION, Action.CLOSE.name()),
             false
         );
+        events.addEventBinding(
+            CustomUIEventBindingType.Activating,
+            "#ConfigButton",
+            new EventData().put(WaypointGuiData.KEY_ACTION, Action.CONFIG.name()),
+            false
+        );
 
         buildWaypointList(ref, store, ui, events);
     }
@@ -79,7 +86,7 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
         }
 
         boolean canTeleport = PermissionsUtil.canTeleport(player)
-            && BetterMapConfig.getInstance().isAllowWaypointTeleports();
+            && ModConfig.getInstance().isAllowWaypointTeleports();
 
         int index = 0;
         for (UserMapMarker marker : markers) {
@@ -90,13 +97,13 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             String itemPath = WAYPOINT_LIST_PATH + "[" + index + "]";
 
             ui.append(WAYPOINT_LIST_PATH, "Pages/BetterMap/WaypointItem.ui");
-            
+
             String name = marker.getName();
             ui.set(itemPath + " #NameLabel.Text", name != null && !name.isEmpty() ? name : "Unnamed");
             
             String icon = marker.getIcon();
             ui.set(itemPath + " #IconLabel.Text", "[" + formatIcon(icon) + "]");
-            
+
             boolean isShared = WaypointManager.isSharedId(marker.getId());
             ui.set(itemPath + " #SharedLabel.Text", isShared ? "(Shared)" : "(Personal)");
 
@@ -189,6 +196,11 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             return;
         }
 
+        if (action == Action.CONFIG) {
+            player.getPageManager().openCustomPage(ref, store, new ConfigMenuPage(this.playerRef));
+            return;
+        }
+
         switch (action) {
             case CREATE -> {
                 player.getPageManager().openCustomPage(ref, store, new WaypointEditPage(this.playerRef, null));
@@ -216,7 +228,7 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             }
             case TELEPORT -> {
                 if (!PermissionsUtil.canTeleport(player)
-                    || !BetterMapConfig.getInstance().isAllowWaypointTeleports()) {
+                    || !ModConfig.getInstance().isAllowWaypointTeleports()) {
                     return;
                 }
                 if (data.targetId != null && !data.targetId.isEmpty()) {
@@ -226,10 +238,10 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                         if (world == null) {
                             return;
                         }
-                        
+
                         float markerX = marker.getX();
                         float markerZ = marker.getZ();
-                        
+
                         double destinationY = 64.0;
                         try {
                             long chunkIndex = ChunkUtil.indexChunkFromBlock(markerX, markerZ);
@@ -248,12 +260,12 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                                 destinationY = transform.getPosition().y;
                             }
                         }
-                        
+
                         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
                         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
                         Vector3d destination = new Vector3d(markerX, destinationY, markerZ);
                         Teleport teleport = new Teleport(destination, currentRotation);
-                        
+
                         world.execute(() -> store.addComponent(ref, Teleport.getComponentType(), teleport));
                     }
                 }
@@ -273,7 +285,8 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
         EDIT,
         DELETE,
         TELEPORT,
-        CLOSE;
+        CLOSE,
+        CONFIG;
 
         static Action from(String raw) {
             if (raw == null) {

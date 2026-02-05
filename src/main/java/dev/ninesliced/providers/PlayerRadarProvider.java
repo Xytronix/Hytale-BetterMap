@@ -5,15 +5,19 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.HiddenPlayersManager;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.PlayerRadarManager.RadarData;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -36,7 +40,8 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
         try {
             UUID viewerUuid = ((CommandSender) viewingPlayer).getUuid();
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+
+            ModConfig config = ModConfig.getInstance();
 
             if (!config.isRadarEnabled() || config.isHidePlayersOnMap()) {
                 return;
@@ -61,12 +66,31 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
             boolean infiniteRange = radarRange < 0;
             long rangeSquared = infiniteRange ? Long.MAX_VALUE : (long) radarRange * radarRange;
 
+            // Build a UUID->PlayerRef lookup map once for efficient vanish checks
+            Map<UUID, PlayerRef> playerRefMap = new HashMap<>();
+            for (PlayerRef playerRef : world.getPlayerRefs()) {
+                playerRefMap.put(playerRef.getUuid(), playerRef);
+            }
+
             for (RadarData otherData : radarDataList) {
                 if (otherData.uuid.equals(viewerUuid.toString())) {
                     continue;
                 }
 
                 try {
+                    boolean isHidden = false;
+                    try {
+                        UUID otherUuid = UUID.fromString(otherData.uuid);
+                        PlayerRef playerRef = playerRefMap.get(otherUuid);
+                        if (playerRef != null) {
+                            isHidden = playerRef.getHiddenPlayersManager().isPlayerHidden(viewerUuid);
+                        }
+                    } catch (IllegalArgumentException e) { }
+
+                    if (isHidden) {
+                        continue;
+                    }
+
                     Vector3d otherPos = otherData.position;
 
                     double dx = otherPos.x - viewerPos.x;

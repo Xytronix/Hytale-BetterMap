@@ -8,7 +8,9 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.managers.PlayerRadarManager;
+import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
@@ -50,8 +52,9 @@ public class ExplorationTicker {
             return;
         }
         isRunning = true;
-        scheduler.scheduleAtFixedRate(this::tick, 1000, 100, TimeUnit.MILLISECONDS);
-        LOGGER.info("Exploration Ticker started.");
+        int updateRateMs = ModConfig.getInstance().getUpdateRateMs();
+        scheduler.scheduleAtFixedRate(this::tick, 1000, updateRateMs, TimeUnit.MILLISECONDS);
+        LOGGER.info("Exploration Ticker started with update rate: " + updateRateMs + "ms");
     }
 
     /**
@@ -84,8 +87,21 @@ public class ExplorationTicker {
      * Stops the ticker and shuts down the scheduler.
      */
     public void stop() {
+        if (!isRunning) {
+            return;
+        }
         isRunning = false;
         scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                LOGGER.warning("Exploration ticker did not terminate in time, forcing shutdown...");
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        LOGGER.info("Exploration Ticker stopped.");
     }
 
     private void tick() {
@@ -102,6 +118,7 @@ public class ExplorationTicker {
                     if (!world.isAlive()) return;
                     updateWorldPlayers(world);
                     PlayerRadarManager.getInstance().updateRadarData(world);
+                    WorldBorderManager.getInstance().hookWorldMapManager(world);
                 });
             } catch (IllegalThreadStateException ignored) {
             } catch (Exception ignored) {
