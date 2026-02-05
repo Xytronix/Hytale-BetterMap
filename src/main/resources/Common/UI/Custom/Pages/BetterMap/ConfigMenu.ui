@@ -18,6 +18,20 @@ $C = "../../Common.ui";
   VerticalAlignment: Center
 );
 
+@WarningTextStyle = LabelStyle(
+  FontSize: 13,
+  TextColor: #ff4a4a,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@AsteriskLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #ff4a4a,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
 @NavButtonStyle = TextButtonStyle(
   Default: (Background: $C.@DefaultSquareButtonDefaultBackground, LabelStyle: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
   Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
@@ -201,6 +215,16 @@ $C.@PageOverlay {
           Padding: (Right: 8);
 
           Group {
+            Anchor: (Height: 22);
+            Padding: (Bottom: 6);
+
+            Label {
+              Text: "* Settings marked with this symbol require a server restart to take effect.";
+              Style: @WarningTextStyle;
+            }
+          }
+
+          Group {
             LayoutMode: Left;
             Anchor: (Height: 32);
             Background: #93844c(0.15);
@@ -224,13 +248,25 @@ $C.@PageOverlay {
               LayoutMode: Left;
               Anchor: (Height: 40, Top: 4);
 
-              Label { Text: "Map Quality"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              Group {
+                LayoutMode: Left;
+                FlexWeight: 1;
+
+                Label { Text: "Map Quality"; Style: @FieldLabelStyle; }
+                Label { Text: " *"; Style: @AsteriskLabelStyle; }
+              }
               $C.@DropdownBox #AdminMapQuality { Anchor: (Width: 200, Height: $C.@DropdownBoxHeight); }
             }
 
             @FieldRow {
               Anchor: (Top: 4);
-              Label { Text: "Max Chunks To Load"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              Group {
+                LayoutMode: Left;
+                FlexWeight: 1;
+
+                Label { Text: "Max Chunks To Load"; Style: @FieldLabelStyle; }
+                Label { Text: " *"; Style: @AsteriskLabelStyle; }
+              }
               $C.@NumberField #AdminMaxChunksToLoad { Anchor: (Width: 120, Height: 28); }
             }
 
@@ -392,7 +428,13 @@ $C.@PageOverlay {
             Background: #231a2a(0.6);
             OutlineColor: #4a3a5a(0.5);
 
-            Label { Text: "Allowed Worlds (comma separated)"; Style: @FieldLabelStyle; }
+            Group {
+                LayoutMode: Left;
+                Anchor: (Left: 10);
+
+                Label { Text: "Allowed Worlds (comma separated)"; Style: @CheckboxLabelStyle; }
+                Label { Text: " *"; Style: @AsteriskLabelStyle; }
+              }
             $C.@TextField #AllowedWorldList { Anchor: (Height: 28, Top: 4); }
             TextButton #AddCurrentWorldBtn { Anchor: (Height: 28, Top: 4); Text: "ADD CURRENT WORLD"; Style: @NavButtonStyle; }
           }
