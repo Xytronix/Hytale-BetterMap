@@ -35,7 +35,7 @@ public class PlayerConfig {
     }
 
     public void setMaxScale(float maxScale) {
-        this.maxScale = maxScale;
+        this.maxScale = Math.max(maxScale, minScale + 1);
     }
 
     public boolean isLocationEnabled() {

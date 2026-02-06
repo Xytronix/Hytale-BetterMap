@@ -166,6 +166,12 @@ $C.@PageOverlay {
               Label { Text: "Enable Location HUD"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
 
+            Label {
+              Anchor: (Top: 4, Left: 2);
+              Text: "Warning: If you use multiple HUD mods, please install the MultipleHUD mod.";
+              Style: @WarningTextStyle;
+            }
+
             @FieldRow {
               Anchor: (Top: 4);
               Label { Text: "HUD Position"; Style: @FieldLabelStyle; FlexWeight: 1; }
@@ -350,6 +356,12 @@ $C.@PageOverlay {
               Label { Text: "Enable Location HUD (Global)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
 
+            Label {
+              Anchor: (Top: 4, Left: 2);
+              Text: "Warning: If you use multiple HUD mods, please install the MultipleHUD mod.";
+              Style: @WarningTextStyle;
+            }
+
             @FieldRow {
               Anchor: (Top: 4);
               Label { Text: "Default HUD Position"; Style: @FieldLabelStyle; FlexWeight: 1; }
@@ -369,7 +381,7 @@ $C.@PageOverlay {
             Padding: (Left: 10);
 
             Label {
-              Text: "Radar Settings";
+              Text: "Player radar Settings";
               Style: (FontSize: 18, TextColor: #4c7a9c, RenderBold: true);
             }
           }

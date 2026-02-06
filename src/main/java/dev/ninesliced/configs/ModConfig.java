@@ -556,7 +556,7 @@ public class ModConfig {
      * @param maxScale The new maximum scale.
      */
     public void setMaxScale(float maxScale) {
-        this.maxScale = maxScale;
+        this.maxScale = Math.max(maxScale, minScale + 1);
         save();
     }
 
