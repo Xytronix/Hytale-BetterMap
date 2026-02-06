@@ -10,9 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.UUID;
-import java.util.WeakHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -21,8 +19,6 @@ import java.util.logging.Logger;
  */
 public final class WaypointLimitUtil {
     private static final Logger LOGGER = Logger.getLogger(WaypointLimitUtil.class.getName());
-    private static final Map<World, MarkerLimits> ORIGINAL_LIMITS = new WeakHashMap<>();
-
     private WaypointLimitUtil() {
     }
 
@@ -94,7 +90,7 @@ public final class WaypointLimitUtil {
     }
 
     /**
-     * Applies overrides to all worlds. Use negative values to restore originals.
+     * Applies overrides to all worlds. Use -1 for unlimited.
      */
     public static void applyOverridesToAllWorlds(int personalOverride, int sharedOverride) {
         Universe universe = Universe.get();
@@ -105,31 +101,18 @@ public final class WaypointLimitUtil {
     }
 
     /**
-     * Applies overrides to a single world. Use negative values to restore originals.
+     * Applies overrides to a single world. Use -1 for unlimited.
      */
     public static void applyOverridesToWorld(@Nonnull World world, int personalOverride, int sharedOverride) {
         try {
             UserMapMarkerConfig config = world.getGameplayConfig().getWorldMapConfig().getUserMapMarkerConfig();
-            MarkerLimits original = ORIGINAL_LIMITS.computeIfAbsent(world,
-                w -> new MarkerLimits(config.getMaxPersonalMarkersPerPlayer(), config.getMaxSharedMarkersPerPlayer()));
-
-            int personal = personalOverride >= 0 ? personalOverride : original.personal;
-            int shared = sharedOverride >= 0 ? sharedOverride : original.shared;
+            int personal = personalOverride >= 0 ? personalOverride : Integer.MAX_VALUE;
+            int shared = sharedOverride >= 0 ? sharedOverride : Integer.MAX_VALUE;
 
             ReflectionHelper.setFieldValue(config, "maxPersonalMarkersPerPlayer", personal);
             ReflectionHelper.setFieldValue(config, "maxSharedMarkersPerPlayer", shared);
         } catch (Exception e) {
             LOGGER.warning("Failed to apply marker limit overrides: " + e.getMessage());
-        }
-    }
-
-    private static class MarkerLimits {
-        private final int personal;
-        private final int shared;
-
-        private MarkerLimits(int personal, int shared) {
-            this.personal = personal;
-            this.shared = shared;
         }
     }
 }

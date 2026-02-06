@@ -17,8 +17,8 @@ import java.util.concurrent.CompletableFuture;
  * Command to set per-player waypoint limits.
  */
 public class MarkerLimitCommand extends AbstractCommand {
-    private final RequiredArg<Integer> personalArg = this.withRequiredArg("personal", "Max personal markers per player (-1 for default)", ArgTypes.INTEGER);
-    private final RequiredArg<Integer> sharedArg = this.withRequiredArg("shared", "Max shared markers per player (-1 for default)", ArgTypes.INTEGER);
+    private final RequiredArg<Integer> personalArg = this.withRequiredArg("personal", "Max personal markers per player (-1 for unlimited)", ArgTypes.INTEGER);
+    private final RequiredArg<Integer> sharedArg = this.withRequiredArg("shared", "Max shared markers per player (-1 for unlimited)", ArgTypes.INTEGER);
 
     public MarkerLimitCommand() {
         super("markerlimit", "Set max personal/shared waypoint limits per player");
@@ -54,7 +54,7 @@ public class MarkerLimitCommand extends AbstractCommand {
 
         context.sendMessage(Message.raw("Waypoint limits updated:").color(Color.GREEN));
         context.sendMessage(Message.raw("Personal: " + personal + " | Shared: " + shared).color(Color.YELLOW));
-        context.sendMessage(Message.raw("Use -1 to restore Hytale defaults.").color(Color.GRAY));
+        context.sendMessage(Message.raw("Use -1 for unlimited.").color(Color.GRAY));
 
         return CompletableFuture.completedFuture(null);
     }

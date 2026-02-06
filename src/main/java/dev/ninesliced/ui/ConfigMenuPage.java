@@ -124,15 +124,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
              int personalLimit = gConfig.getMaxPersonalMarkersPerPlayer();
              int sharedLimit = gConfig.getMaxSharedMarkersPerPlayer();
-             World currentWorld = player.getWorld();
-             if (personalLimit < 0) {
-                 personalLimit = WaypointLimitUtil.getMaxMarkers(currentWorld, false);
-             }
-             if (sharedLimit < 0) {
-                 sharedLimit = WaypointLimitUtil.getMaxMarkers(currentWorld, true);
-             }
-             ui.set("#AdminMaxPersonalMarkers.Value", Math.max(personalLimit, 0));
-             ui.set("#AdminMaxSharedMarkers.Value", Math.max(sharedLimit, 0));
+             ui.set("#AdminMaxPersonalMarkers.Value", personalLimit);
+             ui.set("#AdminMaxSharedMarkers.Value", sharedLimit);
 
 
              ui.set("#HiddenPoisList.Value", String.join(", ", gConfig.getHiddenPoiNames()));
