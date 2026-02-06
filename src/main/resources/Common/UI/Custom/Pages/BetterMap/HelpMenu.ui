@@ -218,11 +218,11 @@ $C.@PageOverlay {
                   Label { Text: "The number of chunks around each player that get explored and rendered on the map as they move. Higher values reveal more area per tick but increase server load. Default: 16 chunks."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
-                  Label { Text: "Map Quality *"; Style: @ParamNameStyle; }
+                  Label { Text: "Map Quality"; Style: @ParamNameStyle; }
                   Label { Text: "Controls the resolution of map chunk textures. LOW: 8x8 px (up to 30,000 chunks). MEDIUM: 16x16 px (up to 10,000 chunks). HIGH: 32x32 px (up to 3,000 chunks). Higher quality = sharper visuals but more memory. Requires server restart to apply."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
-                  Label { Text: "Max Chunks To Load *"; Style: @ParamNameStyle; }
+                  Label { Text: "Max Chunks To Load"; Style: @ParamNameStyle; }
                   Label { Text: "Maximum number of explored chunks kept loaded in memory at once. Chunks nearest to the player are prioritized. Automatically capped by your Map Quality setting. Requires server restart."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
@@ -354,7 +354,7 @@ $C.@PageOverlay {
 
               @SectionCard {
                 @ParamRow {
-                  Label { Text: "Allowed Worlds *"; Style: @ParamNameStyle; }
+                  Label { Text: "Allowed Worlds"; Style: @ParamNameStyle; }
                   Label { Text: "A comma-separated list of world names where BetterMap is active. The mod only tracks exploration in these worlds. Default: 'default, world'. Use the 'Add Current World' button to quickly add whatever world you are in. Requires restart."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
