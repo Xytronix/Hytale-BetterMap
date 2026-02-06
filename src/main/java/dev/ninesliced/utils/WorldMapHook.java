@@ -61,6 +61,8 @@ public class WorldMapHook {
     private static final Map<String, CompletableFuture<CaveModeImageBuilder>> pendingCaveModeFutures = new java.util.concurrent.ConcurrentHashMap<>();
     
     private static final Map<String, Integer> caveModeRetryCounter = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final Map<String, Set<Long>> sharedCaveExploredChunks = new java.util.concurrent.ConcurrentHashMap<>();
     
     /**
      * Gets or creates the cave mode loaded chunks set for a player.
@@ -88,6 +90,10 @@ public class WorldMapHook {
      */
     private static Set<Long> getCaveModePendingChunks(String playerName) {
         return caveModePendingChunks.computeIfAbsent(playerName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
+    }
+
+    private static Set<Long> getSharedCaveExploredChunks(@Nonnull String worldName) {
+        return sharedCaveExploredChunks.computeIfAbsent(worldName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
     }
     
     /**
@@ -450,6 +456,8 @@ public class WorldMapHook {
             Set<Long> loadedCaveChunks = state.getLoadedCaveChunks();
             Set<Long> pendingCaveChunks = state.getPendingCaveChunks();
             Set<Long> exploredCaveChunks = state.getExploredCaveChunks();
+            boolean shareCaves = ModConfig.getInstance().isShareAllExploration();
+            Set<Long> sharedExplored = shareCaves ? getSharedCaveExploredChunks(world.getName()) : null;
             
             Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
             @SuppressWarnings("unchecked")
@@ -465,11 +473,17 @@ public class WorldMapHook {
                         long idx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
                         allCaveChunks.add(idx);
                         state.markCaveChunkExplored(idx);
+                        if (shareCaves && sharedExplored != null) {
+                            sharedExplored.add(idx);
+                        }
                     }
                 }
             }
-            
+
             allCaveChunks.addAll(exploredCaveChunks);
+            if (shareCaves && sharedExplored != null) {
+                allCaveChunks.addAll(sharedExplored);
+            }
             
             List<Long> sortedCaveChunks = new ArrayList<>(allCaveChunks);
             sortedCaveChunks.sort(Comparator.comparingDouble(idx -> {
@@ -581,6 +595,9 @@ public class WorldMapHook {
                             int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
                             chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
                             state.markCaveChunkExplored(chunkIdx);
+                            if (shareCaves && sharedExplored != null) {
+                                sharedExplored.add(chunkIdx);
+                            }
                             refreshCount++;
                         }
                     } else {
@@ -608,6 +625,9 @@ public class WorldMapHook {
                         loadedCaveChunks.add(pendingIdx);
                         trackerLoaded.add(pendingIdx);
                         state.markCaveChunkExplored(pendingIdx);
+                        if (shareCaves && sharedExplored != null) {
+                            sharedExplored.add(pendingIdx);
+                        }
                         failedChunks.remove(pendingIdx);
                     } else {
                         failedChunks.add(pendingIdx);
@@ -676,6 +696,9 @@ public class WorldMapHook {
                         loadedCaveChunks.add(chunkIdx);
                         trackerLoaded.add(chunkIdx);
                         state.markCaveChunkExplored(chunkIdx);
+                        if (shareCaves && sharedExplored != null) {
+                            sharedExplored.add(chunkIdx);
+                        }
                         immediateLoads++;
                         failedChunks.remove(chunkIdx);
                     } else {
@@ -998,14 +1021,20 @@ public class WorldMapHook {
             }
 
             Set<Long> exploredWorldChunks;
-            if (ModConfig.getInstance().isShareAllExploration()) {
-                String worldName = world.getName();
-                exploredWorldChunks = ExplorationManager.getInstance().getAllExploredChunks(worldName);
+            CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(player);
+            boolean shareCaves = ModConfig.getInstance().isShareAllExploration();
+            if (state != null) {
+                exploredWorldChunks = new HashSet<>(state.getExploredCaveChunks());
+                if (shareCaves) {
+                    exploredWorldChunks.addAll(getSharedCaveExploredChunks(world.getName()));
+                }
+            } else if (shareCaves) {
+                exploredWorldChunks = getSharedCaveExploredChunks(world.getName());
             } else {
-                exploredWorldChunks = explorationData.getExploredChunks().getExploredChunks();
+                exploredWorldChunks = Collections.emptySet();
             }
 
-            if (exploredWorldChunks == null || exploredWorldChunks.isEmpty()) {
+            if (exploredWorldChunks.isEmpty()) {
                 return maxGeneration;
             }
 
