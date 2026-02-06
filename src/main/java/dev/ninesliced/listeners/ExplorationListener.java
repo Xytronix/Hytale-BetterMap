@@ -27,6 +27,7 @@ import dev.ninesliced.managers.WaypointMigrationManager;
 import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.ReflectionHelper;
+import dev.ninesliced.utils.WaypointLimitUtil;
 import dev.ninesliced.utils.WorldMapHook;
 import com.hypixel.hytale.server.core.Message;
 import java.awt.Color;
@@ -215,6 +216,13 @@ public class ExplorationListener {
             String newWorldName = newWorld.getName();
             String oldWorldName = playerWorlds.get(playerName);
             World oldWorld = oldWorldName != null ? Universe.get().getWorld(oldWorldName) : null;
+
+            ModConfig config = ModConfig.getInstance();
+            WaypointLimitUtil.applyOverridesToWorld(
+                newWorld,
+                config.getMaxPersonalMarkersPerPlayer(),
+                config.getMaxSharedMarkersPerPlayer()
+            );
 
             LOGGER.info("[DEBUG] Player " + playerName + " joining world: " + newWorldName + " (previous: " + oldWorldName + ")");
 

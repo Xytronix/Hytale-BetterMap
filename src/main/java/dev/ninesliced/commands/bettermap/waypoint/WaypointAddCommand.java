@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.WaypointLimitUtil;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -72,6 +73,12 @@ public class WaypointAddCommand extends AbstractPlayerCommand {
         if (makeShared && !PermissionsUtil.canUseGlobalWaypoints(player)) {
             context.sendMessage(Message.raw("You don't have permission to create shared waypoints. Creating a personal waypoint instead."));
             makeShared = false;
+        }
+
+        String limitError = WaypointLimitUtil.getCreationError(player, makeShared);
+        if (limitError != null) {
+            context.sendMessage(Message.raw(limitError));
+            return;
         }
 
         WaypointManager.addMarker(player, name, icon, x, z, null, makeShared);

@@ -2,15 +2,19 @@ package dev.ninesliced.managers;
 
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarkersStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
 import dev.ninesliced.listeners.ExplorationListener;
+import dev.ninesliced.utils.ReflectionHelper;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -129,6 +133,7 @@ public class WaypointManager {
 
         List<UserMapMarker> markers = new ArrayList<>(entry.store.getUserMapMarkers());
         boolean updated = false;
+        UserMapMarker updatedMarker = null;
         for (int i = 0; i < markers.size(); i++) {
             UserMapMarker m = markers.get(i);
             if (!id.equals(m.getId())) continue;
@@ -147,6 +152,7 @@ public class WaypointManager {
             }
 
             updated = true;
+            updatedMarker = m;
             break;
         }
 
@@ -155,8 +161,14 @@ public class WaypointManager {
             
             if (entry.shared) {
                 forceRefreshMarkerOnAllClients(world, id);
+                if (updatedMarker != null) {
+                    forceSendMarkerUpdateToAllClients(world, updatedMarker);
+                }
             } else {
                 forceRefreshMarkerOnClient(player, id);
+                if (updatedMarker != null) {
+                    forceSendMarkerUpdate(player, updatedMarker);
+                }
             }
         }
         return updated;
@@ -169,12 +181,33 @@ public class WaypointManager {
         try {
             var tracker = player.getWorldMapTracker();
             if (tracker == null) return;
-            
-            var sentMarkers = tracker.getSentMarkers();
-            if (sentMarkers != null) {
-                sentMarkers.remove(markerId);
+
+            Object markerTrackerObj = ReflectionHelper.getFieldValueRecursive(tracker, "markerTracker");
+            if (markerTrackerObj instanceof MapMarkerTracker markerTracker) {
+                var sentMarkers = markerTracker.getSentMarkers();
+                if (sentMarkers != null) {
+                    sentMarkers.remove(markerId);
+                }
+                ReflectionHelper.setFieldValueRecursive(markerTracker, "smallMovementsTimer", 0.0f);
+                return;
+            }
+
+            try {
+                var sentMarkers = tracker.getSentMarkers();
+                if (sentMarkers != null) {
+                    sentMarkers.remove(markerId);
+                }
+            } catch (Exception ignored) {
             }
         } catch (Exception e) {
+        }
+    }
+
+    private static void forceSendMarkerUpdate(@Nonnull Player player, @Nonnull UserMapMarker marker) {
+        try {
+            MapMarker protocol = marker.toProtocolMarker();
+            player.getPlayerConnection().writeNoCache(new UpdateWorldMap(null, new MapMarker[]{protocol}, new String[]{marker.getId()}));
+        } catch (Exception ignored) {
         }
     }
     
@@ -189,6 +222,19 @@ public class WaypointManager {
                 Player player = holder.getComponent(Player.getComponentType());
                 if (player == null) continue;
                 forceRefreshMarkerOnClient(player, markerId);
+            }
+        } catch (Exception _) {
+        }
+    }
+
+    private static void forceSendMarkerUpdateToAllClients(@Nonnull World world, @Nonnull UserMapMarker marker) {
+        try {
+            for (PlayerRef worldPlayer : world.getPlayerRefs()) {
+                Holder<EntityStore> holder = worldPlayer.getHolder();
+                if (holder == null) continue;
+                Player player = holder.getComponent(Player.getComponentType());
+                if (player == null) continue;
+                forceSendMarkerUpdate(player, marker);
             }
         } catch (Exception _) {
         }

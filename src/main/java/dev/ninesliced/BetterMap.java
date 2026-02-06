@@ -26,6 +26,7 @@ import dev.ninesliced.managers.UserMarkerProviderManager;
 import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.providers.LocationHudProvider;
 import dev.ninesliced.systems.LocationSystem;
+import dev.ninesliced.utils.WaypointLimitUtil;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Path;
@@ -100,6 +101,10 @@ public class BetterMap extends JavaPlugin {
 
             Path serverRoot = Paths.get(".").toAbsolutePath().normalize();
             ModConfig.getInstance().initialize(serverRoot);
+            WaypointLimitUtil.applyOverridesToAllWorlds(
+                ModConfig.getInstance().getMaxPersonalMarkersPerPlayer(),
+                ModConfig.getInstance().getMaxSharedMarkersPerPlayer()
+            );
 
             PlayerConfigManager.initialize(serverRoot.resolve("mods").resolve("BetterMap"));
             LOGGER.info("Player Config Manager: INITIALIZED");

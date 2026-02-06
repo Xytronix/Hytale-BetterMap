@@ -33,6 +33,7 @@ import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.managers.CaveModeManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.WorldMapHook;
+import dev.ninesliced.utils.WaypointLimitUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -121,6 +122,18 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
              ui.set("#RadarRange.Value", gConfig.getRadarRange());
 
+             int personalLimit = gConfig.getMaxPersonalMarkersPerPlayer();
+             int sharedLimit = gConfig.getMaxSharedMarkersPerPlayer();
+             World currentWorld = player.getWorld();
+             if (personalLimit < 0) {
+                 personalLimit = WaypointLimitUtil.getMaxMarkers(currentWorld, false);
+             }
+             if (sharedLimit < 0) {
+                 sharedLimit = WaypointLimitUtil.getMaxMarkers(currentWorld, true);
+             }
+             ui.set("#AdminMaxPersonalMarkers.Value", Math.max(personalLimit, 0));
+             ui.set("#AdminMaxSharedMarkers.Value", Math.max(sharedLimit, 0));
+
 
              ui.set("#HiddenPoisList.Value", String.join(", ", gConfig.getHiddenPoiNames()));
              ui.set("#AllowedWorldList.Value", String.join(", ", gConfig.getAllowedWorlds()));
@@ -152,6 +165,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
              bindChange(events, "#RadarEnabled", "admin_radar_enabled", BindingType.BOOLEAN);
              bindChange(events, "#RadarRange", "admin_radar_range", BindingType.NUMBER);
+             bindChange(events, "#AdminMaxPersonalMarkers", "admin_marker_personal_limit", BindingType.NUMBER);
+             bindChange(events, "#AdminMaxSharedMarkers", "admin_marker_shared_limit", BindingType.NUMBER);
 
              bindChange(events, "#HidePlayers", "admin_hide_players", BindingType.BOOLEAN);
              bindChange(events, "#HideOtherWarps", "admin_hide_other_warps", BindingType.BOOLEAN);
@@ -431,6 +446,30 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_radar_range":
                      if (val != null) gConfig.setRadarRange(Integer.parseInt(val));
+                    break;
+                case "admin_marker_personal_limit":
+                    if (val != null) {
+                        int limit = Integer.parseInt(val);
+                        gConfig.setMaxPersonalMarkersPerPlayer(limit);
+                        ui.set("#AdminMaxPersonalMarkers.Value", gConfig.getMaxPersonalMarkersPerPlayer());
+                        sendUpdate(ui, new UIEventBuilder(), false);
+                        WaypointLimitUtil.applyOverridesToAllWorlds(
+                            gConfig.getMaxPersonalMarkersPerPlayer(),
+                            gConfig.getMaxSharedMarkersPerPlayer()
+                        );
+                    }
+                    break;
+                case "admin_marker_shared_limit":
+                    if (val != null) {
+                        int limit = Integer.parseInt(val);
+                        gConfig.setMaxSharedMarkersPerPlayer(limit);
+                        ui.set("#AdminMaxSharedMarkers.Value", gConfig.getMaxSharedMarkersPerPlayer());
+                        sendUpdate(ui, new UIEventBuilder(), false);
+                        WaypointLimitUtil.applyOverridesToAllWorlds(
+                            gConfig.getMaxPersonalMarkersPerPlayer(),
+                            gConfig.getMaxSharedMarkersPerPlayer()
+                        );
+                    }
                     break;
                 case "admin_hide_players":
                      if (val != null) {

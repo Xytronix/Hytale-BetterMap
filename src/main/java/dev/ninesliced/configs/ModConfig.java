@@ -44,6 +44,8 @@ public class ModConfig {
     private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
     private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
+    private int maxPersonalMarkersPerPlayer = -1;
+    private int maxSharedMarkersPerPlayer = -1;
     
     private boolean caveModeEnabled = true;
     private int caveModeLayerSize = 5;
@@ -250,6 +252,18 @@ public class ModConfig {
 
                     if (jsonObject.has("allowedWorlds") && loaded.allowedWorlds != null) {
                         this.allowedWorlds = loaded.allowedWorlds;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("maxPersonalMarkersPerPlayer")) {
+                        this.maxPersonalMarkersPerPlayer = loaded.maxPersonalMarkersPerPlayer;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("maxSharedMarkersPerPlayer")) {
+                        this.maxSharedMarkersPerPlayer = loaded.maxSharedMarkersPerPlayer;
                     } else {
                         needsSave = true;
                     }
@@ -468,6 +482,40 @@ public class ModConfig {
      */
     public void setAutoSaveInterval(int autoSaveInterval) {
         this.autoSaveInterval = autoSaveInterval;
+        save();
+    }
+
+    /**
+     * Gets the max personal markers per player override.
+     * Use -1 to follow Hytale defaults.
+     */
+    public int getMaxPersonalMarkersPerPlayer() {
+        return maxPersonalMarkersPerPlayer;
+    }
+
+    /**
+     * Gets the max shared markers per player override.
+     * Use -1 to follow Hytale defaults.
+     */
+    public int getMaxSharedMarkersPerPlayer() {
+        return maxSharedMarkersPerPlayer;
+    }
+
+    /**
+     * Sets the max personal markers per player override and saves config.
+     * Use -1 to follow Hytale defaults.
+     */
+    public void setMaxPersonalMarkersPerPlayer(int maxPersonalMarkersPerPlayer) {
+        this.maxPersonalMarkersPerPlayer = Math.max(-1, maxPersonalMarkersPerPlayer);
+        save();
+    }
+
+    /**
+     * Sets the max shared markers per player override and saves config.
+     * Use -1 to follow Hytale defaults.
+     */
+    public void setMaxSharedMarkersPerPlayer(int maxSharedMarkersPerPlayer) {
+        this.maxSharedMarkersPerPlayer = Math.max(-1, maxSharedMarkersPerPlayer);
         save();
     }
 

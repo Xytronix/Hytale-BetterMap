@@ -30,11 +30,11 @@ public class ConfigCommand extends AbstractCommandCollection {
         this.addSubCommand(new HideUnexploredWarpsCommand());
         this.addSubCommand(new HideAllPoiCommand());
         this.addSubCommand(new HideUnexploredPoiCommand());
-        this.addSubCommand(new WaypointTeleportCommand());
         this.addSubCommand(new MarkerTeleportCommand());
         this.addSubCommand(new TrackWorldCommand());
         this.addSubCommand(new UntrackWorldCommand());
         this.addSubCommand(new AutoSaveIntervalCommand());
+        this.addSubCommand(new MarkerLimitCommand());
         this.addSubCommand(new WorldBorderToggleCommand());
         this.addSubCommand(new WorldBorderRadiusCommand());
         this.addSubCommand(new WorldBorderOffsetCommand());

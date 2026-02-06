@@ -19,6 +19,7 @@ import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.WaypointLimitUtil;
 import dev.ninesliced.BetterMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,7 +36,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     private static final Color[] AVAILABLE_TINTS = {
         new Color((byte) -1, (byte) -1, (byte) -1),   // White #FFFFFF
         new Color((byte) -1, (byte) 68, (byte) 68),   // Red #FF4444
-        new Color((byte) 68, (byte) -1, (byte) 68),   // Green #44FF44
+        new Color((byte) 1, (byte) -20, (byte) 126),   // Green #01EC7E
         new Color((byte) 68, (byte) 68, (byte) -1),   // Blue #4444FF
         new Color((byte) -1, (byte) -1, (byte) 68),   // Yellow #FFFF44
         new Color((byte) -1, (byte) 68, (byte) -1),   // Magenta #FF44FF
@@ -52,6 +53,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     private String inputZ = "0.00";
     private int selectedIconIndex = 0;
     private int selectedTintIndex = 0;
+    private String errorMessage = null;
     
     private boolean initialized = false;
 
@@ -126,6 +128,9 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         if (canShared) {
             ui.set("#GlobalCheckbox.Value", this.shared);
         }
+
+        ui.set("#ErrorLabel.Text", errorMessage != null ? errorMessage : "");
+        ui.set("#ErrorLabel.Visible", errorMessage != null && !errorMessage.isBlank());
 
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#NameInput",  
             new EventData().put(EditData.KEY_NAME_INPUT, "#NameInput.Value"), false);
@@ -249,6 +254,14 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                 if (targetId != null) {
                     UserMapMarker existing = WaypointManager.getMarker(player, targetId);
                     boolean wasShared = WaypointManager.isSharedId(targetId);
+
+                    if (existing != null && wantsShared != wasShared) {
+                        String limitError = WaypointLimitUtil.getCreationError(player, wantsShared);
+                        if (limitError != null) {
+                            showError(ref, store, limitError);
+                            return;
+                        }
+                    }
                     
                     if (wantsShared != wasShared && existing != null) {
                         WaypointManager.removeMarker(player, targetId);
@@ -257,6 +270,11 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                         WaypointManager.updateMarker(player, targetId, newName, selectedIcon, x, z, selectedTint);
                     }
                 } else {
+                    String limitError = WaypointLimitUtil.getCreationError(player, wantsShared);
+                    if (limitError != null) {
+                        showError(ref, store, limitError);
+                        return;
+                    }
                     WaypointManager.addMarker(player, newName, selectedIcon, x, z, selectedTint, wantsShared);
                 }
                 
@@ -285,32 +303,27 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         int r = tint.red & 0xFF;
         int g = tint.green & 0xFF;
         int b = tint.blue & 0xFF;
-        float[] inputHsl = rgbToHsl(r, g, b);
-        
+
         int closestIndex = 0;
-        float closestDistance = Float.MAX_VALUE;
-        
+        int closestDistance = Integer.MAX_VALUE;
+
         for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
             Color t = AVAILABLE_TINTS[i];
             int tr = t.red & 0xFF;
             int tg = t.green & 0xFF;
             int tb = t.blue & 0xFF;
-            float[] targetHsl = rgbToHsl(tr, tg, tb);
-            
-            float hueDiff = Math.abs(inputHsl[0] - targetHsl[0]);
-            if (hueDiff > 0.5f) hueDiff = 1.0f - hueDiff;
-            
-            float satDiff = Math.abs(inputHsl[1] - targetHsl[1]);
-            float litDiff = Math.abs(inputHsl[2] - targetHsl[2]);
-            
-            float distance = hueDiff * 3.0f + satDiff * 1.0f + litDiff * 0.5f;
-            
+
+            int dr = r - tr;
+            int dg = g - tg;
+            int db = b - tb;
+            int distance = dr * dr + dg * dg + db * db;
+
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestIndex = i;
             }
         }
-        
+
         return closestIndex;
     }
     
@@ -379,6 +392,15 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         ui.set("#InputX.Value", this.inputX);
         ui.set("#InputZ.Value", this.inputZ);
         
+        sendUpdate(ui, events, false);
+    }
+
+    private void showError(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull String message) {
+        this.errorMessage = message;
+        UICommandBuilder ui = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
+        ui.set("#ErrorLabel.Text", message);
+        ui.set("#ErrorLabel.Visible", true);
         sendUpdate(ui, events, false);
     }
 

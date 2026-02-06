@@ -292,6 +292,35 @@ $C.@PageOverlay {
           Group {
             LayoutMode: Left;
             Anchor: (Height: 32, Top: 16);
+            Background: #7a5c4c(0.15);
+            Padding: (Left: 10);
+
+            Label {
+              Text: "Waypoint Limits";
+              Style: (FontSize: 18, TextColor: #7a5c4c, RenderBold: true);
+            }
+          }
+
+          @SectionCard {
+            Anchor: (Top: 8);
+            Background: #2a231f(0.6);
+            OutlineColor: #5a4a3a(0.5);
+
+            @FieldRow {
+              Label { Text: "Max Personal Waypoints"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #AdminMaxPersonalMarkers { Anchor: (Width: 120, Height: 28); }
+            }
+
+            @FieldRow {
+              Anchor: (Top: 4);
+              Label { Text: "Max Shared Waypoints"; Style: @FieldLabelStyle; FlexWeight: 1; }
+              $C.@NumberField #AdminMaxSharedMarkers { Anchor: (Width: 120, Height: 28); }
+            }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 32, Top: 16);
             Background: #4a9c4c(0.15);
             Padding: (Left: 10);
 

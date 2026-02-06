@@ -193,7 +193,7 @@ $C.@PageOverlay {
           Anchor: (Width: 40, Height: 40);
           Panel { Anchor: (Full: 0); Background: #2a2a2a; }
           Panel #Color2Selected { Anchor: (Full: 0); Background: #4a6a9a; Visible: false; }
-          Panel #Color2Preview { Anchor: (Width: 28, Height: 28); Background: #44FF44; }
+          Panel #Color2Preview { Anchor: (Width: 28, Height: 28); Background: #01EC7E; }
           TextButton #Color2 { Anchor: (Full: 0); Style: @ColorBtn; }
         }
         Panel { Anchor: (Width: 6, Height: 1); }
@@ -252,6 +252,13 @@ $C.@PageOverlay {
           Style: (FontSize: 14, TextColor: #d3d6db);
           Text: "Shared waypoint (visible to everyone)";
         }
+      }
+
+      Label #ErrorLabel {
+        Anchor: (Top: 8, Height: 24);
+        Text: "";
+        Style: (FontSize: 13, TextColor: #ff4a4a, RenderBold: true);
+        Visible: false;
       }
 
       Group #ActionRow {
