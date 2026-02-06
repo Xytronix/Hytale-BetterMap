@@ -1,0 +1,443 @@
+$C = "../../Common.ui";
+
+@ParamNameStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #8cbae8,
+  RenderBold: true,
+  Wrap: true
+);
+
+@ParamDescStyle = LabelStyle(
+  FontSize: 13,
+  TextColor: #a0b0c0,
+  Wrap: true
+);
+
+@CategoryBtnStyle = TextButtonStyle(
+  Default: (LabelStyle: (FontSize: 16, TextColor: #c8b86c, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center), Background: #1a2533(0.5)),
+  Hovered: (LabelStyle: (FontSize: 16, TextColor: #ffe090, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center), Background: #2a3a50(0.7)),
+  Pressed: (LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center), Background: #3a4a60(0.8)),
+  Sounds: $C.@ButtonSounds
+);
+
+@AdminCategoryBtnStyle = TextButtonStyle(
+  Default: (LabelStyle: (FontSize: 16, TextColor: #e07070, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center), Background: #261a1a(0.5)),
+  Hovered: (LabelStyle: (FontSize: 16, TextColor: #ff9090, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center), Background: #3a2020(0.7)),
+  Pressed: (LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center), Background: #4a2a2a(0.8)),
+  Sounds: $C.@ButtonSounds
+);
+
+@SectionCard = Group {
+  LayoutMode: Top;
+  Padding: (Full: 10);
+  Background: #0d1520(0.5);
+  OutlineColor: #2a3a4a(0.3);
+  OutlineSize: 1;
+};
+
+@ParamRow = Group {
+  LayoutMode: Top;
+  Padding: (Full: 8);
+  Anchor: (Top: 4);
+  Background: #0a1018(0.5);
+  OutlineColor: #1a2a3a(0.3);
+  OutlineSize: 1;
+};
+
+@NoteBox = Group {
+  Anchor: (Top: 8);
+  Padding: (Full: 6);
+  Background: #332200(0.4);
+  OutlineColor: #665500(0.3);
+  OutlineSize: 1;
+  LayoutMode: Top;
+};
+
+$C.@PageOverlay {
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 700, Height: 700);
+
+    #Title {
+      $C.@Title {
+        @Text = "BetterMap Help";
+      }
+
+      TextButton #BackBtn {
+        Anchor: (Left: 12, Top: 4, Width: 80, Height: 24);
+        Padding: (Left: 8, Top: 2);
+        Text: "Back";
+        Style: TextButtonStyle(
+          Default: (LabelStyle: (FontSize: 14, TextColor: #93844c, RenderBold: true)),
+          Sounds: $C.@ButtonSounds
+        );
+        Background: #000000(0.13);
+      }
+
+      TextButton #NeedHelpBtn {
+        Anchor: (Right: 12, Top: 4, Width: 140, Height: 24);
+        Padding: (Left: 8, Top: 2);
+        Text: "Need more help?";
+        Style: TextButtonStyle(
+          Default: (LabelStyle: (FontSize: 13, TextColor: #93844c, RenderBold: true)),
+          Hovered: (LabelStyle: (FontSize: 13, TextColor: #a4955f, RenderBold: true)),
+          Pressed: (LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true)),
+          Sounds: $C.@ButtonSounds
+        );
+        Background: #000000(0.13);
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+
+      Group #HelpScrollArea {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group {
+          LayoutMode: Top;
+          Padding: (Right: 8);
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 34);
+            Background: #2a6090(0.2);
+            Padding: (Left: 12);
+
+            Label {
+              Text: "Player Settings";
+              Style: (FontSize: 20, TextColor: #5a9fd4, RenderBold: true, VerticalAlignment: Center);
+            }
+          }
+
+          TextButton #CatMapSettings {
+            Anchor: (Height: 38, Top: 6);
+            Padding: (Left: 14);
+            Text: "Map Zoom Settings";
+            Style: @CategoryBtnStyle;
+          }
+
+          Group #DetailMapSettings {
+            Visible: false;
+            LayoutMode: Top;
+            Anchor: (Top: 2);
+
+            @SectionCard {
+              @ParamRow {
+                Label { Text: "Min Scale (Max Zoom Out)"; Style: @ParamNameStyle; }
+                Label { Text: "Controls how far you can zoom out on the map. The lower the value, the further you can zoom out, allowing you to see a larger area. Cannot be set below 2.0 to prevent rendering issues. Default: 10."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+              }
+              @ParamRow {
+                Label { Text: "Max Scale (Max Zoom In)"; Style: @ParamNameStyle; }
+                Label { Text: "Controls how far you can zoom in on the map. The higher the value, the closer you can zoom in for more detail. Must be larger than your Min Scale value. Default: 256."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+              }
+            }
+          }
+
+          TextButton #CatLocationHud {
+            Anchor: (Height: 38, Top: 6);
+            Padding: (Left: 14);
+            Text: "Location HUD";
+            Style: @CategoryBtnStyle;
+          }
+
+          Group #DetailLocationHud {
+            Visible: false;
+            LayoutMode: Top;
+            Anchor: (Top: 2);
+
+            @SectionCard {
+              @ParamRow {
+                Label { Text: "Enable Location HUD"; Style: @ParamNameStyle; }
+                Label { Text: "Toggles the on-screen coordinate display that shows your current X, Y, Z position. Only available if the server admin has enabled this feature globally."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+              }
+              @ParamRow {
+                Label { Text: "HUD Position"; Style: @ParamNameStyle; }
+                Label { Text: "Choose where the location overlay appears on your screen. Options: Top Left, Top Right, Bottom Left, Bottom Right. Your personal preference overrides the server default."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+              }
+              @NoteBox {
+                Label { Text: "If you use multiple HUD mods, install the MultipleHUD compatibility mod to prevent display conflicts."; Style: (FontSize: 12, TextColor: #ffaa44, Wrap: true); }
+              }
+            }
+          }
+
+          TextButton #CatPlayerCaveMode {
+            Anchor: (Height: 38, Top: 6);
+            Padding: (Left: 14);
+            Text: "Cave Mode (Personal)";
+            Style: @CategoryBtnStyle;
+          }
+
+          Group #DetailPlayerCaveMode {
+            Visible: false;
+            LayoutMode: Top;
+            Anchor: (Top: 2);
+
+            @SectionCard {
+              @ParamRow {
+                Label { Text: "Enable Cave Mode (Personal)"; Style: @ParamNameStyle; }
+                Label { Text: "Toggle your personal cave mode preference. When enabled, the map switches to a cave layer view when you go underground, showing only blocks around your Y level. Only works if the server admin has enabled cave mode globally."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+              }
+            }
+          }
+
+          Group #AdminCategoriesSection {
+            LayoutMode: Top;
+            Anchor: (Top: 16);
+            Visible: false;
+
+            Group {
+              LayoutMode: Left;
+              Anchor: (Height: 34);
+              Background: #902a2a(0.2);
+              Padding: (Left: 12);
+
+              Label {
+                Text: "Admin Settings";
+                Style: (FontSize: 20, TextColor: #d45a5a, RenderBold: true, VerticalAlignment: Center);
+              }
+            }
+
+            TextButton #CatGlobalMap {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "Global Map Settings";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailGlobalMap {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Exploration Radius"; Style: @ParamNameStyle; }
+                  Label { Text: "The number of chunks around each player that get explored and rendered on the map as they move. Higher values reveal more area per tick but increase server load. Default: 16 chunks."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Map Quality *"; Style: @ParamNameStyle; }
+                  Label { Text: "Controls the resolution of map chunk textures. LOW: 8x8 px (up to 30,000 chunks). MEDIUM: 16x16 px (up to 10,000 chunks). HIGH: 32x32 px (up to 3,000 chunks). Higher quality = sharper visuals but more memory. Requires server restart to apply."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Max Chunks To Load *"; Style: @ParamNameStyle; }
+                  Label { Text: "Maximum number of explored chunks kept loaded in memory at once. Chunks nearest to the player are prioritized. Automatically capped by your Map Quality setting. Requires server restart."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Global Min Scale (Zoom Out Limit)"; Style: @ParamNameStyle; }
+                  Label { Text: "Server-wide minimum scale value. The lower this value, the further all players can zoom out on the map. Individual player Min Scale cannot go below this. Cannot be set below 2.0. Default: 10."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Global Max Scale (Zoom In Limit)"; Style: @ParamNameStyle; }
+                  Label { Text: "Server-wide maximum scale value. The higher this value, the closer all players can zoom in on the map. Individual player Max Scale cannot exceed this. Default: 256."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Auto Save Interval (min)"; Style: @ParamNameStyle; }
+                  Label { Text: "How often (in minutes) the server auto-saves all exploration data to disk. Protects against data loss from crashes. Default: 5 minutes. Set to 0 to disable auto-save."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+
+            TextButton #CatFeatureToggles {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "Feature Toggles";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailFeatureToggles {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Allow Waypoint Teleports"; Style: @ParamNameStyle; }
+                  Label { Text: "When enabled, players can teleport directly to their saved waypoints from the waypoint menu. Disable to make waypoints only serve as visual markers on the map."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Share All Exploration"; Style: @ParamNameStyle; }
+                  Label { Text: "Creates a linked map shared by all players. Any area explored by one player becomes visible for everyone. Useful for cooperative servers. When disabled, each player has their own separate exploration data."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Enable Location HUD (Global)"; Style: @ParamNameStyle; }
+                  Label { Text: "Master toggle for the coordinate overlay feature server-wide. When disabled, no player can use the Location HUD regardless of their personal settings."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Default HUD Position"; Style: @ParamNameStyle; }
+                  Label { Text: "Sets the default screen position for the Location HUD for all players. Players can override this in their personal settings. Options: Top Left, Top Right, Bottom Left, Bottom Right."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Debug Mode"; Style: @ParamNameStyle; }
+                  Label { Text: "Enables detailed logging for all BetterMap systems in the server console. Useful for troubleshooting issues but generates large amounts of log output. Keep disabled in production."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+
+            TextButton #CatRadar {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "Player Radar";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailRadar {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Enable Radar"; Style: @ParamNameStyle; }
+                  Label { Text: "Toggles the player radar system. When enabled, players can see other players' positions on the compass and map. Enabled by default."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Radar Range"; Style: @ParamNameStyle; }
+                  Label { Text: "Maximum distance (in blocks) at which other players appear on the radar. Set to -1 for infinite range (all players always visible regardless of distance). Default: -1."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+
+            TextButton #CatHideMarkers {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "Hide Markers";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailHideMarkers {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Hide Players"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides all player cursors and markers from the world map. Players will not see each other's positions. Does not affect the compass radar."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide Other Warps"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides warp markers placed by other players from the map. Your own warps remain visible."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide Unexplored Warps"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides warp markers located in areas the player has not yet explored. Enabled by default to avoid spoiling undiscovered locations."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide All POIs"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides all Point of Interest markers from the map entirely. POIs are special locations defined by the game world (villages, dungeons, etc.)."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide Unexplored POIs"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides POI markers in areas the player has not explored yet. Enabled by default to encourage organic discovery of locations."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hidden POI Names"; Style: @ParamNameStyle; }
+                  Label { Text: "A comma-separated list of specific POI type names to hide from the map. Use this to selectively hide certain POI types while keeping others visible (e.g. 'Village, Dungeon')."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+
+            TextButton #CatWorldSettings {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "World Settings";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailWorldSettings {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Allowed Worlds *"; Style: @ParamNameStyle; }
+                  Label { Text: "A comma-separated list of world names where BetterMap is active. The mod only tracks exploration in these worlds. Default: 'default, world'. Use the 'Add Current World' button to quickly add whatever world you are in. Requires restart."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Add Current World"; Style: @ParamNameStyle; }
+                  Label { Text: "Adds the world you are currently in to the allowed worlds list. Useful for hosting providers (like Apex) that use non-standard world names."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+
+            TextButton #CatCaveMode {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "Cave Mode (Global)";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailCaveMode {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Enable Cave Mode (Global)"; Style: @ParamNameStyle; }
+                  Label { Text: "Master toggle for the cave mode system. When enabled, players who go underground see a cave layer map instead of the surface. Individual players can still toggle it off in their personal settings."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Discover Surface While Underground"; Style: @ParamNameStyle; }
+                  Label { Text: "When enabled, walking underground also reveals the surface map above you. When disabled, underground exploration only reveals cave layers, not the surface."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Cave Fog of War"; Style: @ParamNameStyle; }
+                  Label { Text: "When enabled, previously explored surface chunks are hidden while you are underground. Only your explored cave layer is visible. Creates a more immersive underground experience."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Layer Size (Y blocks)"; Style: @ParamNameStyle; }
+                  Label { Text: "The vertical height (in blocks) of each cave map layer. Smaller values give more precise cave mapping but create more layers. Range: 1-20. Default: 5."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Underground Threshold (Y)"; Style: @ParamNameStyle; }
+                  Label { Text: "The Y coordinate below which a player is considered underground and cave mode activates. Range: 0-319. Default: 100. Adjust based on your world's typical terrain height."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Cave Radius (chunks)"; Style: @ParamNameStyle; }
+                  Label { Text: "The exploration radius (in chunks) used when mapping caves underground. Range: 1-16. Default: 4. Smaller values improve performance but reveal less area."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+
+            TextButton #CatWorldBorder {
+              Anchor: (Height: 38, Top: 6);
+              Padding: (Left: 14);
+              Text: "World Border";
+              Style: @AdminCategoryBtnStyle;
+            }
+
+            Group #DetailWorldBorder {
+              Visible: false;
+              LayoutMode: Top;
+              Anchor: (Top: 2, Bottom: 16);
+
+              @SectionCard {
+                @ParamRow {
+                  Label { Text: "Enable World Border Visualization"; Style: @ParamNameStyle; }
+                  Label { Text: "Toggles the display of a world border on the map. When enabled, a visual boundary is drawn showing the allowed play area."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Border Radius (blocks)"; Style: @ParamNameStyle; }
+                  Label { Text: "The radius of the world border in blocks, measured from the center offset point. Default: 5000 blocks."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Border Offset X"; Style: @ParamNameStyle; }
+                  Label { Text: "Shifts the center of the world border along the X axis. Default: 0. Use this if your play area is not centered on X=0."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Border Offset Z"; Style: @ParamNameStyle; }
+                  Label { Text: "Shifts the center of the world border along the Z axis. Default: 0. Use this if your play area is not centered on Z=0."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

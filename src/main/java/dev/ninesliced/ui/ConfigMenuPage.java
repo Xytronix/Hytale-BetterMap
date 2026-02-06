@@ -93,10 +93,12 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         bindClick(events, "#PlayerViewBtn", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
         bindClick(events, "#OpenWaypointsBtn", "open_waypoints");
+        bindClick(events, "#HelpBtnPlayer", "open_help");
         bindClick(events, "#CloseBtn", "close_menu");
 
         if (isAdmin) {
              ui.set("#NavBar.Visible", true);
+             ui.set("#HelpBtnPlayer.Visible", false);
 
              ModConfig gConfig = ModConfig.getInstance();
 
@@ -168,6 +170,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#WorldBorderRadius", "admin_world_border_radius", BindingType.NUMBER);
              bindChange(events, "#WorldBorderOffsetX", "admin_world_border_offset_x", BindingType.NUMBER);
              bindChange(events, "#WorldBorderOffsetZ", "admin_world_border_offset_z", BindingType.NUMBER);
+
+             bindClick(events, "#HelpViewBtn", "open_help");
 
              bindChange(events, "#CaveModeEnabled", "admin_cavemode_enabled", BindingType.BOOLEAN);
              bindChange(events, "#DiscoverSurfaceUnderground", "admin_discover_surface", BindingType.BOOLEAN);
@@ -242,6 +246,10 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
             }
             case "open_waypoints" -> {
                 player.getPageManager().openCustomPage(ref, store, new WaypointMenuPage(playerRef));
+                return;
+            }
+            case "open_help" -> {
+                player.getPageManager().openCustomPage(ref, store, new HelpMenuPage(playerRef));
                 return;
             }
             case "close_menu" -> {
