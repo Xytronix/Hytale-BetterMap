@@ -115,6 +115,8 @@ public class WaypointManager {
 
     /**
      * Updates a marker's properties.
+     * When position changes, the marker is deleted and recreated with a new ID
+     * to ensure both map and compass update correctly.
      */
     public static boolean updateMarker(@Nonnull Player player, 
                                        @Nonnull String id, 
@@ -131,9 +133,33 @@ public class WaypointManager {
             return false;
         }
 
+        UserMapMarker existing = entry.marker;
+        
+=        boolean positionChanging = newX != null && newZ != null && 
+            (Math.abs(existing.getX() - newX) > 0.01f || Math.abs(existing.getZ() - newZ) > 0.01f);
+        
+        if (positionChanging) {
+            String finalName = (newName != null && !newName.trim().isEmpty()) ? newName.trim() : existing.getName();
+            String finalIcon = (newIcon != null && !newIcon.trim().isEmpty()) ? normalizeIcon(newIcon.trim()) : existing.getIcon();
+            Color finalTint = newTint != null ? newTint : existing.getColorTint();
+            
+            entry.store.removeUserMapMarker(id);
+            
+            UserMapMarker newMarker = new UserMapMarker();
+            newMarker.setId((entry.shared ? SHARED_ID_PREFIX : PERSONAL_ID_PREFIX) + UUID.randomUUID());
+            newMarker.setName(finalName);
+            newMarker.setIcon(finalIcon);
+            newMarker.setPosition(newX, newZ);
+            newMarker.setColorTint(finalTint);
+            newMarker.withCreatedByName(existing.getCreatedByName());
+            newMarker.withCreatedByUuid(existing.getCreatedByUuid());
+            
+            entry.store.addUserMapMarker(newMarker);
+            return true;
+        }
+        
         List<UserMapMarker> markers = new ArrayList<>(entry.store.getUserMapMarkers());
         boolean updated = false;
-        UserMapMarker updatedMarker = null;
         for (int i = 0; i < markers.size(); i++) {
             UserMapMarker m = markers.get(i);
             if (!id.equals(m.getId())) continue;
@@ -144,15 +170,11 @@ public class WaypointManager {
             if (newIcon != null && !newIcon.trim().isEmpty()) {
                 m.setIcon(normalizeIcon(newIcon.trim()));
             }
-            if (newX != null && newZ != null) {
-                m.setPosition(newX, newZ);
-            }
             if (newTint != null) {
                 m.setColorTint(newTint);
             }
 
             updated = true;
-            updatedMarker = m;
             break;
         }
 
@@ -160,83 +182,58 @@ public class WaypointManager {
             entry.store.setUserMapMarkers(markers);
             
             if (entry.shared) {
-                forceRefreshMarkerOnAllClients(world, id);
-                if (updatedMarker != null) {
-                    forceSendMarkerUpdateToAllClients(world, updatedMarker);
-                }
+                forceRemoveAndResyncMarkerForAllClients(world, id);
             } else {
-                forceRefreshMarkerOnClient(player, id);
-                if (updatedMarker != null) {
-                    forceSendMarkerUpdate(player, updatedMarker);
-                }
+                forceRemoveAndResyncMarker(player, id);
             }
         }
         return updated;
     }
     
     /**
-     * Forces a marker to be re-sent to the client by removing it from the tracker's sent cache.
+     * Forces a marker to be removed from client and server caches, then immediately re-synced.
+     * This is the key to updating both map AND compass - we fully remove the old marker,
+     * then the provider will re-add it fresh on the next tick.
      */
-    private static void forceRefreshMarkerOnClient(@Nonnull Player player, @Nonnull String markerId) {
+    private static void forceRemoveAndResyncMarker(@Nonnull Player player, @Nonnull String markerId) {
         try {
             var tracker = player.getWorldMapTracker();
             if (tracker == null) return;
 
             Object markerTrackerObj = ReflectionHelper.getFieldValueRecursive(tracker, "markerTracker");
-            if (markerTrackerObj instanceof MapMarkerTracker markerTracker) {
-                var sentMarkers = markerTracker.getSentMarkers();
-                if (sentMarkers != null) {
-                    sentMarkers.remove(markerId);
-                }
-                ReflectionHelper.setFieldValueRecursive(markerTracker, "smallMovementsTimer", 0.0f);
-                return;
+            if (!(markerTrackerObj instanceof MapMarkerTracker markerTracker)) return;
+            
+            var sentMarkers = markerTracker.getSentMarkers();
+            if (sentMarkers != null) {
+                sentMarkers.remove(markerId);
             }
-
-            try {
-                var sentMarkers = tracker.getSentMarkers();
-                if (sentMarkers != null) {
-                    sentMarkers.remove(markerId);
-                }
-            } catch (Exception ignored) {
-            }
+            
+            player.getPlayerConnection().writeNoCache(new UpdateWorldMap(
+                null, 
+                null, 
+                new String[]{markerId}
+            ));
+            
+            ReflectionHelper.setFieldValueRecursive(markerTracker, "smallMovementsTimer", 0.0f);
         } catch (Exception e) {
-        }
-    }
-
-    private static void forceSendMarkerUpdate(@Nonnull Player player, @Nonnull UserMapMarker marker) {
-        try {
-            MapMarker protocol = marker.toProtocolMarker();
-            player.getPlayerConnection().writeNoCache(new UpdateWorldMap(null, new MapMarker[]{protocol}, new String[]{marker.getId()}));
-        } catch (Exception ignored) {
+            LOGGER.warning("Failed to force marker resync: " + e.getMessage());
         }
     }
     
     /**
-     * Forces a shared marker to be re-sent to ALL clients in the world.
+     * Forces a shared marker to be removed and re-synced for ALL clients in the world.
      */
-    private static void forceRefreshMarkerOnAllClients(@Nonnull World world, @Nonnull String markerId) {
+    private static void forceRemoveAndResyncMarkerForAllClients(@Nonnull World world, @Nonnull String markerId) {
         try {
             for (PlayerRef worldPlayer : world.getPlayerRefs()) {
                 Holder<EntityStore> holder = worldPlayer.getHolder();
                 if (holder == null) continue;
                 Player player = holder.getComponent(Player.getComponentType());
                 if (player == null) continue;
-                forceRefreshMarkerOnClient(player, markerId);
+                forceRemoveAndResyncMarker(player, markerId);
             }
-        } catch (Exception _) {
-        }
-    }
-
-    private static void forceSendMarkerUpdateToAllClients(@Nonnull World world, @Nonnull UserMapMarker marker) {
-        try {
-            for (PlayerRef worldPlayer : world.getPlayerRefs()) {
-                Holder<EntityStore> holder = worldPlayer.getHolder();
-                if (holder == null) continue;
-                Player player = holder.getComponent(Player.getComponentType());
-                if (player == null) continue;
-                forceSendMarkerUpdate(player, marker);
-            }
-        } catch (Exception _) {
+        } catch (Exception e) {
+            LOGGER.warning("Failed to force marker resync for all clients: " + e.getMessage());
         }
     }
 
