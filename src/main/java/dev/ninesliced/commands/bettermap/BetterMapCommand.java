@@ -32,6 +32,7 @@ public class BetterMapCommand extends AbstractCommand {
 
         this.addSubCommand(new ConfigCommand());
         this.addSubCommand(new ReloadCommand());
+        this.addSubCommand(new HelpCommand());
         this.addSubCommand(new PlayerMinScaleCommand());
         this.addSubCommand(new PlayerMaxScaleCommand());
         this.addSubCommand(new PlayerLocationCommand());

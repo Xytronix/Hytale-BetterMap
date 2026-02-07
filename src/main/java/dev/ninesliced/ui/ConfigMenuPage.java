@@ -92,14 +92,17 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         bindChange(events, "#PlayerLocationPosition", "player_location_pos", BindingType.STRING);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
+        bindClick(events, "#PlayerViewBtnSelected", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
+        bindClick(events, "#AdminViewBtnSelected", "view_admin");
         bindClick(events, "#OpenWaypointsBtn", "open_waypoints");
-        bindClick(events, "#HelpBtnPlayer", "open_help");
+        bindClick(events, "#HelpViewBtn", "open_help");
+        bindClick(events, "#HelpViewBtnSelected", "open_help");
         bindClick(events, "#CloseBtn", "close_menu");
 
         if (isAdmin) {
-             ui.set("#NavBar.Visible", true);
-             ui.set("#HelpBtnPlayer.Visible", false);
+             ui.set("#AdminViewContainer.Visible", true);
+             ui.set("#AdminViewSpacer.Visible", true);
 
              ModConfig gConfig = ModConfig.getInstance();
 
@@ -179,8 +182,6 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#WorldBorderOffsetX", "admin_world_border_offset_x", BindingType.NUMBER);
              bindChange(events, "#WorldBorderOffsetZ", "admin_world_border_offset_z", BindingType.NUMBER);
 
-             bindClick(events, "#HelpViewBtn", "open_help");
-
              bindChange(events, "#CaveModeEnabled", "admin_cavemode_enabled", BindingType.BOOLEAN);
              bindChange(events, "#DiscoverSurfaceUnderground", "admin_discover_surface", BindingType.BOOLEAN);
              bindChange(events, "#CaveFogOfWar", "admin_cave_fog_of_war", BindingType.BOOLEAN);
@@ -241,6 +242,12 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
             case "view_player" -> {
                 ui.set("#PlayerView.Visible", true);
                 ui.set("#AdminView.Visible", false);
+                ui.set("#PlayerViewBtnContainer.Visible", false);
+                ui.set("#PlayerViewBtnSelectedContainer.Visible", true);
+                ui.set("#AdminViewBtnContainer.Visible", true);
+                ui.set("#AdminViewBtnSelectedContainer.Visible", false);
+                ui.set("#HelpViewBtnContainer.Visible", true);
+                ui.set("#HelpViewBtnSelectedContainer.Visible", false);
                 sendUpdate(ui, events, false);
                 return;
             }
@@ -248,6 +255,12 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                 if (PermissionsUtil.isAdmin(player)) {
                     ui.set("#PlayerView.Visible", false);
                     ui.set("#AdminView.Visible", true);
+                    ui.set("#PlayerViewBtnContainer.Visible", true);
+                    ui.set("#PlayerViewBtnSelectedContainer.Visible", false);
+                    ui.set("#AdminViewBtnContainer.Visible", false);
+                    ui.set("#AdminViewBtnSelectedContainer.Visible", true);
+                    ui.set("#HelpViewBtnContainer.Visible", true);
+                    ui.set("#HelpViewBtnSelectedContainer.Visible", false);
                     sendUpdate(ui, events, false);
                 }
                 return;

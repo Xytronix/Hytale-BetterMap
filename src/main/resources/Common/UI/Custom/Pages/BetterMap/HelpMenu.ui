@@ -155,7 +155,7 @@ $C.@PageOverlay {
               }
               @ParamRow {
                 Label { Text: "HUD Position"; Style: @ParamNameStyle; }
-                Label { Text: "Choose where the location overlay appears on your screen. Options: Top Left, Top Right, Bottom Left, Bottom Right. Your personal preference overrides the server default."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                Label { Text: "Choose where the location overlay appears on your screen. Options: Top Left, Top Centre, Top Right, Bottom Left, Bottom Centre, Bottom Right. Your personal preference overrides the server default."; Style: @ParamDescStyle; Anchor: (Top: 4); }
               }
               @NoteBox {
                 Label { Text: "If you use multiple HUD mods, install the MultipleHUD compatibility mod to prevent display conflicts."; Style: (FontSize: 12, TextColor: #ffaa44, Wrap: true); }
@@ -219,7 +219,7 @@ $C.@PageOverlay {
                 }
                 @ParamRow {
                   Label { Text: "Map Quality"; Style: @ParamNameStyle; }
-                  Label { Text: "Controls the resolution of map chunk textures. LOW: 8x8 px (up to 30,000 chunks). MEDIUM: 16x16 px (up to 10,000 chunks). HIGH: 32x32 px (up to 3,000 chunks). Higher quality = sharper visuals but more memory. Requires server restart to apply."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                  Label { Text: "Controls the resolution of map chunk textures. LOW: 8x8 px (up to 80,000 chunks). MEDIUM: 16x16 px (up to 25,000 chunks). HIGH (Hytale default map quality): 32x32 px (up to 8,000 chunks). Higher quality = sharper visuals but more memory. Requires server restart to apply."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
                   Label { Text: "Max Chunks To Load"; Style: @ParamNameStyle; }
@@ -267,7 +267,7 @@ $C.@PageOverlay {
                 }
                 @ParamRow {
                   Label { Text: "Default HUD Position"; Style: @ParamNameStyle; }
-                  Label { Text: "Sets the default screen position for the Location HUD for all players. Players can override this in their personal settings. Options: Top Left, Top Right, Bottom Left, Bottom Right."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                  Label { Text: "Sets the default screen position for the Location HUD for all players. Players can override this in their personal settings. Options: Top Left, Top Centre, Top Right, Bottom Left, Bottom Centre, Bottom Right."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
                   Label { Text: "Debug Mode"; Style: @ParamNameStyle; }

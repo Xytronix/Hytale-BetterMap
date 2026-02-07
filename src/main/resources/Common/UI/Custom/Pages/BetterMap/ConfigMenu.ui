@@ -39,6 +39,22 @@ $C = "../../Common.ui";
   Sounds: $C.@ButtonSounds
 );
 
+@NavButtonSelectedStyle = TextButtonStyle(
+  Default: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: $C.@DefaultSquareButtonPressedBackground, LabelStyle: (FontSize: 13, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds
+);
+
+@NavButtonSelectedContainer = Group {
+  LayoutMode: Left;
+};
+
+@NavButtonContainer = Group {
+  LayoutMode: Left;
+  Background: #1a2533(0.5);
+};
+
 @SectionCard = Group {
   LayoutMode: Top;
   Padding: (Full: 12);
@@ -88,31 +104,92 @@ $C.@PageOverlay {
         LayoutMode: Left;
         Anchor: (Height: 40);
         Padding: (Bottom: 10);
-        Visible: false;
+        Visible: true;
 
-        TextButton #PlayerViewBtn {
+        Group {
           FlexWeight: 1;
           Anchor: (Height: 32);
-          Text: "PLAYER SETTINGS";
-          Style: @NavButtonStyle;
+
+          @NavButtonContainer #PlayerViewBtnContainer {
+            Anchor: (Full: 0);
+            Visible: false;
+
+            TextButton #PlayerViewBtn {
+              FlexWeight: 1;
+              Text: "PLAYER SETTINGS";
+              Style: @NavButtonStyle;
+            }
+          }
+
+          @NavButtonSelectedContainer #PlayerViewBtnSelectedContainer {
+            Anchor: (Full: 0);
+            Visible: true;
+
+            TextButton #PlayerViewBtnSelected {
+              FlexWeight: 1;
+              Text: "PLAYER SETTINGS";
+              Style: @NavButtonSelectedStyle;
+            }
+          }
+        }
+
+        Group #AdminViewSpacer { Anchor: (Width: 10); Visible: false; }
+
+        Group #AdminViewContainer {
+          FlexWeight: 1;
+          Anchor: (Height: 32);
+          Visible: false;
+
+          @NavButtonContainer #AdminViewBtnContainer {
+            Anchor: (Full: 0);
+            Visible: true;
+
+            TextButton #AdminViewBtn {
+              FlexWeight: 1;
+              Text: "ADMIN SETTINGS";
+              Style: @NavButtonStyle;
+            }
+          }
+
+          @NavButtonSelectedContainer #AdminViewBtnSelectedContainer {
+            Anchor: (Full: 0);
+            Visible: false;
+
+            TextButton #AdminViewBtnSelected {
+              FlexWeight: 1;
+              Text: "ADMIN SETTINGS";
+              Style: @NavButtonSelectedStyle;
+            }
+          }
         }
 
         Group { Anchor: (Width: 10); }
 
-        TextButton #AdminViewBtn {
+        Group {
           FlexWeight: 1;
           Anchor: (Height: 32);
-          Text: "ADMIN SETTINGS";
-          Style: @NavButtonStyle;
-        }
 
-        Group { Anchor: (Width: 10); }
+          @NavButtonContainer #HelpViewBtnContainer {
+            Anchor: (Full: 0);
+            Visible: true;
 
-        TextButton #HelpViewBtn {
-          FlexWeight: 1;
-          Anchor: (Height: 32);
-          Text: "HELP";
-          Style: @NavButtonStyle;
+            TextButton #HelpViewBtn {
+              FlexWeight: 1;
+              Text: "HELP";
+              Style: @NavButtonStyle;
+            }
+          }
+
+          @NavButtonSelectedContainer #HelpViewBtnSelectedContainer {
+            Anchor: (Full: 0);
+            Visible: false;
+
+            TextButton #HelpViewBtnSelected {
+              FlexWeight: 1;
+              Text: "HELP";
+              Style: @NavButtonSelectedStyle;
+            }
+          }
         }
       }
 
@@ -214,12 +291,6 @@ $C.@PageOverlay {
           TextButton #OpenWaypointsBtn {
             Anchor: (Height: 32, Top: 8);
             Text: "OPEN WAYPOINT MENU";
-            Style: @NavButtonStyle;
-          }
-
-          TextButton #HelpBtnPlayer {
-            Anchor: (Height: 32, Top: 8);
-            Text: "HELP & DOCUMENTATION";
             Style: @NavButtonStyle;
           }
         }
