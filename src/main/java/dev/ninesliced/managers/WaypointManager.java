@@ -135,7 +135,7 @@ public class WaypointManager {
 
         UserMapMarker existing = entry.marker;
         
-=        boolean positionChanging = newX != null && newZ != null && 
+        boolean positionChanging = newX != null && newZ != null && 
             (Math.abs(existing.getX() - newX) > 0.01f || Math.abs(existing.getZ() - newZ) > 0.01f);
         
         if (positionChanging) {
