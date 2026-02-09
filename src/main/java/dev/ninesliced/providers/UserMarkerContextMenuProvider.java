@@ -5,17 +5,27 @@ import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.PlacedByMarkerComponent;
 import com.hypixel.hytale.protocol.packets.worldmap.TintComponent;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
+import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.ReflectionHelper;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * Custom marker provider that adds "Edit" context menu option to user map markers.
@@ -25,27 +35,40 @@ import javax.annotation.Nonnull;
 public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProvider {
     
     public static final UserMarkerContextMenuProvider INSTANCE = new UserMarkerContextMenuProvider();
+    private static final Logger LOGGER = Logger.getLogger(UserMarkerContextMenuProvider.class.getName());
+    private static final Map<UUID, Boolean> TELEPORT_MENU_STATE = new ConcurrentHashMap<>();
     
     private UserMarkerContextMenuProvider() {
     }
     
     @Override
     public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
+        boolean allowWaypointTeleport = ModConfig.getInstance().isAllowWaypointTeleports();
+        boolean hasTeleportPermission = PermissionsUtil.canTeleport(player);
+        boolean hasNativeTeleport = player.getWorldMapTracker() != null && player.getWorldMapTracker().isAllowTeleportToMarkers();
+        boolean showTeleport = allowWaypointTeleport && hasTeleportPermission && !hasNativeTeleport;
+
+        UUID playerId = ((CommandSender) player).getUuid();
+        Boolean previous = TELEPORT_MENU_STATE.put(playerId, showTeleport);
+        if (previous != null && previous != showTeleport) {
+            forceResyncAllMarkers(player);
+        }
+
         PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
         for (UserMapMarker marker : perWorldData.getUserMapMarkers()) {
-            collector.add(buildMarkerWithContextMenu(marker));
+            collector.add(buildMarkerWithContextMenu(marker, showTeleport));
         }
         
         WorldMarkersResource worldMarkersResource = world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
         for (UserMapMarker marker : worldMarkersResource.getUserMapMarkers()) {
-            collector.add(buildMarkerWithContextMenu(marker));
+            collector.add(buildMarkerWithContextMenu(marker, showTeleport));
         }
     }
     
     /**
      * Builds a MapMarker with context menu options (Edit).
      */
-    private MapMarker buildMarkerWithContextMenu(@Nonnull UserMapMarker marker) {
+    private MapMarker buildMarkerWithContextMenu(@Nonnull UserMapMarker marker, boolean showTeleport) {
         MapMarkerBuilder builder = new MapMarkerBuilder(
             marker.getId(),
             marker.getIcon(),
@@ -67,8 +90,37 @@ public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProv
             ));
         }
         
+        if (showTeleport) {
+            builder.withContextMenuItem(new ContextMenuItem("Teleport", "bettermap waypoint teleport " + marker.getId()));
+        }
         builder.withContextMenuItem(new ContextMenuItem("Edit", "bettermap waypoint edit " + marker.getId()));
         
         return builder.build();
+    }
+
+    private void forceResyncAllMarkers(@Nonnull Player player) {
+        try {
+            var tracker = player.getWorldMapTracker();
+            if (tracker == null) return;
+
+            Object markerTrackerObj = ReflectionHelper.getFieldValueRecursive(tracker, "markerTracker");
+            if (!(markerTrackerObj instanceof MapMarkerTracker markerTracker)) return;
+
+            var sentMarkers = markerTracker.getSentMarkers();
+            if (sentMarkers == null || sentMarkers.isEmpty()) return;
+
+            String[] ids = sentMarkers.keySet().toArray(String[]::new);
+            sentMarkers.clear();
+
+            player.getPlayerConnection().writeNoCache(new UpdateWorldMap(
+                null,
+                null,
+                ids
+            ));
+
+            ReflectionHelper.setFieldValueRecursive(markerTracker, "smallMovementsTimer", 0.0f);
+        } catch (Exception e) {
+            LOGGER.warning("Failed to refresh marker context menu: " + e.getMessage());
+        }
     }
 }

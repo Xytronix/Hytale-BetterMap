@@ -4,6 +4,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -14,6 +16,8 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.configs.ModConfig;
@@ -58,14 +62,30 @@ public class WaypointTeleportCommand extends AbstractPlayerCommand {
         }
 
         TransformComponent transform = player.getTransformComponent();
-        double currentY = transform != null ? transform.getPosition().y : 64.0;
-
-        Vector3d destination = new Vector3d(marker.getX(), currentY, marker.getZ());
+        double fallbackY = transform != null ? transform.getPosition().y : 64.0;
         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
-        Teleport teleport = new Teleport(destination, currentRotation);
 
-        world.execute(() -> store.addComponent(ref, Teleport.getComponentType(), teleport));
-        String markerName = marker.getName() != null ? marker.getName() : target;
-        context.sendMessage(Message.raw("Teleported to waypoint: " + markerName));
+        int blockX = MathUtil.floor(marker.getX());
+        int blockZ = MathUtil.floor(marker.getZ());
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
+
+        world.getChunkStore().getChunkReferenceAsync(chunkIndex).thenAcceptAsync(chunkRef -> {
+            double destinationY = fallbackY;
+            try {
+                BlockChunk blockChunk = world.getChunkStore().getStore()
+                    .getComponent((Ref<ChunkStore>) chunkRef, BlockChunk.getComponentType());
+                if (blockChunk != null) {
+                    destinationY = blockChunk.getHeight(blockX, blockZ) + 1.0;
+                }
+            } catch (Exception ignored) {
+            }
+
+            Vector3d destination = new Vector3d(marker.getX(), destinationY, marker.getZ());
+            Teleport teleport = new Teleport(destination, currentRotation);
+            store.addComponent(ref, Teleport.getComponentType(), teleport);
+
+            String markerName = marker.getName() != null ? marker.getName() : target;
+            context.sendMessage(Message.raw("Teleported to waypoint: " + markerName));
+        }, world);
     }
 }
