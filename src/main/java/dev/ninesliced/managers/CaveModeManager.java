@@ -382,6 +382,10 @@ public class CaveModeManager {
         private final Set<Long> loadedCaveChunks = ConcurrentHashMap.newKeySet();
         
         private final Set<Long> pendingCaveChunks = ConcurrentHashMap.newKeySet();
+
+        private volatile long lastOverlayUpdateMs = 0L;
+        private volatile int lastOverlayMapChunkX = Integer.MIN_VALUE;
+        private volatile int lastOverlayMapChunkZ = Integer.MIN_VALUE;
         
         public boolean isDynamicModeEnabled() {
             return dynamicModeEnabled;
@@ -508,6 +512,27 @@ public class CaveModeManager {
         
         public Set<Long> getPendingCaveChunks() {
             return pendingCaveChunks;
+        }
+
+        public long getLastOverlayUpdateMs() {
+            return lastOverlayUpdateMs;
+        }
+
+        public void setLastOverlayUpdateMs(long lastOverlayUpdateMs) {
+            this.lastOverlayUpdateMs = lastOverlayUpdateMs;
+        }
+
+        public int getLastOverlayMapChunkX() {
+            return lastOverlayMapChunkX;
+        }
+
+        public int getLastOverlayMapChunkZ() {
+            return lastOverlayMapChunkZ;
+        }
+
+        public void setLastOverlayMapChunk(int mapChunkX, int mapChunkZ) {
+            this.lastOverlayMapChunkX = mapChunkX;
+            this.lastOverlayMapChunkZ = mapChunkZ;
         }
         
         /**
