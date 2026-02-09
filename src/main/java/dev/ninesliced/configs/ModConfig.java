@@ -48,7 +48,7 @@ public class ModConfig {
     private int maxSharedMarkersPerPlayer = 12;
     
     private boolean caveModeEnabled = true;
-    private int caveModeLayerSize = 5;
+    private int caveModeLayerSize = 10;
     private int caveModeUndergroundThreshold = 100;
     private int caveModeRadius = 4;
     private boolean discoverSurfaceUnderground = false;
