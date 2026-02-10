@@ -555,7 +555,20 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         }
                         World caveWorld = player.getWorld();
                         if (caveWorld != null) {
-                            caveWorld.execute(() -> WorldMapHook.forceFullMapRefresh(player));
+                            caveWorld.execute(() -> {
+                                for (PlayerRef pRef : caveWorld.getPlayerRefs()) {
+                                    Ref<EntityStore> ref = pRef.getReference();
+                                    if (ref == null || !ref.isValid()) continue;
+                                    Player p = ref.getStore().getComponent(ref, Player.getComponentType());
+                                    if (p == null) continue;
+                                    
+                                    try {
+                                        WorldMapHook.forceFullMapRefresh(p);
+                                    } catch (Exception e) {
+                                        LOGGER.warning("Failed to refresh map for fog of war: " + e.getMessage());
+                                    }
+                                }
+                            });
                         }
                     }
                     break;
@@ -573,16 +586,15 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         if (fogWorld != null) {
                             fogWorld.execute(() -> {
                                 for (PlayerRef pRef : fogWorld.getPlayerRefs()) {
-                                    var pHolder = pRef.getHolder();
-                                    if (pHolder != null) {
-                                        Player p = pHolder.getComponent(Player.getComponentType());
-                                        if (p != null) {
-                                            try {
-                                                WorldMapHook.forceFullMapRefresh(p);
-                                            } catch (Exception e) {
-                                                LOGGER.warning("Failed to refresh map for fog of war: " + e.getMessage());
-                                            }
-                                        }
+                                    Ref<EntityStore> ref = pRef.getReference();
+                                    if (ref == null || !ref.isValid()) continue;
+                                    Player p = ref.getStore().getComponent(ref, Player.getComponentType());
+                                    if (p == null) continue;
+                                    
+                                    try {
+                                        WorldMapHook.forceFullMapRefresh(p);
+                                    } catch (Exception e) {
+                                        LOGGER.warning("Failed to refresh map for fog of war: " + e.getMessage());
                                     }
                                 }
                             });
