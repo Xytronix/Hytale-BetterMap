@@ -95,6 +95,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         bindClick(events, "#AdminViewBtn", "view_admin");
         bindClick(events, "#AdminViewBtnSelected", "view_admin");
         bindClick(events, "#OpenWaypointsBtn", "open_waypoints");
+        bindClick(events, "#PlayerResetDefaultsBtn", "player_reset_defaults");
         bindClick(events, "#HelpViewBtn", "open_help");
         bindClick(events, "#HelpViewBtnSelected", "open_help");
         bindClick(events, "#CloseBtn", "close_menu");
@@ -180,6 +181,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#CaveModeLayerSize", "admin_cavemode_layer", BindingType.NUMBER);
              bindChange(events, "#CaveModeThreshold", "admin_cavemode_threshold", BindingType.NUMBER);
              bindChange(events, "#CaveModeRadius", "admin_cavemode_radius", BindingType.NUMBER);
+
+             bindClick(events, "#AdminResetDefaultsBtn", "admin_reset_defaults");
+             bindClick(events, "#AdminResetConfirmAllBtn", "admin_reset_confirm_all");
+             bindClick(events, "#AdminResetConfirmKeepWorldsBtn", "admin_reset_confirm_keep_worlds");
+             bindClick(events, "#AdminResetConfirmCancelBtn", "admin_reset_cancel");
         }
     }
 
@@ -220,6 +226,133 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         }
         ui.set(elementId + ".Entries", entries);
         ui.set(elementId + ".Value", currentQuality != null ? currentQuality.name() : MapQuality.MEDIUM.name());
+    }
+
+    private void applyPlayerSettingsToUi(UICommandBuilder ui, PlayerConfig pConfig) {
+        ui.set("#PlayerMinScale.Value", pConfig.getMinScale());
+        ui.set("#PlayerMaxScale.Value", pConfig.getMaxScale());
+
+        if (ModConfig.getInstance().isLocationEnabled()) {
+            ui.set("#PlayerLocationEnabled.Value", pConfig.isLocationEnabled());
+            applyLocationPositionDropdown(ui, pConfig.getEffectiveLocationHudPosition(), "#PlayerLocationPosition");
+        }
+
+        if (ModConfig.getInstance().isCaveModeEnabled()) {
+            ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
+        }
+    }
+
+    private void applyAdminSettingsToUi(UICommandBuilder ui, ModConfig gConfig) {
+        ui.set("#AdminExplorationRadius.Value", gConfig.getExplorationRadius());
+        applyMapQualityDropdown(ui, gConfig.getMapQuality(), "#AdminMapQuality");
+        ui.set("#AdminMaxChunksToLoad.Value", gConfig.getMaxChunksToLoad());
+
+        ui.set("#AdminMinScale.Value", (int) gConfig.getMinScale());
+        ui.set("#AdminMaxScale.Value", (int) gConfig.getMaxScale());
+
+        ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
+        ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
+        ui.set("#DebugMode.Value", gConfig.isDebug());
+        ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
+        applyLocationPositionDropdown(ui, gConfig.getLocationHudPosition(), "#AdminLocationPosition");
+        ui.set("#RadarEnabled.Value", gConfig.isRadarEnabled());
+        ui.set("#HidePlayers.Value", gConfig.isHidePlayersOnMap());
+        ui.set("#HideOtherWarps.Value", gConfig.isHideOtherWarpsOnMap());
+        ui.set("#HideUnexploredWarps.Value", gConfig.isHideUnexploredWarpsOnMap());
+        ui.set("#HideAllPois.Value", gConfig.isHideAllPoiOnMap());
+        ui.set("#HideUnexploredPois.Value", gConfig.isHideUnexploredPoiOnMap());
+
+        ui.set("#RadarRange.Value", gConfig.getRadarRange());
+
+        ui.set("#HiddenPoisList.Value", String.join(", ", gConfig.getHiddenPoiNames()));
+        ui.set("#AllowedWorldList.Value", String.join(", ", gConfig.getAllowedWorlds()));
+        ui.set("#AutoSaveInterval.Value", gConfig.getAutoSaveInterval());
+
+        ui.set("#WorldBorderEnabled.Value", gConfig.isWorldBorderEnabled());
+        ui.set("#WorldBorderRadius.Value", gConfig.getWorldBorderRadius());
+        ui.set("#WorldBorderOffsetX.Value", gConfig.getWorldBorderOffsetX());
+        ui.set("#WorldBorderOffsetZ.Value", gConfig.getWorldBorderOffsetZ());
+
+        ui.set("#CaveModeEnabled.Value", gConfig.isCaveModeEnabled());
+        ui.set("#DiscoverSurfaceUnderground.Value", gConfig.isDiscoverSurfaceUnderground());
+        ui.set("#CaveFogOfWar.Value", gConfig.isCaveFogOfWar());
+        ui.set("#CaveModeLayerSize.Value", gConfig.getCaveModeLayerSize());
+        ui.set("#CaveModeThreshold.Value", gConfig.getCaveModeUndergroundThreshold());
+        ui.set("#CaveModeRadius.Value", gConfig.getCaveModeRadius());
+    }
+
+    private void updatePlayerCaveState(Player player, boolean enabled) {
+        CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(player);
+        if (state != null) {
+            state.setDynamicModeEnabled(enabled);
+            if (!enabled) {
+                state.setCurrentlyUnderground(false);
+            }
+        }
+    }
+
+    private void refreshWorldPlayersMap(World world) {
+        if (world == null) return;
+        world.execute(() -> {
+            for (PlayerRef pRef : world.getPlayerRefs()) {
+                Ref<EntityStore> ref = pRef.getReference();
+                if (ref == null || !ref.isValid()) continue;
+                Player p = ref.getStore().getComponent(ref, Player.getComponentType());
+                if (p == null) continue;
+                try {
+                    WorldMapHook.forceFullMapRefresh(p);
+                } catch (Exception e) {
+                    LOGGER.warning("Failed to refresh map after reset: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void handlePlayerReset(UICommandBuilder ui, UIEventBuilder events, Player player) {
+        PlayerConfig pConfig = PlayerConfigManager.getInstance().getPlayerConfig(((CommandSender) player).getUuid());
+        pConfig.resetToDefaults();
+        PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+
+        applyPlayerSettingsToUi(ui, pConfig);
+        sendUpdate(ui, events, false);
+
+        updatePlayerCaveState(player, pConfig.isCaveModeEnabled());
+        World world = player.getWorld();
+        if (world != null) {
+            world.execute(() -> WorldMapHook.sendMapSettingsToPlayer(player));
+            world.execute(() -> WorldMapHook.forceFullMapRefresh(player));
+        }
+    }
+
+    private void handleAdminResetRequest(UICommandBuilder ui, UIEventBuilder events, Player player) {
+        ModConfig gConfig = ModConfig.getInstance();
+        if (!gConfig.isAllowedWorldsDefault()) {
+            ui.set("#AdminResetConfirm.Visible", true);
+            sendUpdate(ui, events, false);
+            return;
+        }
+        handleAdminResetConfirm(ui, player, true);
+    }
+
+    private void handleAdminResetConfirm(UICommandBuilder ui, Player player, boolean resetWorlds) {
+        ModConfig gConfig = ModConfig.getInstance();
+        gConfig.resetToDefaults(resetWorlds);
+        restartRequired = true;
+
+        applyAdminSettingsToUi(ui, gConfig);
+        ui.set("#AdminResetConfirm.Visible", false);
+        sendUpdate(ui, new UIEventBuilder(), false);
+
+        MapPrivacyManager.getInstance().updatePrivacyState();
+        WorldBorderManager.getInstance().clearAllCaches();
+
+        Universe universe = Universe.get();
+        if (universe != null) {
+            universe.getWorlds().values().forEach(WorldMapHook::refreshTrackers);
+        }
+
+        updatePlayerCaveState(player, gConfig.isCaveModeEnabled());
+        refreshWorldPlayersMap(player.getWorld());
     }
 
     @Override
@@ -263,6 +396,35 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
             }
             case "open_help" -> {
                 player.getPageManager().openCustomPage(ref, store, new HelpMenuPage(playerRef));
+                return;
+            }
+            case "player_reset_defaults" -> {
+                handlePlayerReset(ui, events, player);
+                return;
+            }
+            case "admin_reset_defaults" -> {
+                if (PermissionsUtil.isAdmin(player)) {
+                    handleAdminResetRequest(ui, events, player);
+                }
+                return;
+            }
+            case "admin_reset_confirm_all" -> {
+                if (PermissionsUtil.isAdmin(player)) {
+                    handleAdminResetConfirm(ui, player, true);
+                }
+                return;
+            }
+            case "admin_reset_confirm_keep_worlds" -> {
+                if (PermissionsUtil.isAdmin(player)) {
+                    handleAdminResetConfirm(ui, player, false);
+                }
+                return;
+            }
+            case "admin_reset_cancel" -> {
+                if (PermissionsUtil.isAdmin(player)) {
+                    ui.set("#AdminResetConfirm.Visible", false);
+                    sendUpdate(ui, events, false);
+                }
                 return;
             }
             case "close_menu" -> {

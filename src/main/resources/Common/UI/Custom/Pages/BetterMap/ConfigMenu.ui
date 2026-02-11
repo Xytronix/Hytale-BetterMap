@@ -293,6 +293,12 @@ $C.@PageOverlay {
             Text: "OPEN WAYPOINT MENU";
             Style: @NavButtonStyle;
           }
+
+          TextButton #PlayerResetDefaultsBtn {
+            Anchor: (Height: 32, Top: 6);
+            Text: "RESET PLAYER SETTINGS";
+            Style: @NavButtonStyle;
+          }
         }
       }
 
@@ -629,6 +635,66 @@ $C.@PageOverlay {
               Label { Text: "Border Offset Z"; Style: @FieldLabelStyle; FlexWeight: 1; }
               $C.@NumberField #WorldBorderOffsetZ { Anchor: (Width: 120, Height: 28); }
             }
+          }
+
+          TextButton #AdminResetDefaultsBtn {
+            Anchor: (Height: 34, Top: 10, Bottom: 6);
+            Text: "RESET ADMIN SETTINGS";
+            Style: @NavButtonStyle;
+          }
+        }
+      }
+    }
+
+    Group #AdminResetConfirm {
+      Visible: false;
+      Anchor: (Full: 0);
+      Background: #000000(0.6);
+      LayoutMode: Center;
+
+      Group {
+        Anchor: (Width: 420, Height: 180);
+        Background: #1a2533(0.95);
+        OutlineColor: #3a4a5a(0.8);
+        OutlineSize: 1;
+        LayoutMode: Top;
+        Padding: (Full: 12);
+
+        Label {
+          Text: "Reset Admin Settings?";
+          Style: @SectionTitleStyle;
+        }
+
+        Label {
+          Anchor: (Top: 8, Width: 396);
+          Text: "Tracked worlds differ from defaults. Resetting will also reset tracked worlds.";
+          Style: (FontSize: 13, TextColor: #ff4a4a, RenderBold: true, VerticalAlignment: Center, Wrap: true);
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Top: 14, Height: 34);
+
+          TextButton #AdminResetConfirmAllBtn {
+            FlexWeight: 1;
+            Text: "RESET ALL";
+            Style: @NavButtonStyle;
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          TextButton #AdminResetConfirmKeepWorldsBtn {
+            FlexWeight: 1;
+            Text: "KEEP WORLDS";
+            Style: @NavButtonStyle;
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          TextButton #AdminResetConfirmCancelBtn {
+            FlexWeight: 1;
+            Text: "CANCEL";
+            Style: @NavButtonStyle;
           }
         }
       }

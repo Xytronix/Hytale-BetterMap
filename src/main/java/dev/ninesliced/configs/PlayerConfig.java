@@ -98,6 +98,18 @@ public class PlayerConfig {
     }
 
     /**
+     * Resets this player's config to default values.
+     */
+    public void resetToDefaults() {
+        ModConfig mainConfig = ModConfig.getInstance();
+        this.minScale = mainConfig.getMinScale();
+        this.maxScale = mainConfig.getMaxScale();
+        this.locationEnabled = false;
+        this.locationHudPosition = null;
+        this.caveModeEnabled = true;
+    }
+
+    /**
      * Checks if cave mode is effectively enabled for this player.
      * Returns true only if BOTH the server config AND the player config have it enabled.
      * If the server disables cave mode globally, the player cannot enable it.

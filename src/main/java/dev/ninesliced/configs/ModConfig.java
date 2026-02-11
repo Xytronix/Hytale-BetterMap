@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,6 +22,8 @@ public class ModConfig {
     private static final Logger LOGGER = Logger.getLogger(ModConfig.class.getName());
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static ModConfig INSTANCE;
+
+    private static final List<String> DEFAULT_ALLOWED_WORLDS = Arrays.asList("default", "world");
 
     private int explorationRadius = 16;
     private int updateRateMs = 500;
@@ -43,7 +46,7 @@ public class ModConfig {
     private boolean hideUnexploredPoiOnMap = true;
     private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
-    private List<String> allowedWorlds = new ArrayList<>(Arrays.asList("default", "world"));
+    private List<String> allowedWorlds = new ArrayList<>(DEFAULT_ALLOWED_WORLDS);
     
     private boolean caveModeEnabled = true;
     private int caveModeLayerSize = 10;
@@ -787,6 +790,24 @@ public class ModConfig {
     }
 
     /**
+     * Gets the default allowed worlds list.
+     *
+     * @return A copy of the default allowed worlds list.
+     */
+    public static List<String> getDefaultAllowedWorlds() {
+        return new ArrayList<>(DEFAULT_ALLOWED_WORLDS);
+    }
+
+    /**
+     * Checks if the allowed worlds list matches the default list.
+     *
+     * @return True if allowed worlds are default.
+     */
+    public boolean isAllowedWorldsDefault() {
+        return normalizeWorlds(this.allowedWorlds).equals(normalizeWorlds(DEFAULT_ALLOWED_WORLDS));
+    }
+
+    /**
      * Checks if a world is allowed/tracked.
      *
      * @param worldName The world name.
@@ -804,6 +825,70 @@ public class ModConfig {
     public void setAllowedWorlds(List<String> allowedWorlds) {
         this.allowedWorlds = allowedWorlds;
         save();
+    }
+
+    /**
+     * Resets all configuration values to defaults.
+     *
+     * @param resetTrackedWorlds True to reset allowed worlds to defaults.
+     */
+    public void resetToDefaults(boolean resetTrackedWorlds) {
+        ModConfig defaults = new ModConfig();
+
+        this.explorationRadius = defaults.explorationRadius;
+        this.updateRateMs = defaults.updateRateMs;
+        this.mapQuality = defaults.mapQuality;
+        this.minScale = defaults.minScale;
+        this.maxScale = defaults.maxScale;
+        this.debug = defaults.debug;
+        this.locationEnabled = defaults.locationEnabled;
+        this.locationHudPosition = defaults.locationHudPosition;
+        this.shareAllExploration = defaults.shareAllExploration;
+        this.maxChunksToLoad = defaults.maxChunksToLoad;
+        this.radarEnabled = defaults.radarEnabled;
+        this.radarRange = defaults.radarRange;
+        this.hidePlayersOnMap = defaults.hidePlayersOnMap;
+        this.hideOtherWarpsOnMap = defaults.hideOtherWarpsOnMap;
+        this.hideUnexploredWarpsOnMap = defaults.hideUnexploredWarpsOnMap;
+        this.allowWaypointTeleports = defaults.allowWaypointTeleports;
+        this.allowMapMarkerTeleports = defaults.allowMapMarkerTeleports;
+        this.hideAllPoiOnMap = defaults.hideAllPoiOnMap;
+        this.hideUnexploredPoiOnMap = defaults.hideUnexploredPoiOnMap;
+        this.hiddenPoiNames = new ArrayList<>(defaults.hiddenPoiNames);
+        this.autoSaveInterval = defaults.autoSaveInterval;
+        if (resetTrackedWorlds) {
+            this.allowedWorlds = new ArrayList<>(defaults.allowedWorlds);
+        }
+
+        this.caveModeEnabled = defaults.caveModeEnabled;
+        this.caveModeLayerSize = defaults.caveModeLayerSize;
+        this.caveModeUndergroundThreshold = defaults.caveModeUndergroundThreshold;
+        this.caveModeRadius = defaults.caveModeRadius;
+        this.discoverSurfaceUnderground = defaults.discoverSurfaceUnderground;
+        this.caveFogOfWar = defaults.caveFogOfWar;
+
+        this.worldBorderEnabled = defaults.worldBorderEnabled;
+        this.worldBorderRadius = defaults.worldBorderRadius;
+        this.worldBorderOffsetX = defaults.worldBorderOffsetX;
+        this.worldBorderOffsetZ = defaults.worldBorderOffsetZ;
+
+        updateLoggers();
+        save();
+    }
+
+    private static List<String> normalizeWorlds(List<String> worlds) {
+        List<String> normalized = new ArrayList<>();
+        if (worlds != null) {
+            for (String world : worlds) {
+                if (world == null) continue;
+                String val = world.trim().toLowerCase();
+                if (!val.isEmpty()) {
+                    normalized.add(val);
+                }
+            }
+        }
+        Collections.sort(normalized);
+        return normalized;
     }
 
     /**
