@@ -6,7 +6,7 @@
 
     <groupId>dev.ninesliced</groupId>
     <artifactId>BetterMap</artifactId>
-    <version>1.2.7-b-pre-release-2026.01.29-301e13929</version>
+    <version>1.2.7-pre-release-2026.02.11-255364b8e</version>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
@@ -32,7 +32,7 @@
             <groupId>com.hypixel.hytale</groupId>
             <artifactId>Server</artifactId>
             <!-- Replace with latest version, we provide jars for the last five releases -->
-            <version>2026.01.29-301e13929</version>
+            <version>2026.02.11-255364b8e</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
