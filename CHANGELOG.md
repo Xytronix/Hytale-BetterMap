@@ -1,5 +1,17 @@
 # Changelog
 
+# v1.2.7-pre-release-2026.02.11-255364b8e
+
+* Fixed API packet changes for sending map chunks
+
+## v1.2.7-b-pre-release-2026.01.29-301e13929
+
+* Fix message being send of world not being tracked on world with different name than "world" or "default" when it is tracked
+* remove global permission to use hytale permission system for global markers
+* updated the edit waypoint menu to be more user friendly and added 'here' button to update waypoint at current position
+* fix icon changes between players not updating correctly
+* added migration for old waypoint in our old saves to the new marker system
+
 ## v1.2.7-pre-release-2026.01.29-301e13929
 
 * Fix issue with the new release changes in the marker API (map not becoming black)
