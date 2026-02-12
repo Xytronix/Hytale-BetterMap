@@ -38,5 +38,4 @@ build/
 
 ### Mac OS ###
 .DS_Store
-HytaleServer.jar
-Hytale-BetterMap.jar
+Hytale-BetterMap.code-workspace

@@ -1,5 +1,9 @@
 # Changelog
 
+# v1.2.7-pre-release-2026.02.11-255364b8e
+
+* Fixed API packet changes for sending map chunks
+
 ## v1.2.7-b-pre-release-2026.01.29-301e13929
 
 * Fix message being send of world not being tracked on world with different name than "world" or "default" when it is tracked

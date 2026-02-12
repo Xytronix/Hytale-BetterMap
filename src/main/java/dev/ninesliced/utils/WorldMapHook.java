@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
 import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
@@ -882,13 +883,15 @@ public class WorldMapHook {
         }
     }
 
-    private static void sendPacket(Player player, Packet packet) {
-        Ref<EntityStore> ref = player.getReference();
-        if (ref != null && ref.isValid()) {
-            PlayerRef playerRef = ref.getStore().getComponent(ref, PlayerRef.getComponentType());
-            if (playerRef != null) {
-                playerRef.getPacketHandler().write(packet);
-            }
+    private static void sendPacket(Player player, ToClientPacket packet) {
+        if (player == null || packet == null) {
+            return;
+        }
+
+        try {
+            player.getPlayerConnection().write(packet);
+        } catch (Exception e) {
+            LOGGER.warning("Failed to send world map packet to " + player.getDisplayName() + ": " + e.getMessage());
         }
     }
 
@@ -1552,7 +1555,7 @@ public class WorldMapHook {
 
                         if (!toRemovePackets.isEmpty()) {
                             UpdateWorldMap packet = new UpdateWorldMap(toRemovePackets.toArray(new MapChunk[0]), null, null);
-                            sendPacket(tracker.getPlayer(), (Packet) packet);
+                            sendPacket(tracker.getPlayer(), packet);
                         }
                     }
                 }
