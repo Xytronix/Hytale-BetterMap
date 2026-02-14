@@ -22,6 +22,7 @@ import dev.ninesliced.managers.ChunkStreamingManager;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
+import dev.ninesliced.managers.MapAnchorManager;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.managers.WaypointMigrationManager;
 import dev.ninesliced.managers.WorldBorderManager;
@@ -123,6 +124,8 @@ public class ExplorationListener {
                 WorldBorderManager.getInstance().registerForPlayer(player);
 
                 WaypointManager.onPlayerJoin(player);
+
+                MapAnchorManager.getInstance().sendWaypointAnchorDelayed(player, 2000);
 
                 initDynamicCaveMode(player);
 
@@ -247,6 +250,8 @@ public class ExplorationListener {
             playerWorlds.put(playerName, newWorldName);
 
             if (!isTrackedWorld(newWorld)) {
+                MapAnchorManager.getInstance().clearAnchor(player);
+
                 WorldMapTracker tracker = player.getWorldMapTracker();
                 if (tracker != null) {
                     WorldMapHook.restoreVanillaMapTracker(player, tracker);
@@ -275,6 +280,8 @@ public class ExplorationListener {
                 PlayerRadarManager.getInstance().registerForWorld(newWorld);
 
                 WorldBorderManager.getInstance().registerForWorld(newWorld);
+
+                MapAnchorManager.getInstance().sendWaypointAnchorDelayed(player, 2000);
 
                 final WorldMapTracker finalTracker = tracker;
                 final String finalNewWorldName = newWorldName;
@@ -359,6 +366,8 @@ public class ExplorationListener {
             }
 
             cleanupCaveModeStateByName(playerName);
+
+            MapAnchorManager.getInstance().removePlayer(playerName);
 
             playerWorlds.remove(playerName);
             LOGGER.info("[DEBUG] Removed world tracking for " + playerName);

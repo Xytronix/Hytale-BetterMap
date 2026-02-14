@@ -24,6 +24,7 @@ import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.managers.UserMarkerProviderManager;
 import dev.ninesliced.managers.WorldBorderManager;
+import dev.ninesliced.managers.MapAnchorManager;
 import dev.ninesliced.providers.LocationHudProvider;
 import dev.ninesliced.systems.LocationSystem;
 import dev.ninesliced.utils.WaypointLimitUtil;
@@ -152,6 +153,9 @@ public class BetterMap extends JavaPlugin {
             WorldBorderManager.getInstance();
             LOGGER.info("World Border Manager: INITIALIZED");
 
+            MapAnchorManager.getInstance().initialize();
+            LOGGER.info("Map Anchor Manager: INITIALIZED (Anchor UI on MapServerContent)");
+
             this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, ExplorationListener::onPlayerReady);
             this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, ExplorationListener::onPlayerQuit);
 
@@ -187,6 +191,7 @@ public class BetterMap extends JavaPlugin {
 
         PlayerRadarManager.getInstance().cleanup();
         WorldBorderManager.getInstance().cleanup();
+        MapAnchorManager.getInstance().cleanup();
         ChunkStreamingManager.getInstance().cleanup();
 
         LOGGER.info("BetterMap plugin shutdown complete.");

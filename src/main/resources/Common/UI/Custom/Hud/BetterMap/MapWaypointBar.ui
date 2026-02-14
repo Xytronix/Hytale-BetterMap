@@ -1,0 +1,42 @@
+@BtnStyle = TextButtonStyle(
+  Default: (Background: #1a2733(0.92), LabelStyle: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #2a3d4f(0.96), LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #0f1a24(0.96), LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, RenderUppercase: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);
+
+Group #MapWaypointBar {
+  LayoutMode: Left;
+  Anchor: (Width: 254, Height: 40, Top: 25, Right: 0);
+  Background: #0d1117(0.78);
+  Padding: (Left: 6, Right: 6, Top: 3, Bottom: 3);
+
+  Label #WaypointCount {
+    FlexWeight: 1;
+    Style: (FontSize: 11, RenderBold: true, TextColor: #bfcdd5, VerticalAlignment: Center);
+    Text: "Waypoints: 0";
+  }
+
+  Group { Anchor: (Width: 4); }
+
+  TextButton #AddWaypointButton {
+    Anchor: (Width: 30, Height: 30);
+    Text: "+";
+    Style: @BtnStyle;
+  }
+
+  Group { Anchor: (Width: 4); }
+
+  TextButton #ManageWaypointsButton {
+    Anchor: (Width: 56, Height: 30);
+    Text: "MENU";
+    Style: @BtnStyle;
+  }
+
+  Group { Anchor: (Width: 4); }
+
+  TextButton #ConfigButton {
+    Anchor: (Width: 56, Height: 30);
+    Text: "CONFIG";
+    Style: @BtnStyle;
+  }
+}

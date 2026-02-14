@@ -95,6 +95,8 @@ public class WaypointManager {
         marker.withCreatedByUuid(((CommandSender) player).getUuid());
         
         store.addUserMapMarker(marker);
+
+        MapAnchorManager.getInstance().refreshAnchor(player);
     }
 
     /**
@@ -110,6 +112,9 @@ public class WaypointManager {
         }
 
         entry.store.removeUserMapMarker(entry.marker.getId());
+
+        MapAnchorManager.getInstance().refreshAnchor(player);
+
         return true;
     }
 
@@ -155,6 +160,9 @@ public class WaypointManager {
             newMarker.withCreatedByUuid(existing.getCreatedByUuid());
             
             entry.store.addUserMapMarker(newMarker);
+
+            MapAnchorManager.getInstance().refreshAnchor(player);
+
             return true;
         }
         
@@ -186,6 +194,8 @@ public class WaypointManager {
             } else {
                 forceRemoveAndResyncMarker(player, id);
             }
+
+            MapAnchorManager.getInstance().refreshAnchor(player);
         }
         return updated;
     }
