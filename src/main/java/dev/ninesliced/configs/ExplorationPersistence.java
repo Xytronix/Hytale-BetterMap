@@ -124,6 +124,7 @@ public class ExplorationPersistence {
                     LOGGER.info("Saving exploration data for world: " + world.getName());
                     world.getPlayerRefs().forEach(playerRef -> {
                         LOGGER.info(" - Saving player: " + playerRef);
+                        assert playerRef.getHolder() != null;
                         Player player = playerRef.getHolder().getComponent(Player.getComponentType());
                         if (player != null) {
                             String playerName = player.getDisplayName();
