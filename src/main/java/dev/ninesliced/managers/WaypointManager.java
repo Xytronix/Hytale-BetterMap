@@ -1,5 +1,24 @@
 package dev.ninesliced.managers;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
@@ -16,28 +35,15 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
+
 import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.utils.PermissionsUtil;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class WaypointManager {
     private static final Logger LOGGER = Logger.getLogger(WaypointManager.class.getName());
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
     private static final String GLOBAL_ID_PREFIX = "global_waypoint_";
 
     private static WaypointPersistence persistence;
@@ -218,13 +224,14 @@ public class WaypointManager {
     private static ContextMenuItem[] buildContextMenu(@Nonnull Player player, @Nonnull String markerId) {
         List<ContextMenuItem> menuItems = new ArrayList<>();
         boolean isGlobal = isGlobalId(markerId);
-        menuItems.add(new ContextMenuItem(isGlobal ? "Global Waypoint" : "Personal Waypoint", ""));
-        if (PermissionsUtil.canTeleport(player)
+        if (!BetterMapConfig.getInstance().isAllowMapMarkerTeleports()
             && ModConfig.getInstance().isAllowWaypointTeleports()) {
             menuItems.add(new ContextMenuItem("Teleport To", "bm waypoint teleport " + markerId));
         }
         if (isGlobal) {
-            menuItems.add(new ContextMenuItem("Delete", "bm waypoint removeglobal " + markerId));
+            if (PermissionsUtil.canUseGlobalWaypoints(player)) {
+                menuItems.add(new ContextMenuItem("Delete", "bm waypoint removeglobal " + markerId));
+            }
         } else {
             menuItems.add(new ContextMenuItem("Delete", "bm waypoint remove " + markerId));
         }
@@ -281,7 +288,7 @@ public class WaypointManager {
         }
 
         List<MapMarker> personal = new ArrayList<>();
-        if (persistence != null) {
+        if (persistence != null && !shouldHidePersonalWaypoints(player)) {
             UUID uuid = ((CommandSender) player).getUuid();
             List<StoredWaypoint> stored = persistence.loadPlayer(uuid, player.getDisplayName(), world.getName());
             for (StoredWaypoint waypoint : stored) {
@@ -318,13 +325,15 @@ public class WaypointManager {
             return;
         }
 
-        List<StoredWaypoint> stored = persistence.loadPlayer(uuid, player.getDisplayName(), worldName);
         List<MapMarker> markers = new ArrayList<>();
-        if (!stored.isEmpty()) {
-            for (StoredWaypoint waypoint : stored) {
-                MapMarker marker = toMarker(waypoint, player);
-                if (marker != null) {
-                    markers.add(marker);
+        if (!shouldHidePersonalWaypoints(player)) {
+            List<StoredWaypoint> stored = persistence.loadPlayer(uuid, player.getDisplayName(), worldName);
+            if (!stored.isEmpty()) {
+                for (StoredWaypoint waypoint : stored) {
+                    MapMarker marker = toMarker(waypoint, player);
+                    if (marker != null) {
+                        markers.add(marker);
+                    }
                 }
             }
         }
@@ -377,6 +386,9 @@ public class WaypointManager {
 
     private static List<MapMarker> getGlobalMarkers(@Nonnull String worldName, @Nonnull Player player) {
         if (persistence == null) {
+            return Collections.emptyList();
+        }
+        if (shouldHideGlobalWaypoints(player)) {
             return Collections.emptyList();
         }
         List<StoredWaypoint> stored = persistence.loadGlobal();
@@ -581,7 +593,7 @@ public class WaypointManager {
 
     private static String stripColorTags(String input) {
         if (input == null) return "";
-        return input.replaceAll("<[^>]*>", "");
+        return HTML_TAG_PATTERN.matcher(input).replaceAll("");
     }
 
     public static boolean isTrackedWorld(@Nullable World world) {
@@ -590,6 +602,32 @@ public class WaypointManager {
 
     private static String cacheKey(@Nonnull UUID uuid, @Nonnull String worldName) {
         return uuid + "|" + worldName.toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean shouldHideGlobalWaypoints(@Nonnull Player player) {
+        UUID uuid = ((CommandSender) player).getUuid();
+        PlayerConfig playerConfig = PlayerConfigManager.getInstance() != null
+            ? PlayerConfigManager.getInstance().getPlayerConfig(uuid)
+            : null;
+
+        if (playerConfig != null && playerConfig.isOverrideGlobalWaypointHide()) {
+            return playerConfig.isHideGlobalWaypointsOnMap();
+        }
+
+        if (playerConfig != null && playerConfig.isHideGlobalWaypointsOnMap()) {
+            return true;
+        }
+
+        return BetterMapConfig.getInstance().isHideGlobalWaypointsOnMap();
+    }
+
+    private static boolean shouldHidePersonalWaypoints(@Nonnull Player player) {
+        UUID uuid = ((CommandSender) player).getUuid();
+        PlayerConfig playerConfig = PlayerConfigManager.getInstance() != null
+            ? PlayerConfigManager.getInstance().getPlayerConfig(uuid)
+            : null;
+
+        return playerConfig != null && playerConfig.isHidePersonalWaypointsOnMap();
     }
 
     private static void invalidatePlayerCache(@Nonnull Player player, @Nonnull World world) {

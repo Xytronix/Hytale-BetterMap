@@ -1,4 +1,10 @@
-package dev.ninesliced.commands.bettermap.config;
+package dev.ninesliced.commands.config;
+
+import java.awt.Color;
+import java.util.concurrent.CompletableFuture;
+
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.Message;
@@ -8,26 +14,17 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.ninesliced.configs.ModConfig;
+
+import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
-import dev.ninesliced.managers.WarpPrivacyManager;
-import dev.ninesliced.utils.WorldMapHook;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import dev.ninesliced.managers.WaypointManager;
 
-import java.awt.*;
-import java.util.concurrent.CompletableFuture;
+public class HideGlobalWaypointsCommand extends AbstractCommand {
 
-/**
- * Command to toggle hiding other players' warp markers on the world map.
- */
-public class HideOtherWarpsCommand extends AbstractCommand {
-
-    public HideOtherWarpsCommand() {
-        super("hidewarps", "Toggle hiding other players' warps on the world map");
+    public HideGlobalWaypointsCommand() {
+        super("hideglobalwaypoints", "Toggle hiding global waypoints on the map");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
-        this.addAliases("hideotherwarps");
     }
 
     @Override
@@ -59,28 +56,26 @@ public class HideOtherWarpsCommand extends AbstractCommand {
                 return;
             }
 
-            ModConfig config = ModConfig.getInstance();
-            boolean newState = !config.isHideOtherWarpsOnMap();
-            config.setHideOtherWarpsOnMap(newState);
+            BetterMapConfig config = BetterMapConfig.getInstance();
+            boolean newState = !config.isHideGlobalWaypointsOnMap();
+            config.setHideGlobalWaypointsOnMap(newState);
 
             PlayerConfig playerConfig = playerRef.getUuid() != null
                 ? PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid())
                 : null;
             if (playerConfig != null) {
-                playerConfig.setOverrideGlobalOtherWarpsHide(false);
-                playerConfig.setOverrideGlobalAllWarpsHide(false);
+                playerConfig.setHideGlobalWaypointsOnMap(false);
+                playerConfig.setOverrideGlobalWaypointHide(false);
                 PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
             }
 
-            WarpPrivacyManager.getInstance().updatePrivacyState();
-            WorldMapHook.clearMarkerCaches(world);
-            WorldMapHook.refreshTrackers(world);
+            WaypointManager.refreshAllPlayersMarkers(world);
 
             boolean visible = !newState;
             Color color = visible ? Color.GREEN : Color.RED;
             String status = visible ? "VISIBLE" : "HIDDEN";
 
-            playerRef.sendMessage(Message.raw("Other players' warps are now " + status + " on the map.").color(color));
+            playerRef.sendMessage(Message.raw("Global waypoints are now " + status + " on the map.").color(color));
         }, world);
     }
 }

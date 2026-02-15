@@ -1,5 +1,7 @@
 package dev.ninesliced.commands.bettermap.waypoint;
 
+import javax.annotation.Nonnull;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -16,10 +18,11 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
-import javax.annotation.Nonnull;
+import dev.ninesliced.utils.WorldMapHook;
 
 public class WaypointTeleportCommand extends AbstractPlayerCommand {
     private final RequiredArg<String> targetArg = this.withRequiredArg("target", "Waypoint name or marker id", ArgTypes.STRING);
@@ -32,7 +35,6 @@ public class WaypointTeleportCommand extends AbstractPlayerCommand {
     public WaypointTeleportCommand() {
         super("teleport", "Teleport to a map waypoint");
         this.addAliases("tp");
-        this.requirePermission("dev.ninesliced.bettermap.command.teleport");
     }
 
     @Override
@@ -66,7 +68,13 @@ public class WaypointTeleportCommand extends AbstractPlayerCommand {
         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
         Teleport teleport = new Teleport(destination, currentRotation);
 
-        world.execute(() -> store.addComponent(ref, Teleport.getComponentType(), teleport));
+        world.execute(() -> {
+            store.addComponent(ref, Teleport.getComponentType(), teleport);
+            world.execute(() -> {
+                WorldMapHook.clearPlayerMarkerCache(player);
+                WaypointManager.onPlayerJoin(player);
+            });
+        });
         context.sendMessage(Message.raw("Teleported to waypoint: " + (marker.name != null ? marker.name : target)));
     }
 }

@@ -28,7 +28,7 @@ public class WaypointDeleteGlobalCommand extends AbstractPlayerCommand {
     public WaypointDeleteGlobalCommand() {
         super("removeglobal", "Remove a global map waypoint");
         this.addAliases("deleteglobal", "delglobal");
-        this.requirePermission("dev.ninesliced.bettermap.command.waypoint.global");
+        this.requirePermission("bettermap.command.waypoint.global");
     }
 
     @Override
