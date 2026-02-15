@@ -1,4 +1,4 @@
-package dev.ninesliced.commands.config;
+package dev.ninesliced.commands.bettermap.config;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
+import dev.ninesliced.configs.ModConfig;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -20,7 +21,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import dev.ninesliced.configs.BetterMapConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
@@ -69,7 +69,7 @@ public class HiddenPoiCommand extends AbstractCommand {
                 return;
             }
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+            ModConfig config = ModConfig.getInstance();
 
             if (action == null || action.isEmpty()) {
                 showUsage(playerRef);
@@ -112,7 +112,7 @@ public class HiddenPoiCommand extends AbstractCommand {
         playerRef.sendMessage(Message.raw("  /bm config hiddenpoi clear - Clear all hidden POI names").color(Color.GRAY));
     }
 
-    private void listHiddenPois(PlayerRef playerRef, BetterMapConfig config) {
+    private void listHiddenPois(PlayerRef playerRef, ModConfig config) {
         List<String> hiddenNames = config.getHiddenPoiNames();
         if (hiddenNames == null || hiddenNames.isEmpty()) {
             playerRef.sendMessage(Message.raw("No POI names are currently hidden.").color(Color.GRAY));
@@ -125,7 +125,7 @@ public class HiddenPoiCommand extends AbstractCommand {
         }
     }
 
-    private void addHiddenPoi(PlayerRef playerRef, BetterMapConfig config, String name, World world) {
+    private void addHiddenPoi(PlayerRef playerRef, ModConfig config, String name, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
 
         for (String existing : hiddenNames) {
@@ -146,7 +146,7 @@ public class HiddenPoiCommand extends AbstractCommand {
         playerRef.sendMessage(Message.raw("POIs matching this name will now be hidden.").color(Color.GRAY));
     }
 
-    private void removeHiddenPoi(PlayerRef playerRef, BetterMapConfig config, String name, World world) {
+    private void removeHiddenPoi(PlayerRef playerRef, ModConfig config, String name, World world) {
         List<String> hiddenNames = new ArrayList<>(config.getHiddenPoiNames());
         boolean removed = hiddenNames.removeIf(existing -> existing.equalsIgnoreCase(name));
 
@@ -165,7 +165,7 @@ public class HiddenPoiCommand extends AbstractCommand {
         playerRef.sendMessage(Message.raw("POIs matching this name will now be visible.").color(Color.GRAY));
     }
 
-    private void clearHiddenPois(PlayerRef playerRef, BetterMapConfig config, World world) {
+    private void clearHiddenPois(PlayerRef playerRef, ModConfig config, World world) {
         List<String> hiddenNames = config.getHiddenPoiNames();
         if (hiddenNames == null || hiddenNames.isEmpty()) {
             playerRef.sendMessage(Message.raw("The hidden POI list is already empty.").color(Color.YELLOW));

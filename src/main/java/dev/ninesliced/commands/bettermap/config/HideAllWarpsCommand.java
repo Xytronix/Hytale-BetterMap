@@ -1,4 +1,4 @@
-package dev.ninesliced.commands.config;
+package dev.ninesliced.commands.bettermap.config;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.Message;
@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.WarpPrivacyManager;
@@ -55,7 +55,7 @@ public class HideAllWarpsCommand extends AbstractCommand {
                 return;
             }
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+            ModConfig config = ModConfig.getInstance();
             boolean newState = !config.isHideAllWarpsOnMap();
             config.setHideAllWarpsOnMap(newState);
 

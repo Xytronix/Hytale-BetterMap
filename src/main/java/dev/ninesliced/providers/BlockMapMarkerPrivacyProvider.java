@@ -9,10 +9,10 @@ import com.hypixel.hytale.server.core.universe.world.meta.state.BlockMapMarkersR
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
-import dev.ninesliced.listeners.ExplorationEventListener;
+import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
@@ -47,7 +47,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 return;
             }
 
-            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            ModConfig globalConfig = ModConfig.getInstance();
             Player viewer = tracker.getPlayer();
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
@@ -88,7 +88,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 }
             }
 
-            if (hideUnexplored && !ExplorationEventListener.isTrackedWorld(world)) {
+            if (hideUnexplored && !ExplorationListener.isTrackedWorld(world)) {
                 hideUnexplored = false;
             }
 

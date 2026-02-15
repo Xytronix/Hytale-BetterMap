@@ -1532,7 +1532,7 @@ public class WorldMapHook {
                     if (exploredWorldChunks == null || exploredWorldChunks.isEmpty()) {
                         int worldChunkX = cx * 2;
                         int worldChunkZ = cz * 2;
-                        int bootstrapRadius = BetterMapConfig.getInstance().getExplorationRadius();
+                        int bootstrapRadius = ModConfig.getInstance().getExplorationRadius();
 
                         Set<Long> bootstrapChunks = ChunkUtil.getChunksInCircularArea(worldChunkX, worldChunkZ, bootstrapRadius);
                         data.getExploredChunks().markChunksExplored(bootstrapChunks);

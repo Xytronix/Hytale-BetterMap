@@ -1,4 +1,4 @@
-package dev.ninesliced.commands.config;
+package dev.ninesliced.commands.bettermap.config;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
@@ -66,7 +66,7 @@ public class HideDeathMarkerCommand extends AbstractCommand {
                 return;
             }
 
-            BetterMapConfig config = BetterMapConfig.getInstance();
+            ModConfig config = ModConfig.getInstance();
             boolean newState = !config.isHideDeathMarkerOnMap();
             config.setHideDeathMarkerOnMap(newState);
 

@@ -100,7 +100,7 @@ public class MapPrivacyManager {
      * This can be called to refresh the privacy settings without restarting the server.
      */
     public void updatePrivacyState() {
-        BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+        ModConfig globalConfig = ModConfig.getInstance();
         boolean globalHide = globalConfig.isHidePlayersOnMap();
         boolean radarEnabled = globalConfig.isRadarEnabled();
         int radarRange = globalConfig.getRadarRange();
@@ -199,7 +199,7 @@ public class MapPrivacyManager {
     }
 
     private void applyPlayerSettings(Player player, World world) {
-        ModConfig globalConfig = BetterMapConfig.getInstance();
+        ModConfig globalConfig = ModConfig.getInstance();
         boolean globalHide = globalConfig.isHidePlayersOnMap();
         boolean radarEnabled = globalConfig.isRadarEnabled();
         int radarRange = globalConfig.getRadarRange();
@@ -300,7 +300,7 @@ public class MapPrivacyManager {
         try {
             if (world == null) return;
 
-            ModConfig config = BetterMapConfig.getInstance();
+            ModConfig config = ModConfig.getInstance();
             boolean shouldRemove = config.isRadarEnabled();
             if (!shouldRemove && config.isHidePlayersOnMap()) {
                 shouldRemove = !hasGlobalHideOverride(world);

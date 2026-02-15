@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PoiPrivacyManager;
@@ -99,7 +99,7 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
         context.sendMessage(Message.raw("  /bm hiddenpoi remove <name> - Remove a POI name").color(Color.GRAY));
         context.sendMessage(Message.raw("  /bm hiddenpoi clear - Clear your hidden POI list").color(Color.GRAY));
         
-        BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+        ModConfig globalConfig = ModConfig.getInstance();
         List<String> globalHidden = globalConfig.getHiddenPoiNames();
         if (globalHidden != null && !globalHidden.isEmpty()) {
             context.sendMessage(Message.raw("Server-wide hidden POIs: " + globalHidden.size() + " entries").color(Color.YELLOW));
@@ -116,8 +116,8 @@ public class PlayerHiddenPoiCommand extends AbstractCommand {
                 context.sendMessage(Message.raw("  - " + name).color(Color.WHITE));
             }
         }
-        
-        BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+
+        ModConfig globalConfig = ModConfig.getInstance();
         List<String> globalHidden = globalConfig.getHiddenPoiNames();
         if (globalHidden != null && !globalHidden.isEmpty()) {
             context.sendMessage(Message.raw("Server-wide Hidden POIs (" + globalHidden.size() + "):").color(Color.YELLOW));

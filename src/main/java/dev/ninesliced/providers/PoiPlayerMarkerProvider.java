@@ -7,10 +7,10 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldDat
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
-import dev.ninesliced.listeners.ExplorationEventListener;
+import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
@@ -59,7 +59,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            ModConfig globalConfig = ModConfig.getInstance();
             boolean canOverridePoi = PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;
@@ -95,7 +95,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            if (hideUnexplored && !ExplorationEventListener.isTrackedWorld(world)) {
+            if (hideUnexplored && !ExplorationListener.isTrackedWorld(world)) {
                 hideUnexplored = false;
             }
 

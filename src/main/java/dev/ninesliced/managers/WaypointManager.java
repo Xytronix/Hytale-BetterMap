@@ -224,7 +224,7 @@ public class WaypointManager {
     private static ContextMenuItem[] buildContextMenu(@Nonnull Player player, @Nonnull String markerId) {
         List<ContextMenuItem> menuItems = new ArrayList<>();
         boolean isGlobal = isGlobalId(markerId);
-        if (!BetterMapConfig.getInstance().isAllowMapMarkerTeleports()
+        if (!ModConfig.getInstance().isAllowMapMarkerTeleports()
             && ModConfig.getInstance().isAllowWaypointTeleports()) {
             menuItems.add(new ContextMenuItem("Teleport To", "bm waypoint teleport " + markerId));
         }
@@ -618,7 +618,7 @@ public class WaypointManager {
             return true;
         }
 
-        return BetterMapConfig.getInstance().isHideGlobalWaypointsOnMap();
+        return ModConfig.getInstance().isHideGlobalWaypointsOnMap();
     }
 
     private static boolean shouldHidePersonalWaypoints(@Nonnull Player player) {

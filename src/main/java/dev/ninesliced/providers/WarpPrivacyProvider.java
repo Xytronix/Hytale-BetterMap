@@ -2,10 +2,12 @@ package dev.ninesliced.providers;
 
 import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
 import com.hypixel.hytale.builtin.teleport.Warp;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
@@ -62,7 +64,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             Player viewer = tracker.getPlayer();
             String viewerName = resolveViewerName(viewer);
 
-            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            ModConfig globalConfig = ModConfig.getInstance();
             boolean canOverrideWarps = viewer != null && PermissionsUtil.canOverrideWarps(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredWarps(viewer);
             PlayerConfig playerConfig = null;
@@ -101,7 +103,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            if (hideUnexploredWarps && !ExplorationEventListener.isTrackedWorld(world)) {
+            if (hideUnexploredWarps && !ExplorationListener.isTrackedWorld(world)) {
                 hideUnexploredWarps = false;
             }
 

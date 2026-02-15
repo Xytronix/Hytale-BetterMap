@@ -55,7 +55,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             }
 
             Player viewer = tracker.getPlayer();
-            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            ModConfig globalConfig = ModConfig.getInstance();
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;

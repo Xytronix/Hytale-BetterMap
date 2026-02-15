@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import dev.ninesliced.commands.*;
 import dev.ninesliced.commands.bettermap.config.ConfigCommand;
 import dev.ninesliced.commands.bettermap.waypoint.WaypointCommand;
 import dev.ninesliced.configs.ModConfig;

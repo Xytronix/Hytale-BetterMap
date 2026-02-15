@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.util.PositionUtil;
-import dev.ninesliced.configs.BetterMapConfig;
+import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.PermissionsUtil;
@@ -27,7 +27,7 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
     @Override
     public void update(World world, MapMarkerTracker tracker, int viewRadius, int chunkX, int chunkZ) {
         try {
-            BetterMapConfig globalConfig = BetterMapConfig.getInstance();
+            ModConfig globalConfig = ModConfig.getInstance();
 
             Player player = tracker.getPlayer();
             if (player == null) {
