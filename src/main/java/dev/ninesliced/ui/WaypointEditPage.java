@@ -54,7 +54,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     private int selectedIconIndex = 0;
     private int selectedTintIndex = 0;
     private String errorMessage = null;
-    
+
     private boolean initialized = false;
 
     private static final Logger LOGGER = Logger.getLogger("WaypointEditPage");
@@ -79,15 +79,15 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     this.inputX = String.format(Locale.ROOT, "%.2f", marker.getX());
                     this.inputZ = String.format(Locale.ROOT, "%.2f", marker.getZ());
                     this.shared = WaypointManager.isSharedId(targetId);
-                    
+
                     String markerIcon = marker.getIcon();
                     Color markerTint = marker.getColorTint();
                     this.selectedIconIndex = getIconIndex(markerIcon);
                     this.selectedTintIndex = getTintIndex(markerTint);
-                    
-                    LOGGER.info("[WaypointEdit] Loading marker: id=" + targetId + 
+
+                    LOGGER.info("[WaypointEdit] Loading marker: id=" + targetId +
                         ", icon=" + markerIcon + ", iconIndex=" + this.selectedIconIndex +
-                        ", tint=" + (markerTint != null ? String.format("#%02X%02X%02X", markerTint.red & 0xFF, markerTint.green & 0xFF, markerTint.blue & 0xFF) : "null") + 
+                        ", tint=" + (markerTint != null ? String.format("#%02X%02X%02X", markerTint.red & 0xFF, markerTint.green & 0xFF, markerTint.blue & 0xFF) : "null") +
                         ", tintIndex=" + this.selectedTintIndex);
                 } else {
                     LOGGER.warning("[WaypointEdit] Marker not found for id: " + targetId);
@@ -114,11 +114,11 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
             ui.set("#Icon" + i + "Preview.Background.Color", tintHex);
             ui.set("#Icon" + i + "Selected.Visible", i == selectedIconIndex);
         }
-        
+
         for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
             ui.set("#Color" + i + "Selected.Visible", i == selectedTintIndex);
         }
-        
+
         String iconName = AVAILABLE_ICONS[selectedIconIndex];
         ui.set("#SelectedIconPreview.Background", "Common/" + iconName);
         ui.set("#SelectedIconPreview.Background.Color", tintHex);
@@ -141,23 +141,23 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputZ", 
             new EventData().put(EditData.KEY_INPUT_Z, "#InputZ.Value"), false);
 
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#CurrentLocationBtn", 
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#CurrentLocationBtn",
             new EventData().put(EditData.KEY_ACTION, Action.CURRENT_LOCATION.name()), false);
-        
+
         for (int i = 0; i < AVAILABLE_ICONS.length; i++) {
-            events.addEventBinding(CustomUIEventBindingType.Activating, "#Icon" + i, 
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#Icon" + i,
                 new EventData().put(EditData.KEY_ACTION, "SELECT_ICON_" + i), false);
         }
 
         for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
-            events.addEventBinding(CustomUIEventBindingType.Activating, "#Color" + i, 
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#Color" + i,
                 new EventData().put(EditData.KEY_ACTION, "SELECT_COLOR_" + i), false);
         }
 
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton", 
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
             new EventData().put(EditData.KEY_ACTION, Action.BACK.name()), false);
 
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#SaveButton", 
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#SaveButton",
             new EventData().put(EditData.KEY_ACTION, Action.SAVE.name()), false);
             
         events.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", 
@@ -262,7 +262,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                             return;
                         }
                     }
-                    
+
                     if (wantsShared != wasShared && existing != null) {
                         WaypointManager.removeMarker(player, targetId);
                         WaypointManager.addMarker(player, newName, selectedIcon, x, z, selectedTint, wantsShared);
@@ -294,12 +294,12 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
     private int getTintIndex(@Nullable Color tint) {
         if (tint == null) return 0;
-        
+
         for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
             Color t = AVAILABLE_TINTS[i];
             if (t.red == tint.red && t.green == tint.green && t.blue == tint.blue) return i;
         }
-        
+
         int r = tint.red & 0xFF;
         int g = tint.green & 0xFF;
         int b = tint.blue & 0xFF;
@@ -326,7 +326,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
         return closestIndex;
     }
-    
+
     /**
      * Convert RGB to HSL color space.
      * @return float array [hue (0-1), saturation (0-1), lightness (0-1)]
@@ -335,19 +335,19 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         float rf = r / 255.0f;
         float gf = g / 255.0f;
         float bf = b / 255.0f;
-        
+
         float max = Math.max(rf, Math.max(gf, bf));
         float min = Math.min(rf, Math.min(gf, bf));
         float h, s, l;
-        
+
         l = (max + min) / 2.0f;
-        
+
         if (max == min) {
             h = s = 0.0f; // achromatic (gray)
         } else {
             float d = max - min;
             s = l > 0.5f ? d / (2.0f - max - min) : d / (max + min);
-            
+
             if (max == rf) {
                 h = (gf - bf) / d + (gf < bf ? 6.0f : 0.0f);
             } else if (max == gf) {
@@ -357,41 +357,41 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
             }
             h /= 6.0f;
         }
-        
+
         return new float[] { h, s, l };
     }
 
     private void refreshIconAndTint(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         UICommandBuilder ui = new UICommandBuilder();
         UIEventBuilder events = new UIEventBuilder();
-        
+
         Color tintColor = AVAILABLE_TINTS[selectedTintIndex];
         String tintHex = String.format("#%02X%02X%02X", tintColor.red & 0xFF, tintColor.green & 0xFF, tintColor.blue & 0xFF);
-        
+
         for (int i = 0; i < AVAILABLE_ICONS.length; i++) {
             ui.set("#Icon" + i + "Preview.Background", "Common/" + AVAILABLE_ICONS[i]);
             ui.set("#Icon" + i + "Preview.Background.Color", tintHex);
             ui.set("#Icon" + i + "Selected.Visible", i == selectedIconIndex);
         }
-        
+
         for (int i = 0; i < AVAILABLE_TINTS.length; i++) {
             ui.set("#Color" + i + "Selected.Visible", i == selectedTintIndex);
         }
-        
+
         String iconName = AVAILABLE_ICONS[selectedIconIndex];
         ui.set("#SelectedIconPreview.Background", "Common/" + iconName);
         ui.set("#SelectedIconPreview.Background.Color", tintHex);
-        
+
         sendUpdate(ui, events, false);
     }
 
     private void refreshCoordinates(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         UICommandBuilder ui = new UICommandBuilder();
         UIEventBuilder events = new UIEventBuilder();
-        
+
         ui.set("#InputX.Value", this.inputX);
         ui.set("#InputZ.Value", this.inputZ);
-        
+
         sendUpdate(ui, events, false);
     }
 

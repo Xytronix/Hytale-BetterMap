@@ -26,8 +26,9 @@ public class WaypointDeleteGlobalCommand extends AbstractPlayerCommand {
     }
 
     public WaypointDeleteGlobalCommand() {
-        super("removeglobal", "Remove a shared map waypoint");
-        this.addAliases("deleteglobal", "delglobal", "removeshared", "deleteshared");
+        super("removeglobal", "Remove a global map waypoint");
+        this.addAliases("deleteglobal", "delglobal");
+        this.requirePermission("bettermap.command.waypoint.global");
     }
 
     @Override

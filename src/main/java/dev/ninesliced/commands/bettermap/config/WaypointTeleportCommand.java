@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.managers.WaypointManager;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -58,6 +59,7 @@ public class WaypointTeleportCommand extends AbstractCommand {
             ModConfig config = ModConfig.getInstance();
             boolean newState = !config.isAllowWaypointTeleports();
             config.setAllowWaypointTeleports(newState);
+            WaypointManager.refreshAllPlayersMarkers(world);
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;

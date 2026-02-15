@@ -1,5 +1,12 @@
 package dev.ninesliced.commands.bettermap.config;
 
+import java.awt.Color;
+import java.util.concurrent.CompletableFuture;
+
+import dev.ninesliced.commands.bettermap.config.ConfigCommand;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -8,25 +15,17 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
 import dev.ninesliced.configs.ModConfig;
-import dev.ninesliced.managers.MapPrivacyManager;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.utils.WorldMapHook;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
-import java.awt.*;
-import java.util.concurrent.CompletableFuture;
+public class HideSpawnCommand extends AbstractCommand {
 
-/**
- * Command to toggle the player radar feature on and off.
- * <p>
- * When enabled, the player will see other players' positions on the map.
- * </p>
- */
-public class RadarToggleCommand extends AbstractCommand {
-
-    public RadarToggleCommand() {
-        super("radar", "Toggle player radar visibility on the map");
+    public HideSpawnCommand() {
+        super("hidespawn", "Toggle hiding the spawn marker");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
     }
 
@@ -35,16 +34,11 @@ public class RadarToggleCommand extends AbstractCommand {
         return false;
     }
 
-    /**
-     * Executes the radar toggle command.
-     *
-     * @param commandContext The command execution context.
-     * @return A CompletableFuture representing the asynchronous execution.
-     */
     @NullableDecl
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext commandContext) {
         if (!commandContext.isPlayer()) {
+            commandContext.sendMessage(Message.raw("This command can only be used by a player.").color(Color.RED));
             return CompletableFuture.completedFuture(null);
         }
 
@@ -65,21 +59,26 @@ public class RadarToggleCommand extends AbstractCommand {
             }
 
             ModConfig config = ModConfig.getInstance();
-            boolean newState = !config.isRadarEnabled();
-            config.setRadarEnabled(newState);
-            MapPrivacyManager.getInstance().updatePrivacyState();
+            boolean newState = !config.isHideSpawnOnMap();
+            config.setHideSpawnOnMap(newState);
+
+            PlayerConfig playerConfig = playerRef.getUuid() != null
+                ? PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid())
+                : null;
+            if (playerConfig != null) {
+                playerConfig.setOverrideGlobalSpawnHide(false);
+                PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
+            }
+
+            PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
+            WorldMapHook.clearMarkerCaches(world);
             WorldMapHook.refreshTrackers(world);
 
-            String status = newState ? "ENABLED" : "DISABLED";
-            Color color = newState ? Color.GREEN : Color.RED;
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
 
-            playerRef.sendMessage(Message.raw("Player Radar " + status).color(color));
-
-            if (newState) {
-                String rangeText = config.getRadarRange() < 0 ? "Infinite" : config.getRadarRange() + " blocks";
-                playerRef.sendMessage(Message.raw("Range: " + rangeText).color(Color.GRAY));
-            }
+            playerRef.sendMessage(Message.raw("Spawn markers are now " + status + " on the map.").color(color));
         }, world);
     }
 }
-

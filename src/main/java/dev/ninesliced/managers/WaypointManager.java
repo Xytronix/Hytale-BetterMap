@@ -1,5 +1,30 @@
 package dev.ninesliced.managers;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.protocol.Transform;
+import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
@@ -12,7 +37,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarkersStore;
+
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
+import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.utils.ReflectionHelper;
 
@@ -31,6 +58,7 @@ import javax.annotation.Nullable;
  */
 public class WaypointManager {
     private static final Logger LOGGER = Logger.getLogger(WaypointManager.class.getName());
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
     private static final String PERSONAL_ID_PREFIX = "user_personal_";
     private static final String SHARED_ID_PREFIX = "user_shared_";
 
@@ -55,27 +83,27 @@ public class WaypointManager {
         }
 
         List<UserMapMarker> result = new ArrayList<>();
-        
+
         UserMapMarkersStore personalStore = resolveStore(world, player, false);
         if (personalStore != null) {
             result.addAll(personalStore.getUserMapMarkers());
         }
-        
+
         UserMapMarkersStore sharedStore = resolveStore(world, player, true);
         if (sharedStore != null) {
             result.addAll(sharedStore.getUserMapMarkers());
         }
-        
+
         return result;
     }
 
     /**
      * Creates a new marker with the given parameters.
      */
-    public static void addMarker(@Nonnull Player player, 
-                                 @Nonnull String name, 
+    public static void addMarker(@Nonnull Player player,
+                                 @Nonnull String name,
                                  @Nonnull String icon,
-                                 float x, 
+                                 float x,
                                  float z,
                                  @Nullable Color tint,
                                  boolean shared) {
@@ -93,7 +121,7 @@ public class WaypointManager {
         marker.setColorTint(tint != null ? tint : new Color((byte) 0, (byte) 0, (byte) 0));
         marker.withCreatedByName(player.getDisplayName());
         marker.withCreatedByUuid(((CommandSender) player).getUuid());
-        
+
         store.addUserMapMarker(marker);
 
         MapAnchorManager.getInstance().refreshAnchor(player);
@@ -123,9 +151,9 @@ public class WaypointManager {
      * When position changes, the marker is deleted and recreated with a new ID
      * to ensure both map and compass update correctly.
      */
-    public static boolean updateMarker(@Nonnull Player player, 
-                                       @Nonnull String id, 
-                                       @Nullable String newName, 
+    public static boolean updateMarker(@Nonnull Player player,
+                                       @Nonnull String id,
+                                       @Nullable String newName,
                                        @Nullable String newIcon,
                                        @Nullable Float newX,
                                        @Nullable Float newZ,
@@ -139,17 +167,17 @@ public class WaypointManager {
         }
 
         UserMapMarker existing = entry.marker;
-        
-        boolean positionChanging = newX != null && newZ != null && 
+
+        boolean positionChanging = newX != null && newZ != null &&
             (Math.abs(existing.getX() - newX) > 0.01f || Math.abs(existing.getZ() - newZ) > 0.01f);
-        
+
         if (positionChanging) {
             String finalName = (newName != null && !newName.trim().isEmpty()) ? newName.trim() : existing.getName();
             String finalIcon = (newIcon != null && !newIcon.trim().isEmpty()) ? normalizeIcon(newIcon.trim()) : existing.getIcon();
             Color finalTint = newTint != null ? newTint : existing.getColorTint();
-            
+
             entry.store.removeUserMapMarker(id);
-            
+
             UserMapMarker newMarker = new UserMapMarker();
             newMarker.setId((entry.shared ? SHARED_ID_PREFIX : PERSONAL_ID_PREFIX) + UUID.randomUUID());
             newMarker.setName(finalName);
@@ -158,14 +186,14 @@ public class WaypointManager {
             newMarker.setColorTint(finalTint);
             newMarker.withCreatedByName(existing.getCreatedByName());
             newMarker.withCreatedByUuid(existing.getCreatedByUuid());
-            
+
             entry.store.addUserMapMarker(newMarker);
 
             MapAnchorManager.getInstance().refreshAnchor(player);
 
             return true;
         }
-        
+
         List<UserMapMarker> markers = new ArrayList<>(entry.store.getUserMapMarkers());
         boolean updated = false;
         for (int i = 0; i < markers.size(); i++) {
@@ -188,7 +216,7 @@ public class WaypointManager {
 
         if (updated) {
             entry.store.setUserMapMarkers(markers);
-            
+
             if (entry.shared) {
                 forceRemoveAndResyncMarkerForAllClients(world, id);
             } else {
@@ -199,7 +227,7 @@ public class WaypointManager {
         }
         return updated;
     }
-    
+
     /**
      * Forces a marker to be removed from client and server caches, then immediately re-synced.
      * This is the key to updating both map AND compass - we fully remove the old marker,
@@ -212,24 +240,24 @@ public class WaypointManager {
 
             Object markerTrackerObj = ReflectionHelper.getFieldValueRecursive(tracker, "markerTracker");
             if (!(markerTrackerObj instanceof MapMarkerTracker markerTracker)) return;
-            
+
             var sentMarkers = markerTracker.getSentMarkers();
             if (sentMarkers != null) {
                 sentMarkers.remove(markerId);
             }
-            
+
             player.getPlayerConnection().writeNoCache(new UpdateWorldMap(
-                null, 
-                null, 
+                null,
+                null,
                 new String[]{markerId}
             ));
-            
+
             ReflectionHelper.setFieldValueRecursive(markerTracker, "smallMovementsTimer", 0.0f);
         } catch (Exception e) {
             LOGGER.warning("Failed to force marker resync: " + e.getMessage());
         }
     }
-    
+
     /**
      * Forces a shared marker to be removed and re-synced for ALL clients in the world.
      */

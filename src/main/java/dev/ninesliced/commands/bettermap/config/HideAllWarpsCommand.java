@@ -9,7 +9,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ModConfig;
-import dev.ninesliced.managers.MapPrivacyManager;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.utils.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
@@ -17,16 +19,10 @@ import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Command to toggle the player radar feature on and off.
- * <p>
- * When enabled, the player will see other players' positions on the map.
- * </p>
- */
-public class RadarToggleCommand extends AbstractCommand {
+public class HideAllWarpsCommand extends AbstractCommand {
 
-    public RadarToggleCommand() {
-        super("radar", "Toggle player radar visibility on the map");
+    public HideAllWarpsCommand() {
+        super("hideallwarps", "Toggle hiding all warps on the world map");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
     }
 
@@ -35,16 +31,11 @@ public class RadarToggleCommand extends AbstractCommand {
         return false;
     }
 
-    /**
-     * Executes the radar toggle command.
-     *
-     * @param commandContext The command execution context.
-     * @return A CompletableFuture representing the asynchronous execution.
-     */
     @NullableDecl
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext commandContext) {
         if (!commandContext.isPlayer()) {
+            commandContext.sendMessage(Message.raw("This command can only be used by a player.").color(Color.RED));
             return CompletableFuture.completedFuture(null);
         }
 
@@ -65,21 +56,27 @@ public class RadarToggleCommand extends AbstractCommand {
             }
 
             ModConfig config = ModConfig.getInstance();
-            boolean newState = !config.isRadarEnabled();
-            config.setRadarEnabled(newState);
-            MapPrivacyManager.getInstance().updatePrivacyState();
+            boolean newState = !config.isHideAllWarpsOnMap();
+            config.setHideAllWarpsOnMap(newState);
+
+            PlayerConfig playerConfig = playerRef.getUuid() != null
+                ? PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid())
+                : null;
+            if (playerConfig != null) {
+                playerConfig.setOverrideGlobalAllWarpsHide(false);
+                playerConfig.setOverrideGlobalOtherWarpsHide(false);
+                PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
+            }
+
+            WarpPrivacyManager.getInstance().updatePrivacyState();
+            WorldMapHook.clearMarkerCaches(world);
             WorldMapHook.refreshTrackers(world);
 
-            String status = newState ? "ENABLED" : "DISABLED";
-            Color color = newState ? Color.GREEN : Color.RED;
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
 
-            playerRef.sendMessage(Message.raw("Player Radar " + status).color(color));
-
-            if (newState) {
-                String rangeText = config.getRadarRange() < 0 ? "Infinite" : config.getRadarRange() + " blocks";
-                playerRef.sendMessage(Message.raw("Range: " + rangeText).color(Color.GRAY));
-            }
+            playerRef.sendMessage(Message.raw("Warps are now " + status + " on the map.").color(color));
         }, world);
     }
 }
-

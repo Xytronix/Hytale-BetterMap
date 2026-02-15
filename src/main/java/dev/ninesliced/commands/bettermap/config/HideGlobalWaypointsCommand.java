@@ -1,5 +1,12 @@
 package dev.ninesliced.commands.bettermap.config;
 
+import java.awt.Color;
+import java.util.concurrent.CompletableFuture;
+
+import dev.ninesliced.commands.bettermap.config.ConfigCommand;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -8,25 +15,16 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
 import dev.ninesliced.configs.ModConfig;
-import dev.ninesliced.managers.MapPrivacyManager;
-import dev.ninesliced.utils.WorldMapHook;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.WaypointManager;
 
-import java.awt.*;
-import java.util.concurrent.CompletableFuture;
+public class HideGlobalWaypointsCommand extends AbstractCommand {
 
-/**
- * Command to toggle the player radar feature on and off.
- * <p>
- * When enabled, the player will see other players' positions on the map.
- * </p>
- */
-public class RadarToggleCommand extends AbstractCommand {
-
-    public RadarToggleCommand() {
-        super("radar", "Toggle player radar visibility on the map");
+    public HideGlobalWaypointsCommand() {
+        super("hideglobalwaypoints", "Toggle hiding global waypoints on the map");
         this.requirePermission(ConfigCommand.CONFIG_PERMISSION);
     }
 
@@ -35,16 +33,11 @@ public class RadarToggleCommand extends AbstractCommand {
         return false;
     }
 
-    /**
-     * Executes the radar toggle command.
-     *
-     * @param commandContext The command execution context.
-     * @return A CompletableFuture representing the asynchronous execution.
-     */
     @NullableDecl
     @Override
     protected CompletableFuture<Void> execute(@NonNullDecl CommandContext commandContext) {
         if (!commandContext.isPlayer()) {
+            commandContext.sendMessage(Message.raw("This command can only be used by a player.").color(Color.RED));
             return CompletableFuture.completedFuture(null);
         }
 
@@ -65,21 +58,25 @@ public class RadarToggleCommand extends AbstractCommand {
             }
 
             ModConfig config = ModConfig.getInstance();
-            boolean newState = !config.isRadarEnabled();
-            config.setRadarEnabled(newState);
-            MapPrivacyManager.getInstance().updatePrivacyState();
-            WorldMapHook.refreshTrackers(world);
+            boolean newState = !config.isHideGlobalWaypointsOnMap();
+            config.setHideGlobalWaypointsOnMap(newState);
 
-            String status = newState ? "ENABLED" : "DISABLED";
-            Color color = newState ? Color.GREEN : Color.RED;
-
-            playerRef.sendMessage(Message.raw("Player Radar " + status).color(color));
-
-            if (newState) {
-                String rangeText = config.getRadarRange() < 0 ? "Infinite" : config.getRadarRange() + " blocks";
-                playerRef.sendMessage(Message.raw("Range: " + rangeText).color(Color.GRAY));
+            PlayerConfig playerConfig = playerRef.getUuid() != null
+                ? PlayerConfigManager.getInstance().getPlayerConfig(playerRef.getUuid())
+                : null;
+            if (playerConfig != null) {
+                playerConfig.setHideGlobalWaypointsOnMap(false);
+                playerConfig.setOverrideGlobalWaypointHide(false);
+                PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
             }
+
+            WaypointManager.refreshAllPlayersMarkers(world);
+
+            boolean visible = !newState;
+            Color color = visible ? Color.GREEN : Color.RED;
+            String status = visible ? "VISIBLE" : "HIDDEN";
+
+            playerRef.sendMessage(Message.raw("Global waypoints are now " + status + " on the map.").color(color));
         }, world);
     }
 }
-

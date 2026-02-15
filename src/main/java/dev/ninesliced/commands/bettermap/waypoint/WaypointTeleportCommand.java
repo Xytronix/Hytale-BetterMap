@@ -1,5 +1,7 @@
 package dev.ninesliced.commands.bettermap.waypoint;
 
+import javax.annotation.Nonnull;
+
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -23,7 +25,7 @@ import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserM
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.PermissionsUtil;
-import javax.annotation.Nonnull;
+import dev.ninesliced.utils.WorldMapHook;
 
 public class WaypointTeleportCommand extends AbstractPlayerCommand {
     private final RequiredArg<String> targetArg = this.withRequiredArg("target", "Waypoint name or marker id", ArgTypes.STRING);
@@ -36,7 +38,6 @@ public class WaypointTeleportCommand extends AbstractPlayerCommand {
     public WaypointTeleportCommand() {
         super("teleport", "Teleport to a map waypoint");
         this.addAliases("tp");
-        this.requirePermission("dev.ninesliced.bettermap.command.teleport");
     }
 
     @Override

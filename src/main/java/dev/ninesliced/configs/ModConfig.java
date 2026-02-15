@@ -38,12 +38,16 @@ public class ModConfig {
     private boolean radarEnabled = true;
     private int radarRange = -1;
     private boolean hidePlayersOnMap = false;
+    private boolean hideAllWarpsOnMap = false;
     private boolean hideOtherWarpsOnMap = false;
     private boolean hideUnexploredWarpsOnMap = true;
     private boolean allowWaypointTeleports = true;
     private boolean allowMapMarkerTeleports = true;
     private boolean hideAllPoiOnMap = false;
     private boolean hideUnexploredPoiOnMap = true;
+    private boolean hideSpawnOnMap = false;
+    private boolean hideDeathMarkerOnMap = false;
+    private boolean hideGlobalWaypointsOnMap = false;
     private List<String> hiddenPoiNames = new ArrayList<>();
     private int autoSaveInterval = 5;
     private int maxPersonalMarkersPerPlayer = 12;
@@ -207,6 +211,12 @@ public class ModConfig {
                         needsSave = true;
                     }
 
+                    if (jsonObject.has("hideAllWarpsOnMap")) {
+                        this.hideAllWarpsOnMap = loaded.hideAllWarpsOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
                     if (jsonObject.has("hideOtherWarpsOnMap")) {
                         this.hideOtherWarpsOnMap = loaded.hideOtherWarpsOnMap;
                     } else {
@@ -238,6 +248,24 @@ public class ModConfig {
 
                     if (jsonObject.has("hideUnexploredPoiOnMap")) {
                         this.hideUnexploredPoiOnMap = loaded.hideUnexploredPoiOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hideSpawnOnMap")) {
+                        this.hideSpawnOnMap = loaded.hideSpawnOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hideDeathMarkerOnMap")) {
+                        this.hideDeathMarkerOnMap = loaded.hideDeathMarkerOnMap;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("hideGlobalWaypointsOnMap")) {
+                        this.hideGlobalWaypointsOnMap = loaded.hideGlobalWaypointsOnMap;
                     } else {
                         needsSave = true;
                     }
@@ -667,6 +695,10 @@ public class ModConfig {
         return hidePlayersOnMap;
     }
 
+    public boolean isHideAllWarpsOnMap() {
+        return hideAllWarpsOnMap;
+    }
+
     /**
      * Checks if other players' warps should be hidden on the map.
      *
@@ -721,6 +753,14 @@ public class ModConfig {
         return hideUnexploredPoiOnMap;
     }
 
+    public boolean isHideSpawnOnMap() {
+        return hideSpawnOnMap;
+    }
+
+    public boolean isHideDeathMarkerOnMap() {
+        return hideDeathMarkerOnMap;
+    }
+
     /**
      * Gets the list of POI names to hide on the map.
      *
@@ -737,6 +777,11 @@ public class ModConfig {
      */
     public void setHidePlayersOnMap(boolean hidePlayersOnMap) {
         this.hidePlayersOnMap = hidePlayersOnMap;
+        save();
+    }
+
+    public void setHideAllWarpsOnMap(boolean hideAllWarpsOnMap) {
+        this.hideAllWarpsOnMap = hideAllWarpsOnMap;
         save();
     }
 
@@ -797,6 +842,25 @@ public class ModConfig {
      */
     public void setHideUnexploredPoiOnMap(boolean hideUnexploredPoiOnMap) {
         this.hideUnexploredPoiOnMap = hideUnexploredPoiOnMap;
+        save();
+    }
+
+    public void setHideSpawnOnMap(boolean hideSpawnOnMap) {
+        this.hideSpawnOnMap = hideSpawnOnMap;
+        save();
+    }
+
+    public void setHideDeathMarkerOnMap(boolean hideDeathMarkerOnMap) {
+        this.hideDeathMarkerOnMap = hideDeathMarkerOnMap;
+        save();
+    }
+
+    public boolean isHideGlobalWaypointsOnMap() {
+        return hideGlobalWaypointsOnMap;
+    }
+
+    public void setHideGlobalWaypointsOnMap(boolean hideGlobalWaypointsOnMap) {
+        this.hideGlobalWaypointsOnMap = hideGlobalWaypointsOnMap;
         save();
     }
 
