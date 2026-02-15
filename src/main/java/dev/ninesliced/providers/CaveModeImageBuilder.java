@@ -32,26 +32,26 @@ import java.util.logging.Logger;
 public class CaveModeImageBuilder {
     private static final Logger LOGGER = Logger.getLogger(CaveModeImageBuilder.class.getName());
     
-    private static final int COLOR_FLOOR_HIGH = packColor(180, 155, 130, 255);
-    private static final int COLOR_FLOOR_MID = packColor(140, 115, 95, 255);
-    private static final int COLOR_FLOOR_LOW = packColor(100, 80, 65, 255);
+    private static final int COLOR_FLOOR_HIGH = packColor(120, 106, 92, 255);
+    private static final int COLOR_FLOOR_MID = packColor(92, 80, 70, 255);
+    private static final int COLOR_FLOOR_LOW = packColor(66, 56, 49, 255);
+
+    private static final int COLOR_WALL_SOLID = packColor(20, 22, 28, 255);
+    private static final int COLOR_WALL_PARTIAL = packColor(34, 36, 44, 255);
+
+    private static final int COLOR_AIR_SPACE = packColor(26, 24, 33, 230);
+    private static final int COLOR_UNEXPLORED = packColor(8, 9, 14, 255);
     
-    private static final int COLOR_WALL_SOLID = packColor(55, 50, 60, 255);
-    private static final int COLOR_WALL_PARTIAL = packColor(75, 70, 80, 255);
-    
-    private static final int COLOR_AIR_SPACE = packColor(35, 30, 45, 220);
-    private static final int COLOR_UNEXPLORED = packColor(15, 12, 20, 255);
-    
-    private static final int COLOR_LAVA_CORE = packColor(255, 180, 50, 255);
-    private static final int COLOR_LAVA_EDGE = packColor(255, 100, 20, 255);
+    private static final int COLOR_LAVA_CORE = packColor(255, 132, 30, 255);
+    private static final int COLOR_LAVA_EDGE = packColor(255, 72, 14, 255);
     private static final int COLOR_WATER_DEEP = packColor(30, 80, 160, 230);
     private static final int COLOR_WATER_SHALLOW = packColor(70, 150, 220, 200);
     
-    private static final int COLOR_CAVE_TINY = packColor(90, 75, 65, 255);
-    private static final int COLOR_CAVE_SMALL = packColor(120, 100, 85, 255);
-    private static final int COLOR_CAVE_MEDIUM = packColor(150, 125, 105, 255);
-    private static final int COLOR_CAVE_LARGE = packColor(175, 150, 125, 255);
-    private static final int COLOR_CAVE_HUGE = packColor(200, 175, 150, 255);
+    private static final int COLOR_CAVE_TINY = packColor(64, 56, 50, 255);
+    private static final int COLOR_CAVE_SMALL = packColor(84, 73, 64, 255);
+    private static final int COLOR_CAVE_MEDIUM = packColor(110, 97, 84, 255);
+    private static final int COLOR_CAVE_LARGE = packColor(136, 121, 103, 255);
+    private static final int COLOR_CAVE_HUGE = packColor(165, 146, 125, 255);
     
     private final long index;
     private final World world;
@@ -67,6 +67,8 @@ public class CaveModeImageBuilder {
     @Nonnull private final CaveColumnData[] columnData;
     
     private final Color outColor = new Color();
+    private final Color scratchColorA = new Color();
+    private final Color scratchColorB = new Color();
     @Nullable
     private WorldChunk worldChunk;
     private FluidSection[] fluidSections;
@@ -182,7 +184,7 @@ public class CaveModeImageBuilder {
                 int sampleIndex = sampleZ * sampleWidth + sampleX;
                 
                 CaveColumnData col = columnData[sampleIndex];
-                renderColumn(col, globalMinFloorY, heightRange, maxCaveHeightNorm, ix, iz);
+                renderColumn(col, globalMinFloorY, heightRange, maxCaveHeightNorm, sampleX, sampleZ, ix, iz);
             }
         }
         
@@ -217,6 +219,12 @@ public class CaveModeImageBuilder {
         for (int y = minY; y <= maxY; y++) {
             int blockId = worldChunk.getBlock(x, y, z);
             boolean isAir = isAirOrPassable(blockId);
+
+            if (blockId != 0) {
+                result.hasHighestNonAir = true;
+                result.highestNonAirY = y;
+                result.highestNonAirBlockId = blockId;
+            }
             
             int fluidId = getFluidAt(x, y, z);
             if (fluidId != 0) {
@@ -318,29 +326,45 @@ public class CaveModeImageBuilder {
     /**
      * Renders a single column to the output image.
      */
-    private void renderColumn(CaveColumnData col, int minFloorY, int heightRange, 
-                              int maxCaveHeight, int imageX, int imageZ) {
+    private void renderColumn(CaveColumnData col, int minFloorY, int heightRange,
+                              int maxCaveHeight, int sampleX, int sampleZ, int imageX, int imageZ) {
         
         if (col.hasFluid && col.primaryFluidId != 0) {
+            if (shouldRenderHighestNonAirOverFluid(col)) {
+                renderHighestNonAir(col);
+                applyLightContrast(col.lightLevel, 0.66f, 1.08f);
+                applyStructureContrast(sampleX, sampleZ, col, 0.16f);
+                image.data[imageZ * image.width + imageX] = outColor.pack();
+                return;
+            }
+
             renderFluid(col.primaryFluidId, col.fluidY, col.caveHeight, col.fluidDepth);
+            applyLightContrast(col.lightLevel, 0.76f, 1.10f);
+            applyStructureContrast(sampleX, sampleZ, col, 0.18f);
             image.data[imageZ * image.width + imageX] = outColor.pack();
             return;
         }
         
         if (col.isWallAtTarget && col.openness < 0.15f) {
             renderWall(col.targetBlockId, col.openness);
+            applyLightContrast(col.lightLevel, 0.60f, 1.14f);
+            applyStructureContrast(sampleX, sampleZ, col, 0.30f);
             image.data[imageZ * image.width + imageX] = outColor.pack();
             return;
         }
         
         if (col.hasValidFloor) {
             renderCaveBySize(col, minFloorY, heightRange, maxCaveHeight);
+            applyLightContrast(col.lightLevel, 0.58f, 1.24f);
+            applyStructureContrast(sampleX, sampleZ, col, 0.38f);
             image.data[imageZ * image.width + imageX] = outColor.pack();
             return;
         }
         
         if (col.openness > 0.1f) {
             renderPartialCave(col, maxCaveHeight);
+            applyLightContrast(col.lightLevel, 0.62f, 1.14f);
+            applyStructureContrast(sampleX, sampleZ, col, 0.20f);
             image.data[imageZ * image.width + imageX] = outColor.pack();
             return;
         }
@@ -374,11 +398,18 @@ public class CaveModeImageBuilder {
         
         float depthFactor = (float)(col.floorY - minFloorY) / heightRange;
         depthFactor = Math.max(0, Math.min(1, depthFactor));
-        float brightness = 0.8f + 0.2f * depthFactor;
+        float brightness = 0.62f + 0.50f * depthFactor;
         outColor.multiply(brightness);
-        
+
+        if (col.floorBlockId != 0) {
+            getFloorBlockColor(col.floorBlockId, scratchColorA);
+            float blockBlend = Math.min(0.55f, 0.18f + col.openness * 0.55f);
+            outColor.lerpTo(scratchColorA, blockBlend);
+        }
+
+        float caveHeightNorm = Math.min(1.0f, caveHeight / (float)Math.max(1, maxCaveHeight));
         if (col.openness > 0.4f) {
-            outColor.brighten(0.1f * col.openness);
+            outColor.brighten(0.07f * col.openness + 0.07f * caveHeightNorm);
         }
     }
     
@@ -400,6 +431,14 @@ public class CaveModeImageBuilder {
         outColor.g = (int) lerp(wallG, caveG, openFactor);
         outColor.b = (int) lerp(wallB, caveB, openFactor);
         outColor.a = 255;
+
+        if (col.floorBlockId != 0) {
+            getFloorBlockColor(col.floorBlockId, scratchColorA);
+            outColor.lerpTo(scratchColorA, 0.12f + openFactor * 0.18f);
+        }
+
+        float caveHeightNorm = Math.min(1.0f, col.caveHeight / (float)Math.max(1, maxCaveHeight));
+        outColor.multiply(0.75f + 0.30f * openFactor + 0.15f * caveHeightNorm);
     }
     
     /**
@@ -410,15 +449,18 @@ public class CaveModeImageBuilder {
         Fluid fluid = Fluid.getAssetMap().getAsset(fluidId);
         
         if (fluid != null && fluid.hasEffect(ShaderType.Lava)) {
-            float depthIntensity = Math.min(1.0f, fluidDepth / 8.0f);
-            outColor.r = 255;
-            outColor.g = (int) lerp(180, 80, depthIntensity);
-            outColor.b = (int) lerp(50, 20, depthIntensity);
+            float depthIntensity = Math.min(1.0f, fluidDepth / 10.0f);
+            lerpColor(COLOR_LAVA_CORE, COLOR_LAVA_EDGE, depthIntensity, outColor);
+
+            outColor.r = Math.min(255, outColor.r + 14);
+            outColor.g = Math.min(255, outColor.g + 8);
+            outColor.b = Math.max(0, outColor.b - 6);
             outColor.a = 255;
             
-            if (fluidDepth > 4) {
-                outColor.r = 255;
-                outColor.g = Math.max(60, outColor.g - 20);
+            if (fluidDepth <= 2) {
+                outColor.brighten(0.05f);
+            } else if (fluidDepth > 6) {
+                outColor.multiply(0.94f);
             }
         } else {
             float depthFactor = Math.min(1.0f, fluidDepth / 10.0f);
@@ -458,15 +500,134 @@ public class CaveModeImageBuilder {
      * Renders wall/solid blocks.
      */
     private void renderWall(int blockId, float openness) {
-        int baseR = (COLOR_WALL_SOLID >> 24) & 0xFF;
-        int baseG = (COLOR_WALL_SOLID >> 16) & 0xFF;
-        int baseB = (COLOR_WALL_SOLID >> 8) & 0xFF;
-        
-        float factor = 1.0f + openness * 0.5f;
-        outColor.r = Math.min(255, (int)(baseR * factor));
-        outColor.g = Math.min(255, (int)(baseG * factor));
-        outColor.b = Math.min(255, (int)(baseB * factor));
-        outColor.a = 255;
+        int baseColor = openness > 0.07f ? COLOR_WALL_PARTIAL : COLOR_WALL_SOLID;
+        unpackColor(baseColor, outColor);
+
+        if (blockId != 0) {
+            getFloorBlockColor(blockId, scratchColorA);
+            outColor.lerpTo(scratchColorA, 0.26f + Math.min(0.20f, openness * 0.8f));
+        }
+
+        float factor = 0.78f + openness * 0.50f;
+        outColor.multiply(factor);
+    }
+
+    /**
+     * Determines whether a fluid pixel should be replaced by the highest non-air block in the sampled range.
+     * This avoids showing buildings/structures as submerged when they are actually above fluid.
+     */
+    private boolean shouldRenderHighestNonAirOverFluid(CaveColumnData col) {
+        if (!col.hasHighestNonAir || col.highestNonAirBlockId == 0) {
+            return false;
+        }
+
+        if (col.highestNonAirY <= col.fluidY) {
+            return false;
+        }
+
+        int aboveFluid = col.highestNonAirY - col.fluidY;
+        return aboveFluid >= 2 || (aboveFluid >= 1 && col.openness < 0.75f);
+    }
+
+    /**
+     * Renders the highest non-air block found inside the vertical range.
+     */
+    private void renderHighestNonAir(CaveColumnData col) {
+        getFloorBlockColor(col.highestNonAirBlockId, outColor);
+
+        int minScanY = Math.max(0, targetYLevel - verticalRange);
+        int maxScanY = Math.min(319, targetYLevel + verticalRange);
+        int scanRange = Math.max(1, maxScanY - minScanY);
+        float yNorm = Math.max(0.0f, Math.min(1.0f, (col.highestNonAirY - minScanY) / (float) scanRange));
+
+        float baseBrightness = 0.72f + 0.30f * yNorm;
+        outColor.multiply(baseBrightness);
+
+        if (col.hasFluid && col.highestNonAirY > col.fluidY) {
+            float overlayDepth = Math.min(1.0f, (col.highestNonAirY - col.fluidY) / 6.0f);
+            outColor.brighten(0.04f * overlayDepth);
+        }
+    }
+
+    /**
+     * Applies high-contrast brightness curve from block/sky light levels (0..15).
+     */
+    private void applyLightContrast(int lightLevel, float minMultiplier, float maxMultiplier) {
+        float lightNorm = Math.max(0.0f, Math.min(1.0f, lightLevel / 15.0f));
+        float curved = (float) Math.pow(lightNorm, 1.70);
+        float multiplier = minMultiplier + (maxMultiplier - minMultiplier) * curved;
+        outColor.multiply(multiplier);
+
+        if (lightLevel >= 13) {
+            float hotspot = Math.min(1.0f, (lightLevel - 12) / 3.0f);
+            hotspot *= hotspot;
+            outColor.r = (int) lerp(outColor.r, 208, 0.022f * hotspot);
+            outColor.g = (int) lerp(outColor.g, 202, 0.016f * hotspot);
+            outColor.b = (int) lerp(outColor.b, 196, 0.011f * hotspot);
+
+            int channelCap = (int) lerp(190, 210, hotspot);
+            outColor.r = Math.min(channelCap, outColor.r);
+            outColor.g = Math.min(channelCap, outColor.g);
+            outColor.b = Math.min(channelCap, outColor.b);
+        }
+    }
+
+    /**
+     * Applies local relief shading from neighboring sampled cave columns for stronger cave structure readability.
+     */
+    private void applyStructureContrast(int sampleX, int sampleZ, CaveColumnData center, float strength) {
+        CaveColumnData north = getColumn(sampleX, sampleZ - 1);
+        CaveColumnData south = getColumn(sampleX, sampleZ + 1);
+        CaveColumnData west = getColumn(sampleX - 1, sampleZ);
+        CaveColumnData east = getColumn(sampleX + 1, sampleZ);
+
+        int centerY = getColumnReliefY(center);
+        int nY = getColumnReliefY(north);
+        int sY = getColumnReliefY(south);
+        int wY = getColumnReliefY(west);
+        int eY = getColumnReliefY(east);
+
+        float dhdx = (eY - wY) * 0.5f;
+        float dhdz = (sY - nY) * 0.5f;
+
+        float dy = 3.4f;
+        float invLen = 1.0f / (float) Math.sqrt(dhdx * dhdx + dy * dy + dhdz * dhdz);
+        float nx = dhdx * invLen;
+        float ny = dy * invLen;
+        float nz = dhdz * invLen;
+
+        float lx = -0.22f;
+        float ly = 0.82f;
+        float lz = 0.53f;
+        float invLight = 1.0f / (float) Math.sqrt(lx * lx + ly * ly + lz * lz);
+        lx *= invLight;
+        ly *= invLight;
+        lz *= invLight;
+
+        float lambert = Math.max(0.0f, nx * lx + ny * ly + nz * lz);
+        float shade = (0.58f - strength * 0.25f) + (0.42f + strength * 0.35f) * lambert;
+
+        float opennessContrast = 1.0f + Math.min(0.16f, Math.abs(center.openness - ((north.openness + south.openness + west.openness + east.openness) * 0.25f)) * 0.9f);
+        outColor.multiply(shade * opennessContrast);
+    }
+
+    private CaveColumnData getColumn(int sx, int sz) {
+        int clampedX = Math.max(0, Math.min(sampleWidth - 1, sx));
+        int clampedZ = Math.max(0, Math.min(sampleHeight - 1, sz));
+        return columnData[clampedZ * sampleWidth + clampedX];
+    }
+
+    private int getColumnReliefY(CaveColumnData col) {
+        if (col == null) {
+            return targetYLevel;
+        }
+        if (col.hasValidFloor) {
+            return col.floorY;
+        }
+        if (col.openness > 0.05f) {
+            return targetYLevel - (int) (col.openness * verticalRange * 0.55f);
+        }
+        return targetYLevel + 2;
     }
     
     /**
@@ -474,37 +635,48 @@ public class CaveModeImageBuilder {
      */
     private void getFloorBlockColor(int blockId, Color outColor) {
         if (blockId == 0) {
-            outColor.r = 100;
-            outColor.g = 85;
-            outColor.b = 70;
+            outColor.r = 72;
+            outColor.g = 63;
+            outColor.b = 55;
             outColor.a = 255;
             return;
         }
         
         BlockType block = BlockType.getAssetMap().getAsset(blockId);
         if (block == null) {
-            outColor.r = 130;
-            outColor.g = 110;
-            outColor.b = 90;
+            outColor.r = 90;
+            outColor.g = 78;
+            outColor.b = 67;
             outColor.a = 255;
             return;
         }
-        
+
         com.hypixel.hytale.protocol.Color particleColor = block.getParticleColor();
-        if (particleColor != null) {
-            outColor.r = particleColor.red & 255;
-            outColor.g = particleColor.green & 255;
-            outColor.b = particleColor.blue & 255;
-            outColor.a = 255;
-            
-            outColor.r = Math.min(255, outColor.r + 10);
-            outColor.g = Math.max(0, outColor.g - 5);
-        } else {
-            outColor.r = 140;
-            outColor.g = 115;
-            outColor.b = 95;
-            outColor.a = 255;
+        com.hypixel.hytale.protocol.Color[] tintUp = block.getTintUp();
+
+        int tintR = 255;
+        int tintG = 255;
+        int tintB = 255;
+        if (tintUp != null && tintUp.length > 0 && tintUp[0] != null) {
+            tintR = tintUp[0].red & 255;
+            tintG = tintUp[0].green & 255;
+            tintB = tintUp[0].blue & 255;
         }
+
+        if (particleColor != null) {
+            outColor.r = (particleColor.red & 255) * tintR / 255;
+            outColor.g = (particleColor.green & 255) * tintG / 255;
+            outColor.b = (particleColor.blue & 255) * tintB / 255;
+        } else {
+            outColor.r = (int) (84 + 0.30f * (tintR - 84));
+            outColor.g = (int) (76 + 0.30f * (tintG - 76));
+            outColor.b = (int) (68 + 0.30f * (tintB - 68));
+        }
+
+        outColor.r = Math.min(255, Math.max(0, outColor.r));
+        outColor.g = Math.min(255, Math.max(0, outColor.g));
+        outColor.b = Math.min(255, Math.max(0, outColor.b));
+        outColor.a = 255;
     }
     
     /**
@@ -568,6 +740,10 @@ public class CaveModeImageBuilder {
         int floorBlockId = 0;
         int ceilingY = -1;
         int caveHeight = 0;
+
+        boolean hasHighestNonAir = false;
+        int highestNonAirY = -1;
+        int highestNonAirBlockId = 0;
         
         boolean hasFluid = false;
         int primaryFluidId = 0;
@@ -587,6 +763,9 @@ public class CaveModeImageBuilder {
             floorBlockId = 0;
             ceilingY = -1;
             caveHeight = 0;
+            hasHighestNonAir = false;
+            highestNonAirY = -1;
+            highestNonAirBlockId = 0;
             hasFluid = false;
             primaryFluidId = 0;
             fluidY = -1;
@@ -619,6 +798,14 @@ public class CaveModeImageBuilder {
             r = Math.min(255, (int)(r + 255 * amount));
             g = Math.min(255, (int)(g + 255 * amount));
             b = Math.min(255, (int)(b + 255 * amount));
+        }
+
+        void lerpTo(Color target, float t) {
+            float clamped = Math.max(0.0f, Math.min(1.0f, t));
+            r = (int) (r + (target.r - r) * clamped);
+            g = (int) (g + (target.g - g) * clamped);
+            b = (int) (b + (target.b - b) * clamped);
+            a = (int) (a + (target.a - a) * clamped);
         }
     }
 }
