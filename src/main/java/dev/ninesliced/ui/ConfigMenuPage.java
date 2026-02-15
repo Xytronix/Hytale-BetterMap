@@ -308,6 +308,31 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         });
     }
 
+    private void updateCaveRadiusForAllPlayers(int radius) {
+        int clampedRadius = Math.max(1, Math.min(radius, 16));
+        CaveModeManager caveModeManager = CaveModeManager.getInstance();
+        caveModeManager.updateCaveRadiusForAllStates(clampedRadius);
+
+        Universe universe = Universe.get();
+        if (universe == null) return;
+
+        for (World world : universe.getWorlds().values()) {
+            if (world == null) continue;
+
+            world.execute(() -> {
+                for (PlayerRef pRef : world.getPlayerRefs()) {
+                    Ref<EntityStore> pStoreRef = pRef.getReference();
+                    if (pStoreRef == null || !pStoreRef.isValid()) continue;
+
+                    Player p = pStoreRef.getStore().getComponent(pStoreRef, Player.getComponentType());
+                    if (p == null) continue;
+
+                    caveModeManager.getOrCreateState(p).setCaveRadius(clampedRadius);
+                }
+            });
+        }
+    }
+
     private void handlePlayerReset(UICommandBuilder ui, UIEventBuilder events, Player player) {
         PlayerConfig pConfig = PlayerConfigManager.getInstance().getPlayerConfig(((CommandSender) player).getUuid());
         pConfig.resetToDefaults();
@@ -814,22 +839,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         int radius = Integer.parseInt(val);
                         radius = Math.max(1, Math.min(radius, 16));
                         gConfig.setCaveModeRadius(radius);
-                        final int finalRadius = radius;
-                        World radiusWorld = player.getWorld();
-                        if (radiusWorld != null) {
-                            for (PlayerRef pRef : radiusWorld.getPlayerRefs()) {
-                                var pHolder = pRef.getHolder();
-                                if (pHolder != null) {
-                                    Player p = pHolder.getComponent(Player.getComponentType());
-                                    if (p != null) {
-                                        CaveModeManager.DynamicCaveModeState state = CaveModeManager.getInstance().getState(p);
-                                        if (state != null) {
-                                            state.setCaveRadius(finalRadius);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        updateCaveRadiusForAllPlayers(radius);
                     }
                     break;
             }

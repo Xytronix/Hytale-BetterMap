@@ -355,6 +355,15 @@ public class CaveModeManager {
         state.setLayerSize(layerSize);
         state.setUndergroundThreshold(undergroundThreshold);
     }
+
+    /**
+     * Applies a new cave radius to every tracked player state.
+     * This also forces cave overlay target recomputation on next update.
+     */
+    public void updateCaveRadiusForAllStates(int radius) {
+        int clampedRadius = Math.max(1, Math.min(radius, 16));
+        playerStates.values().forEach(state -> state.setCaveRadius(clampedRadius));
+    }
     
     
     /**
@@ -469,7 +478,17 @@ public class CaveModeManager {
         }
         
         public void setCaveRadius(int radius) {
-            this.caveRadius = Math.max(1, Math.min(radius, 16));
+            int clamped = Math.max(1, Math.min(radius, 16));
+            if (this.caveRadius != clamped) {
+                this.caveRadius = clamped;
+                pendingCaveChunks.clear();
+                invalidateTargetCache();
+                this.lastOverlayUpdateMs = 0L;
+                this.needsLayerRefresh = true;
+                this.caveProcessingInProgress = false;
+                return;
+            }
+            this.caveRadius = clamped;
         }
         
         public long getLastLayerChangeTime() {

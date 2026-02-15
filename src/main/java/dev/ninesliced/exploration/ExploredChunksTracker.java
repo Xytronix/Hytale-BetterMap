@@ -51,7 +51,7 @@ public class ExploredChunksTracker {
             persistentComponent.addExploredChunk(chunkIndex);
             version++;
             cachedSnapshot = null;
-            return true;t
+            return true;
         }
 
         lock.writeLock().lock();
