@@ -355,6 +355,15 @@ public class CaveModeManager {
         state.setLayerSize(layerSize);
         state.setUndergroundThreshold(undergroundThreshold);
     }
+
+    /**
+     * Applies a new cave radius to every tracked player state.
+     * This also forces cave overlay target recomputation on next update.
+     */
+    public void updateCaveRadiusForAllStates(int radius) {
+        int clampedRadius = Math.max(1, Math.min(radius, 16));
+        playerStates.values().forEach(state -> state.setCaveRadius(clampedRadius));
+    }
     
     
     /**
@@ -386,6 +395,16 @@ public class CaveModeManager {
         private volatile long lastOverlayUpdateMs = 0L;
         private volatile int lastOverlayMapChunkX = Integer.MIN_VALUE;
         private volatile int lastOverlayMapChunkZ = Integer.MIN_VALUE;
+        
+        /** Cached target cave chunks - only recomputed when player moves map chunk */
+        private volatile Set<Long> cachedTargetChunks = null;
+        /** Sorted by distance from player (nearest first) - used for progressive loading */
+        private volatile java.util.List<Long> cachedTargetSorted = null;
+        private volatile int cachedTargetMapChunkX = Integer.MIN_VALUE;
+        private volatile int cachedTargetMapChunkZ = Integer.MIN_VALUE;
+        
+        /** Flag to prevent concurrent cave overlay processing */
+        private volatile boolean caveProcessingInProgress = false;
         
         public boolean isDynamicModeEnabled() {
             return dynamicModeEnabled;
@@ -459,7 +478,17 @@ public class CaveModeManager {
         }
         
         public void setCaveRadius(int radius) {
-            this.caveRadius = Math.max(1, Math.min(radius, 16));
+            int clamped = Math.max(1, Math.min(radius, 16));
+            if (this.caveRadius != clamped) {
+                this.caveRadius = clamped;
+                pendingCaveChunks.clear();
+                invalidateTargetCache();
+                this.lastOverlayUpdateMs = 0L;
+                this.needsLayerRefresh = true;
+                this.caveProcessingInProgress = false;
+                return;
+            }
+            this.caveRadius = clamped;
         }
         
         public long getLastLayerChangeTime() {
@@ -535,12 +564,33 @@ public class CaveModeManager {
             this.lastOverlayMapChunkZ = mapChunkZ;
         }
         
+        public Set<Long> getCachedTargetChunks() { return cachedTargetChunks; }
+        public void setCachedTargetChunks(Set<Long> targets) { this.cachedTargetChunks = targets; }
+        /** Gets target chunks sorted nearest-first for progressive loading */
+        public java.util.List<Long> getCachedTargetSorted() { return cachedTargetSorted; }
+        public void setCachedTargetSorted(java.util.List<Long> sorted) { this.cachedTargetSorted = sorted; }
+        public int getCachedTargetMapChunkX() { return cachedTargetMapChunkX; }
+        public int getCachedTargetMapChunkZ() { return cachedTargetMapChunkZ; }
+        public void setCachedTargetPosition(int mx, int mz) {
+            this.cachedTargetMapChunkX = mx;
+            this.cachedTargetMapChunkZ = mz;
+        }
+        public void invalidateTargetCache() {
+            this.cachedTargetChunks = null;
+            this.cachedTargetSorted = null;
+            this.cachedTargetMapChunkX = Integer.MIN_VALUE;
+            this.cachedTargetMapChunkZ = Integer.MIN_VALUE;
+        }
+        public boolean isCaveProcessingInProgress() { return caveProcessingInProgress; }
+        public void setCaveProcessingInProgress(boolean inProgress) { this.caveProcessingInProgress = inProgress; }
+
         /**
          * Clears loaded cave chunks (when transitioning to surface).
          */
         public void clearLoadedCaveChunks() {
             loadedCaveChunks.clear();
             pendingCaveChunks.clear();
+            invalidateTargetCache();
         }
         
         /**

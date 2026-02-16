@@ -9,6 +9,7 @@ import dev.ninesliced.configs.ModConfig;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -165,7 +166,28 @@ public class ExplorationManager {
      * @param worldName The world name.
      * @return A set of all explored chunks.
      */
+    private final Map<String, Set<Long>> cachedAllExploredChunks = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> cachedAllExploredVersion = new java.util.concurrent.ConcurrentHashMap<>();
+    
     public java.util.Set<Long> getAllExploredChunks(String worldName) {
+        long combinedVersion = 0;
+        int playerCount = 0;
+        for (ExplorationTracker.PlayerExplorationData data : ExplorationTracker.getInstance().getAllPlayerDataSnapshot().values()) {
+            String dataWorld = data.getWorldName();
+            if (dataWorld == null || !dataWorld.equals(worldName)) continue;
+            combinedVersion += data.getExploredChunks().getVersion();
+            playerCount++;
+        }
+        combinedVersion = combinedVersion * 31 + playerCount;
+        
+        Long cachedVersion = cachedAllExploredVersion.get(worldName);
+        if (cachedVersion != null && cachedVersion == combinedVersion) {
+            Set<Long> cached = cachedAllExploredChunks.get(worldName);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        
         Set<Long> allChunks = new HashSet<>();
 
         if (persistenceEnabled) {
@@ -183,6 +205,8 @@ public class ExplorationManager {
             }
         }
 
+        cachedAllExploredChunks.put(worldName, allChunks);
+        cachedAllExploredVersion.put(worldName, combinedVersion);
         return allChunks;
     }
 

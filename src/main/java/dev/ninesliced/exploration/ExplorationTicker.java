@@ -25,8 +25,15 @@ import java.util.logging.Logger;
 public class ExplorationTicker {
     private static final Logger LOGGER = Logger.getLogger(ExplorationTicker.class.getName());
     private static ExplorationTicker INSTANCE;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "BetterMap-ExplorationTicker");
+        t.setDaemon(true);
+        return t;
+    });
     private boolean isRunning = false;
+    
+    /** Maximum time budget per world tick in nanoseconds (15ms) */
+    private static final long MAX_TICK_BUDGET_NS = 15_000_000L;
 
     private ExplorationTicker() {
     }
@@ -116,7 +123,8 @@ public class ExplorationTicker {
             try {
                 world.execute(() -> {
                     if (!world.isAlive()) return;
-                    updateWorldPlayers(world);
+                    long startNs = System.nanoTime();
+                    updateWorldPlayers(world, startNs);
                     PlayerRadarManager.getInstance().updateRadarData(world);
                     WorldBorderManager.getInstance().hookWorldMapManager(world);
                 });
@@ -126,12 +134,23 @@ public class ExplorationTicker {
         });
     }
 
-    private void updateWorldPlayers(World world) {
+    /**
+     * Updates all players in a world with time budgeting.
+     * If we exceed the time budget, remaining players are skipped until next tick.
+     */
+    private void updateWorldPlayers(World world, long startNs) {
         if (world == null || !world.isAlive()) return;
 
         try {
             for (PlayerRef ref : world.getPlayerRefs()) {
                 if (ref == null) continue;
+                
+                long elapsed = System.nanoTime() - startNs;
+                if (elapsed > MAX_TICK_BUDGET_NS) {
+                    LOGGER.fine("[TICK BUDGET] Exceeded " + (elapsed / 1_000_000) + "ms budget for world " + 
+                               world.getName() + ", deferring remaining players");
+                    break;
+                }
 
                 Ref<EntityStore> playerRef = ref.getReference();
                 if (playerRef == null || !playerRef.isValid()) continue;

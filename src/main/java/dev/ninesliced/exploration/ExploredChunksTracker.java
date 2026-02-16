@@ -4,11 +4,13 @@ import dev.ninesliced.components.ExplorationComponent;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 
 /**
  * Thread-safe tracker for the set of explored chunks.
@@ -18,6 +20,11 @@ public class ExploredChunksTracker {
     private final Set<Long> memoryExploredChunks;
     private final ExplorationComponent persistentComponent;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    
+    private volatile long version = 0;
+    
+    private volatile Set<Long> cachedSnapshot = null;
+    private volatile long cachedSnapshotVersion = -1;
 
     /**
      * Creates a new tracker.
@@ -37,16 +44,24 @@ public class ExploredChunksTracker {
      * Marks a single chunk as explored.
      *
      * @param chunkIndex The chunk index to mark.
+     * @return true if the chunk was newly added, false if already explored.
      */
-    public void markChunkExplored(long chunkIndex) {
+    public boolean markChunkExplored(long chunkIndex) {
         if (persistentComponent != null) {
             persistentComponent.addExploredChunk(chunkIndex);
-            return;
+            version++;
+            cachedSnapshot = null;
+            return true;
         }
 
         lock.writeLock().lock();
         try {
-            memoryExploredChunks.add(chunkIndex);
+            boolean added = memoryExploredChunks.add(chunkIndex);
+            if (added) {
+                version++;
+                cachedSnapshot = null;
+            }
+            return added;
         } finally {
             lock.writeLock().unlock();
         }
@@ -56,18 +71,30 @@ public class ExploredChunksTracker {
      * Marks multiple chunks as explored.
      *
      * @param chunkIndices The set of chunk indices.
+     * @return the number of newly added chunks.
      */
-    public void markChunksExplored(@Nonnull Set<Long> chunkIndices) {
+    public int markChunksExplored(@Nonnull Set<Long> chunkIndices) {
+        if (chunkIndices.isEmpty()) return 0;
+        
         if (persistentComponent != null) {
             for (Long chunk : chunkIndices) {
                 persistentComponent.addExploredChunk(chunk);
             }
-            return;
+            version++;
+            cachedSnapshot = null;
+            return chunkIndices.size();
         }
 
         lock.writeLock().lock();
         try {
+            int sizeBefore = memoryExploredChunks.size();
             memoryExploredChunks.addAll(chunkIndices);
+            int added = memoryExploredChunks.size() - sizeBefore;
+            if (added > 0) {
+                version++;
+                cachedSnapshot = null;
+            }
+            return added;
         } finally {
             lock.writeLock().unlock();
         }
@@ -93,22 +120,68 @@ public class ExploredChunksTracker {
     }
 
     /**
-     * Gets a copy of all explored chunk indices.
+     * Gets a cached, unmodifiable snapshot of all explored chunk indices.
+     * This is dramatically faster than creating a new HashSet copy every call.
+     * The snapshot is automatically invalidated when chunks are added/removed.
      *
-     * @return Set of all explored chunk indices.
+     * @return Unmodifiable set of all explored chunk indices.
      */
     @Nonnull
     public Set<Long> getExploredChunks() {
+        long currentVersion = version;
+        Set<Long> snapshot = cachedSnapshot;
+        if (snapshot != null && cachedSnapshotVersion == currentVersion) {
+            return snapshot;
+        }
+        
         if (persistentComponent != null) {
-            return new HashSet<>(persistentComponent.getExploredChunks());
+            snapshot = Collections.unmodifiableSet(new HashSet<>(persistentComponent.getExploredChunks()));
+        } else {
+            lock.readLock().lock();
+            try {
+                snapshot = Collections.unmodifiableSet(new HashSet<>(memoryExploredChunks));
+            } finally {
+                lock.readLock().unlock();
+            }
+        }
+        
+        cachedSnapshot = snapshot;
+        cachedSnapshotVersion = currentVersion;
+        return snapshot;
+    }
+    
+    /**
+     * Iterates over all explored chunks without creating a copy.
+     * This is the most efficient way to process all explored chunks.
+     *
+     * @param action The action to perform on each chunk index.
+     */
+    public void forEachExploredChunk(@Nonnull Consumer<Long> action) {
+        if (persistentComponent != null) {
+            for (Long chunk : persistentComponent.getExploredChunks()) {
+                action.accept(chunk);
+            }
+            return;
         }
 
         lock.readLock().lock();
         try {
-            return new HashSet<>(memoryExploredChunks);
+            for (Long chunk : memoryExploredChunks) {
+                action.accept(chunk);
+            }
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    /**
+     * Gets the current version counter. Incremented on every mutation.
+     * Callers can use this to efficiently detect changes without computing hashCode().
+     *
+     * @return The current version.
+     */
+    public long getVersion() {
+        return version;
     }
 
     /**
@@ -135,12 +208,16 @@ public class ExploredChunksTracker {
     public void clear() {
         if (persistentComponent != null) {
             persistentComponent.getExploredChunks().clear();
+            version++;
+            cachedSnapshot = null;
             return;
         }
 
         lock.writeLock().lock();
         try {
             memoryExploredChunks.clear();
+            version++;
+            cachedSnapshot = null;
         } finally {
             lock.writeLock().unlock();
         }

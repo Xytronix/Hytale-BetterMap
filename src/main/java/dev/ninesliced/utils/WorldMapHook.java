@@ -429,7 +429,7 @@ public class WorldMapHook {
 
                 if (isUnderground && world != null) {
                     CaveModeManager.DynamicCaveModeState state = caveManager.getState(player);
-                    updateDynamicCaveOverlay(player, world, tracker, x, z, state);
+                    scheduleCaveOverlayUpdate(player, world, tracker, x, z, state);
                     return;
                 }
             }
@@ -469,27 +469,58 @@ public class WorldMapHook {
     }
 
     /**
-     * Updates the dynamic cave mode overlay around the player.
-     * Shows explored cave chunks progressively (like normal map), prioritizing nearby ones.
-     * Cave chunks within the immediate radius are always loaded regardless of surface exploration.
-     * Previously explored cave chunks are also loaded if within range.
+     * Schedules cave overlay update to run OFF the world thread.
+     * Called from the world thread - reads tracker state (fast), then dispatches heavy work
+     * to the ticker thread. This prevents the world thread from being blocked by cave processing.
+     *
+     * Like Hytale's WorldMapManager which runs on its own 10 TPS thread, cave overlay
+     * computation runs on the BetterMap ticker thread, with only packet sending on the world thread.
      */
-    private static void updateDynamicCaveOverlay(@Nonnull Player player, @Nonnull World world,
-                                                   @Nonnull WorldMapTracker tracker,
-                                                   double playerX, double playerZ,
-                                                   @Nonnull CaveModeManager.DynamicCaveModeState state) {
-        try {
-            boolean fogOfWar = ModConfig.getInstance().isCaveFogOfWar();
+    private static void scheduleCaveOverlayUpdate(@Nonnull Player player, @Nonnull World world,
+                                                    @Nonnull WorldMapTracker tracker,
+                                                    double playerX, double playerZ,
+                                                    @Nonnull CaveModeManager.DynamicCaveModeState state) {
+        if (state.isCaveProcessingInProgress()) {
+            return;
+        }
 
-            Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
-            if (spiralIterator instanceof RestrictedSpiralIterator restrictedIterator) {
-                restrictedIterator.setCaveModeActive(fogOfWar);
+        boolean fogOfWar = ModConfig.getInstance().isCaveFogOfWar();
+
+        Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
+        if (spiralIterator instanceof RestrictedSpiralIterator restrictedIterator) {
+            restrictedIterator.setCaveModeActive(fogOfWar);
+        }
+
+        WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
+        float imageScale = settings.getImageScale();
+        int imageSize = MathUtil.fastFloor(32.0F * imageScale);
+
+        Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+        @SuppressWarnings("unchecked")
+        Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : null;
+
+        state.setCaveProcessingInProgress(true);
+        dev.ninesliced.exploration.ExplorationTicker.getInstance().scheduleUpdate(() -> {
+            try {
+                processCaveOverlayAsync(player, world, tracker, trackerLoaded, playerX, playerZ, state, imageSize);
+            } finally {
+                state.setCaveProcessingInProgress(false);
             }
+        });
+    }
 
-            WorldMapSettings settings = world.getWorldMapManager().getWorldMapSettings();
-            float imageScale = settings.getImageScale();
-            int imageSize = MathUtil.fastFloor(32.0F * imageScale);
-
+    /**
+     * Processes cave overlay computation OFF the world thread (runs on the ticker thread).
+     * All heavy work (candidate gathering, sorting, future processing) happens here.
+     * Only packet sending and tracker state updates are dispatched to the world thread.
+     */
+    private static void processCaveOverlayAsync(@Nonnull Player player, @Nonnull World world,
+                                                  @Nonnull WorldMapTracker tracker,
+                                                  @Nullable Set<Long> trackerLoaded,
+                                                  double playerX, double playerZ,
+                                                  @Nonnull CaveModeManager.DynamicCaveModeState state,
+                                                  int imageSize) {
+        try {
             int playerMapChunkX = ((int) Math.floor(playerX)) >> 5;
             int playerMapChunkZ = ((int) Math.floor(playerZ)) >> 5;
 
@@ -510,75 +541,136 @@ public class WorldMapHook {
             int caveRadius = state.getCaveRadius();
             int yLevel = state.getRenderYLevel();
             int verticalRange = state.getVerticalRange();
+            int maxChunks = ModConfig.getInstance().getActiveMapQuality().maxChunks;
+            boolean shareCaves = ModConfig.getInstance().isShareAllExploration();
 
             Set<Long> loadedCaveChunks = state.getLoadedCaveChunks();
             Set<Long> pendingCaveChunks = state.getPendingCaveChunks();
             Set<Long> exploredCaveChunks = state.getExploredCaveChunks();
-            boolean shareCaves = ModConfig.getInstance().isShareAllExploration();
             Set<Long> sharedExplored = shareCaves ? getSharedCaveExploredChunks(world.getName()) : null;
 
-            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
-            @SuppressWarnings("unchecked")
-            Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
+            String playerName = player.getDisplayName();
+            Set<Long> failedChunks = getCaveModeFailedChunks(playerName);
+            List<MapChunk> chunksToSend = new ArrayList<>();
+            Set<Long> trackerToAdd = new HashSet<>();
+            Set<Long> trackerToRemove = new HashSet<>();
 
-            int maxChunks = ModConfig.getInstance().getActiveMapQuality().maxChunks;
+            for (Long pendingIdx : new ArrayList<>(pendingCaveChunks)) {
+                CompletableFuture<CaveModeImageBuilder> future = pendingCaveModeFutures.get(playerName + "_" + pendingIdx);
+                if (future == null) {
+                    pendingCaveChunks.remove(pendingIdx);
+                    continue;
+                }
+                if (future.isDone()) {
+                    pendingCaveChunks.remove(pendingIdx);
+                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
 
-            int scanRadius = Math.max(caveRadius, (int) Math.ceil(Math.sqrt(maxChunks)));
-            int scanRadiusSq = scanRadius * scanRadius;
-            int caveRadiusSq = caveRadius * caveRadius;
+                    CaveModeImageBuilder builder = future.getNow(null);
+                    if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
+                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(pendingIdx);
+                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(pendingIdx);
+                        chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
+                        loadedCaveChunks.add(pendingIdx);
+                        trackerToAdd.add(pendingIdx);
+                        state.markCaveChunkExplored(pendingIdx);
+                        if (shareCaves && sharedExplored != null) {
+                            sharedExplored.add(pendingIdx);
+                        }
+                        failedChunks.remove(pendingIdx);
+                    } else {
+                        failedChunks.add(pendingIdx);
+                    }
+                } else if (future.isCompletedExceptionally()) {
+                    pendingCaveChunks.remove(pendingIdx);
+                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
+                    failedChunks.add(pendingIdx);
+                }
+            }
 
-            List<Long> candidateChunks = new ArrayList<>(Math.min(maxChunks, (scanRadius * scanRadius)));
+            boolean needsTargetRecompute = movedMapChunk || needsRefresh || state.getCachedTargetChunks() == null;
+            Set<Long> targetCaveChunks;
 
-            for (int dx = -scanRadius; dx <= scanRadius; dx++) {
-                for (int dz = -scanRadius; dz <= scanRadius; dz++) {
-                    int dist2 = dx * dx + dz * dz;
-                    if (dist2 > scanRadiusSq) continue;
+            if (needsTargetRecompute) {
+                int caveRadiusSq = caveRadius * caveRadius;
+                int scanRadius = caveRadius + 2;
+                int scanRadiusSq = scanRadius * scanRadius;
 
-                    int mx = playerMapChunkX + dx;
-                    int mz = playerMapChunkZ + dz;
-                    long idx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
+                Set<Long> candidateSet = new HashSet<>();
+                List<long[]> candidateChunksWithDist = new ArrayList<>();
 
-                    boolean inImmediateRadius = dist2 <= caveRadiusSq;
-                    boolean explored = inImmediateRadius || exploredCaveChunks.contains(idx) ||
-                            (shareCaves && sharedExplored != null && sharedExplored.contains(idx));
+                for (int dx = -scanRadius; dx <= scanRadius; dx++) {
+                    for (int dz = -scanRadius; dz <= scanRadius; dz++) {
+                        int dist2 = dx * dx + dz * dz;
+                        if (dist2 > scanRadiusSq) continue;
 
-                    if (explored) {
-                        candidateChunks.add(idx);
-                        if (inImmediateRadius) {
-                            state.markCaveChunkExplored(idx);
-                            if (shareCaves && sharedExplored != null) {
-                                sharedExplored.add(idx);
+                        int mx = playerMapChunkX + dx;
+                        int mz = playerMapChunkZ + dz;
+                        long idx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
+
+                        boolean inImmediateRadius = dist2 <= caveRadiusSq;
+                        boolean explored = inImmediateRadius || exploredCaveChunks.contains(idx) ||
+                                (shareCaves && sharedExplored != null && sharedExplored.contains(idx));
+
+                        if (explored) {
+                            candidateSet.add(idx);
+                            candidateChunksWithDist.add(new long[]{idx, dist2});
+                            if (inImmediateRadius) {
+                                state.markCaveChunkExplored(idx);
+                                if (shareCaves && sharedExplored != null) {
+                                    sharedExplored.add(idx);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            candidateChunks.sort(Comparator.comparingLong(idx -> {
-                int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                long dx = (long) mx - playerMapChunkX;
-                long dz = (long) mz - playerMapChunkZ;
-                return dx * dx + dz * dz;
-            }));
-
-            int surfaceChunksLoaded = 0;
-            for (Long idx : trackerLoaded) {
-                if (!loadedCaveChunks.contains(idx)) {
-                    surfaceChunksLoaded++;
+                for (Long exploredIdx : exploredCaveChunks) {
+                    if (!candidateSet.contains(exploredIdx)) {
+                        candidateSet.add(exploredIdx);
+                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(exploredIdx);
+                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(exploredIdx);
+                        long ddx = (long) mx - playerMapChunkX;
+                        long ddz = (long) mz - playerMapChunkZ;
+                        candidateChunksWithDist.add(new long[]{exploredIdx, ddx * ddx + ddz * ddz});
+                    }
                 }
+                if (shareCaves && sharedExplored != null) {
+                    for (Long sharedIdx : sharedExplored) {
+                        if (!candidateSet.contains(sharedIdx)) {
+                            candidateSet.add(sharedIdx);
+                            int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(sharedIdx);
+                            int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(sharedIdx);
+                            long ddx = (long) mx - playerMapChunkX;
+                            long ddz = (long) mz - playerMapChunkZ;
+                            candidateChunksWithDist.add(new long[]{sharedIdx, ddx * ddx + ddz * ddz});
+                        }
+                    }
+                }
+
+                candidateChunksWithDist.sort(Comparator.comparingLong(a -> a[1]));
+
+                int caveChunksAllowed = maxChunks * 3 / 4;
+                int targetCount = Math.min(candidateChunksWithDist.size(), caveChunksAllowed);
+
+                targetCaveChunks = new HashSet<>(targetCount * 2);
+                List<Long> sortedTargets = new ArrayList<>(targetCount);
+                for (int i = 0; i < targetCount; i++) {
+                    long chunkId = candidateChunksWithDist.get(i)[0];
+                    targetCaveChunks.add(chunkId);
+                    sortedTargets.add(chunkId);
+                }
+
+                state.setCachedTargetChunks(targetCaveChunks);
+                state.setCachedTargetSorted(sortedTargets);
+                state.setCachedTargetPosition(playerMapChunkX, playerMapChunkZ);
+            } else {
+                targetCaveChunks = state.getCachedTargetChunks();
             }
 
-            int surfaceChunksToKeep = Math.min(surfaceChunksLoaded, maxChunks / 4);
-            int caveChunksAllowed = maxChunks - surfaceChunksToKeep;
-
-            Set<Long> targetCaveChunks = new HashSet<>();
-            int targetCount = Math.min(candidateChunks.size(), caveChunksAllowed);
-            for (int i = 0; i < targetCount; i++) {
-                targetCaveChunks.add(candidateChunks.get(i));
+            List<Long> sortedTargets = state.getCachedTargetSorted();
+            if (sortedTargets == null) {
+                sortedTargets = new ArrayList<>(targetCaveChunks);
             }
-
-            List<Long> sortedTargets = targetCount > 0 ? new ArrayList<>(candidateChunks.subList(0, targetCount)) : Collections.emptyList();
 
             List<MapChunk> chunksToUnload = new ArrayList<>();
 
@@ -588,72 +680,15 @@ public class WorldMapHook {
                     int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(loadedIdx);
                     int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(loadedIdx);
                     chunksToUnload.add(new MapChunk(mx, mz, null));
-                    trackerLoaded.remove(loadedIdx);
+                    trackerToRemove.add(loadedIdx);
                 }
             }
-
-            int totalChunksAfterCaveCleanup = trackerLoaded.size();
-
-            if (totalChunksAfterCaveCleanup > maxChunks) {
-                List<Long> surfaceChunksLoaded2 = new ArrayList<>();
-                for (Long idx : new ArrayList<>(trackerLoaded)) {
-                    if (!loadedCaveChunks.contains(idx)) {
-                        surfaceChunksLoaded2.add(idx);
-                    }
-                }
-
-                surfaceChunksLoaded2.sort(Comparator.comparingDouble(idx -> {
-                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                    return -(Math.pow(mx - playerMapChunkX, 2) + Math.pow(mz - playerMapChunkZ, 2));
-                }));
-
-                int surfaceToRemove = totalChunksAfterCaveCleanup - maxChunks;
-                for (int i = 0; i < surfaceToRemove && i < surfaceChunksLoaded2.size(); i++) {
-                    Long idx = surfaceChunksLoaded2.get(i);
-                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                    chunksToUnload.add(new MapChunk(mx, mz, null));
-                    trackerLoaded.remove(idx);
-                }
-            }
-
-            if (loadedCaveChunks.size() > caveChunksAllowed) {
-                List<Long> sortedLoadedCave = new ArrayList<>(loadedCaveChunks);
-                sortedLoadedCave.sort(Comparator.comparingDouble(idx -> {
-                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                    return -(Math.pow(mx - playerMapChunkX, 2) + Math.pow(mz - playerMapChunkZ, 2));
-                }));
-
-                int caveToRemove = loadedCaveChunks.size() - caveChunksAllowed;
-                for (int i = 0; i < caveToRemove && i < sortedLoadedCave.size(); i++) {
-                    Long idx = sortedLoadedCave.get(i);
-                    loadedCaveChunks.remove(idx);
-                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                    chunksToUnload.add(new MapChunk(mx, mz, null));
-                    trackerLoaded.remove(idx);
-                }
-            }
-
-            if (!chunksToUnload.isEmpty()) {
-                UpdateWorldMap unloadPacket = new UpdateWorldMap(chunksToUnload.toArray(new MapChunk[0]), null, null);
-                sendPacket(player, unloadPacket);
-                LOGGER.fine("[DYNAMIC CAVE] Unloaded " + chunksToUnload.size() + " chunks (total loaded: " + trackerLoaded.size() +
-                           ", cave: " + loadedCaveChunks.size() + ", surface: " + (trackerLoaded.size() - loadedCaveChunks.size()) + ")");
-            }
-
-            List<MapChunk> chunksToSend = new ArrayList<>();
-            String playerName = player.getDisplayName();
-            Set<Long> failedChunks = getCaveModeFailedChunks(playerName);
 
             if (needsRefresh) {
-                LOGGER.info("[DYNAMIC CAVE] Refreshing " + loadedCaveChunks.size() + " chunks for new Y level: " + yLevel);
-
-                int refreshCount = 0;
+                LOGGER.info("[DYNAMIC CAVE] Refreshing chunks for new Y level: " + yLevel);
                 for (Long chunkIdx : new ArrayList<>(loadedCaveChunks)) {
                     if (!targetCaveChunks.contains(chunkIdx)) continue;
+                    if (pendingCaveChunks.contains(chunkIdx)) continue;
 
                     CompletableFuture<CaveModeImageBuilder> future = CaveModeImageBuilder.build(
                         chunkIdx, imageSize, imageSize, world, yLevel, verticalRange);
@@ -664,64 +699,55 @@ public class WorldMapHook {
                             int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
                             int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
                             chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
-                            state.markCaveChunkExplored(chunkIdx);
-                            if (shareCaves && sharedExplored != null) {
-                                sharedExplored.add(chunkIdx);
-                            }
-                            refreshCount++;
                         }
                     } else {
                         pendingCaveChunks.add(chunkIdx);
                         pendingCaveModeFutures.put(playerName + "_" + chunkIdx, future);
                     }
                 }
-
                 state.setNeedsLayerRefresh(false);
-                LOGGER.info("[DYNAMIC CAVE] Refreshed " + refreshCount + " chunks immediately, " +
-                           pendingCaveChunks.size() + " pending");
             }
 
-            for (Long pendingIdx : new ArrayList<>(pendingCaveChunks)) {
-                CompletableFuture<CaveModeImageBuilder> future = pendingCaveModeFutures.get(playerName + "_" + pendingIdx);
-                if (future != null && future.isDone()) {
-                    pendingCaveChunks.remove(pendingIdx);
-                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
+            final int MAX_PENDING_GENERATION = 20;
+            int currentPending = pendingCaveChunks.size();
+            int availableSlots = MAX_PENDING_GENERATION - currentPending;
 
-                    CaveModeImageBuilder builder = future.getNow(null);
-                    if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
-                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(pendingIdx);
-                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(pendingIdx);
-                        chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
-                        loadedCaveChunks.add(pendingIdx);
-                        trackerLoaded.add(pendingIdx);
-                        state.markCaveChunkExplored(pendingIdx);
-                        if (shareCaves && sharedExplored != null) {
-                            sharedExplored.add(pendingIdx);
+            if (availableSlots > 0) {
+                int newGenerations = 0;
+                int immediateLoads = 0;
+                int maxImmediateLoads = 4;
+
+                for (Long chunkIdx : sortedTargets) {
+                    if (newGenerations >= availableSlots && immediateLoads >= maxImmediateLoads) break;
+                    if (loadedCaveChunks.contains(chunkIdx) || pendingCaveChunks.contains(chunkIdx)) continue;
+
+                    CompletableFuture<CaveModeImageBuilder> future = CaveModeImageBuilder.build(
+                        chunkIdx, imageSize, imageSize, world, yLevel, verticalRange);
+
+                    if (future.isDone() && immediateLoads < maxImmediateLoads) {
+                        CaveModeImageBuilder builder = future.getNow(null);
+                        if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
+                            int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
+                            int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
+                            chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
+                            loadedCaveChunks.add(chunkIdx);
+                            trackerToAdd.add(chunkIdx);
+                            state.markCaveChunkExplored(chunkIdx);
+                            if (shareCaves && sharedExplored != null) {
+                                sharedExplored.add(chunkIdx);
+                            }
+                            immediateLoads++;
+                            failedChunks.remove(chunkIdx);
+                        } else {
+                            failedChunks.add(chunkIdx);
                         }
-                        failedChunks.remove(pendingIdx);
-                    } else {
-                        failedChunks.add(pendingIdx);
+                    } else if (!future.isDone() && newGenerations < availableSlots) {
+                        pendingCaveChunks.add(chunkIdx);
+                        pendingCaveModeFutures.put(playerName + "_" + chunkIdx, future);
+                        newGenerations++;
                     }
-                } else if (future != null && future.isCompletedExceptionally()) {
-                    pendingCaveChunks.remove(pendingIdx);
-                    pendingCaveModeFutures.remove(playerName + "_" + pendingIdx);
-                    failedChunks.add(pendingIdx);
                 }
             }
-
-            Set<Long> globalTargetChunks = getCaveModeTargetChunks(playerName);
-            globalTargetChunks.clear();
-            globalTargetChunks.addAll(targetCaveChunks);
-
-            int missingChunks = 0;
-            for (Long idx : targetCaveChunks) {
-                if (!loadedCaveChunks.contains(idx) && !pendingCaveChunks.contains(idx)) {
-                    missingChunks++;
-                }
-            }
-
-            int maxNewGenerations = missingChunks > 20 ? 8 : 6;
-            int maxImmediateLoads = missingChunks > 20 ? 6 : 4;
 
             Integer retryCounter = caveModeRetryCounter.get(playerName);
             if (retryCounter == null) retryCounter = 0;
@@ -729,7 +755,7 @@ public class WorldMapHook {
             caveModeRetryCounter.put(playerName, retryCounter);
 
             if (retryCounter % 10 == 0 && !failedChunks.isEmpty()) {
-                int retryCount = Math.min(5, failedChunks.size());
+                int retryCount = Math.min(3, failedChunks.size());
                 Iterator<Long> failedIter = failedChunks.iterator();
                 for (int i = 0; i < retryCount && failedIter.hasNext(); i++) {
                     Long failedIdx = failedIter.next();
@@ -739,52 +765,77 @@ public class WorldMapHook {
                 }
             }
 
-            int immediateLoads = 0;
-            int newGenerations = 0;
+            Set<Long> globalTargetChunks = getCaveModeTargetChunks(playerName);
+            globalTargetChunks.clear();
+            globalTargetChunks.addAll(targetCaveChunks);
 
-            for (Long chunkIdx : sortedTargets) {
-                if (loadedCaveChunks.contains(chunkIdx) || pendingCaveChunks.contains(chunkIdx)) continue;
+            final List<MapChunk> finalChunksToSend = chunksToSend;
+            final List<MapChunk> finalChunksToUnload = chunksToUnload;
+            final Set<Long> finalTrackerToAdd = trackerToAdd;
+            final Set<Long> finalTrackerToRemove = trackerToRemove;
 
-                if (newGenerations >= maxNewGenerations && immediateLoads >= maxImmediateLoads) continue;
+            if (!finalChunksToSend.isEmpty() || !finalChunksToUnload.isEmpty()) {
+                world.execute(() -> {
+                    try {
+                        Ref<EntityStore> ref = player.getReference();
+                        if (ref == null || !ref.isValid()) return;
 
-                CompletableFuture<CaveModeImageBuilder> future = CaveModeImageBuilder.build(
-                    chunkIdx, imageSize, imageSize, world, yLevel, verticalRange);
+                        if (trackerLoaded != null) {
+                            for (Long idx : finalTrackerToRemove) {
+                                trackerLoaded.remove(idx);
+                            }
+                            for (Long idx : finalTrackerToAdd) {
+                                trackerLoaded.add(idx);
+                            }
 
-                if (future.isDone() && immediateLoads < maxImmediateLoads) {
-                    CaveModeImageBuilder builder = future.getNow(null);
-                    if (builder != null && builder.getImage() != null && builder.getImage().data != null) {
-                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
-                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
-                        chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
-                        loadedCaveChunks.add(chunkIdx);
-                        trackerLoaded.add(chunkIdx);
-                        state.markCaveChunkExplored(chunkIdx);
-                        if (shareCaves && sharedExplored != null) {
-                            sharedExplored.add(chunkIdx);
+                            int totalLoaded = trackerLoaded.size();
+                            if (totalLoaded > maxChunks) {
+                                List<Long> surfaceToEvict = new ArrayList<>();
+                                for (Long idx : trackerLoaded) {
+                                    if (!loadedCaveChunks.contains(idx)) {
+                                        surfaceToEvict.add(idx);
+                                    }
+                                }
+                                surfaceToEvict.sort(Comparator.comparingLong(idx -> {
+                                    int emx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                                    int emz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                                    long ddx = (long) emx - playerMapChunkX;
+                                    long ddz = (long) emz - playerMapChunkZ;
+                                    return -(ddx * ddx + ddz * ddz);
+                                }));
+
+                                int toRemove = totalLoaded - maxChunks;
+                                for (int i = 0; i < toRemove && i < surfaceToEvict.size(); i++) {
+                                    Long idx = surfaceToEvict.get(i);
+                                    int emx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                                    int emz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                                    finalChunksToUnload.add(new MapChunk(emx, emz, null));
+                                    trackerLoaded.remove(idx);
+                                }
+                            }
                         }
-                        immediateLoads++;
-                        failedChunks.remove(chunkIdx);
-                    } else {
-                        failedChunks.add(chunkIdx);
-                    }
-                } else if (!future.isDone() && newGenerations < maxNewGenerations) {
-                    pendingCaveChunks.add(chunkIdx);
-                    pendingCaveModeFutures.put(playerName + "_" + chunkIdx, future);
-                    newGenerations++;
-                }
-            }
 
-            if (!chunksToSend.isEmpty()) {
-                int batchSize = 15;
-                for (int i = 0; i < chunksToSend.size(); i += batchSize) {
-                    int end = Math.min(i + batchSize, chunksToSend.size());
-                    List<MapChunk> batch = chunksToSend.subList(i, end);
-                    UpdateWorldMap packet = new UpdateWorldMap(batch.toArray(new MapChunk[0]), null, null);
-                    sendPacket(player, packet);
-                }
+                        if (!finalChunksToUnload.isEmpty()) {
+                            UpdateWorldMap unloadPacket = new UpdateWorldMap(finalChunksToUnload.toArray(new MapChunk[0]), null, null);
+                            sendPacket(player, unloadPacket);
+                        }
+
+                        if (!finalChunksToSend.isEmpty()) {
+                            int batchSize = 15;
+                            for (int i = 0; i < finalChunksToSend.size(); i += batchSize) {
+                                int end = Math.min(i + batchSize, finalChunksToSend.size());
+                                List<MapChunk> batch = finalChunksToSend.subList(i, end);
+                                UpdateWorldMap packet = new UpdateWorldMap(batch.toArray(new MapChunk[0]), null, null);
+                                sendPacket(player, packet);
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOGGER.fine("[DYNAMIC CAVE] Error sending cave packets: " + e.getMessage());
+                    }
+                });
             }
         } catch (Exception e) {
-            LOGGER.warning("[DYNAMIC CAVE] Error updating overlay: " + e.getMessage());
+            LOGGER.warning("[DYNAMIC CAVE] Error processing overlay async: " + e.getMessage());
         }
     }
 
@@ -1035,7 +1086,7 @@ public class WorldMapHook {
 
                 if (caveModeEnabled && isUnderground && state != null) {
                     LOGGER.info("[MAP REFRESH] Starting cave overlay at layer " + state.getCurrentLayer());
-                    updateDynamicCaveOverlay(player, world, tracker, pos.x, pos.z, state);
+                    scheduleCaveOverlayUpdate(player, world, tracker, pos.x, pos.z, state);
                 }
 
                 LOGGER.info("[MAP REFRESH] Re-initialized map at chunk " + chunkX + ", " + chunkZ);
@@ -1119,10 +1170,12 @@ public class WorldMapHook {
             }
 
             List<Long> sortedChunks = new ArrayList<>(mapChunksSet);
-            sortedChunks.sort(Comparator.comparingDouble(idx -> {
+            sortedChunks.sort(Comparator.comparingLong(idx -> {
                 int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
                 int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                return Math.pow(mx - playerMapChunkX, 2) + Math.pow(mz - playerMapChunkZ, 2);
+                long dx = (long) mx - playerMapChunkX;
+                long dz = (long) mz - playerMapChunkZ;
+                return dx * dx + dz * dz;
             }));
 
             caveModeTarget.clear();
@@ -1428,13 +1481,13 @@ public class WorldMapHook {
         private volatile List<Long> cachedRankedChunks = null;
         private volatile int cachedCenterX = Integer.MIN_VALUE;
         private volatile int cachedCenterZ = Integer.MIN_VALUE;
-        private volatile int cachedExploredChunksHash = 0;
-        private volatile int cachedExploredChunksSize = 0;
+        private volatile long cachedExploredVersion = -1;
         private volatile Set<Long> cachedBoundaryChunks = null;
+        
+        private volatile Set<Long> cachedMapChunks = null;
+        private volatile long cachedMapChunksVersion = -1;
 
         private static final int RESORT_DISTANCE_THRESHOLD = 4;
-        private final Set<Long> reusableMapChunks = new HashSet<>(1024);
-        private final Set<Long> reusableBoundaryChunks = new HashSet<>(8);
 
         public RestrictedSpiralIterator(ExplorationTracker.PlayerExplorationData data, WorldMapTracker tracker) {
             super();
@@ -1476,11 +1529,10 @@ public class WorldMapHook {
                 this.cachedRankedChunks = null;
                 this.cachedCenterX = Integer.MIN_VALUE;
                 this.cachedCenterZ = Integer.MIN_VALUE;
-                this.cachedExploredChunksHash = 0;
-                this.cachedExploredChunksSize = 0;
+                this.cachedExploredVersion = -1;
                 this.cachedBoundaryChunks = null;
-                this.reusableMapChunks.clear();
-                this.reusableBoundaryChunks.clear();
+                this.cachedMapChunks = null;
+                this.cachedMapChunksVersion = -1;
                 try {
                     super.init(0, 0, 0, 1);
                 } catch (Exception ignored) {}
@@ -1511,6 +1563,32 @@ public class WorldMapHook {
         public List<Long> getTargetMapChunks() {
             return targetMapChunks;
         }
+        
+        /**
+         * Gets or rebuilds the map chunks set from explored world chunks.
+         * Uses version counter for O(1) staleness check instead of iterating all chunks.
+         */
+        private Set<Long> getOrBuildMapChunks() {
+            long currentVersion = data.getExploredChunks().getVersion();
+            Set<Long> cached = cachedMapChunks;
+            if (cached != null && cachedMapChunksVersion == currentVersion) {
+                return cached;
+            }
+            
+            Set<Long> mapChunks = new HashSet<>(1024);
+            data.getExploredChunks().forEachExploredChunk(chunkIdx -> {
+                int wx = ChunkUtil.indexToChunkX(chunkIdx);
+                int wz = ChunkUtil.indexToChunkZ(chunkIdx);
+                int mx = wx >> 1;
+                int mz = wz >> 1;
+                long mapChunkIdx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
+                mapChunks.add(mapChunkIdx);
+            });
+            
+            cachedMapChunks = mapChunks;
+            cachedMapChunksVersion = currentVersion;
+            return mapChunks;
+        }
 
         @Override
         public void init(int cx, int cz, int startRadius, int endRadius) {
@@ -1538,72 +1616,73 @@ public class WorldMapHook {
                         return;
                     }
 
-                    Set<Long> exploredWorldChunks;
+                    long currentExploredVersion;
+                    Set<Long> mapChunksSet;
+                    
                     if (ModConfig.getInstance().isShareAllExploration()) {
                         World world = player.getWorld();
                         String worldName = world != null ? world.getName() : "world";
-                        exploredWorldChunks = ExplorationManager.getInstance().getAllExploredChunks(worldName);
+                        Set<Long> exploredWorldChunks = ExplorationManager.getInstance().getAllExploredChunks(worldName);
+                        currentExploredVersion = exploredWorldChunks.size();
+                        
+                        if (exploredWorldChunks.isEmpty()) {
+                            bootstrapExploration(cx, cz);
+                            exploredWorldChunks = ExplorationManager.getInstance().getAllExploredChunks(worldName);
+                            currentExploredVersion = exploredWorldChunks.size();
+                        }
+                        
+                        mapChunksSet = new HashSet<>(exploredWorldChunks.size() / 2);
+                        for (Long chunkIdx : exploredWorldChunks) {
+                            int wx = ChunkUtil.indexToChunkX(chunkIdx);
+                            int wz = ChunkUtil.indexToChunkZ(chunkIdx);
+                            long mapChunkIdx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(wx >> 1, wz >> 1);
+                            mapChunksSet.add(mapChunkIdx);
+                        }
                     } else {
-                        exploredWorldChunks = data.getExploredChunks().getExploredChunks();
+                        currentExploredVersion = data.getExploredChunks().getVersion();
+                        
+                        if (data.getExploredChunks().getExploredCount() == 0) {
+                            bootstrapExploration(cx, cz);
+                            currentExploredVersion = data.getExploredChunks().getVersion();
+                        }
+                        
+                        mapChunksSet = getOrBuildMapChunks();
                     }
 
-                    if (exploredWorldChunks == null || exploredWorldChunks.isEmpty()) {
-                        int worldChunkX = cx * 2;
-                        int worldChunkZ = cz * 2;
-                        int bootstrapRadius = ModConfig.getInstance().getExplorationRadius();
-
-                        Set<Long> bootstrapChunks = ChunkUtil.getChunksInCircularArea(worldChunkX, worldChunkZ, bootstrapRadius);
-                        data.getExploredChunks().markChunksExplored(bootstrapChunks);
-                        data.getMapExpansion().updateBoundaries(worldChunkX, worldChunkZ, bootstrapRadius);
-
-                        exploredWorldChunks = data.getExploredChunks().getExploredChunks();
-                        LOGGER.info("Bootstrapped " + bootstrapChunks.size() + " exploration chunks around (" + worldChunkX + ", " + worldChunkZ + ")");
+                    if (mapChunksSet.isEmpty()) {
+                        this.currentIterator = Collections.emptyIterator();
+                        this.initialized = true;
+                        return;
                     }
 
-                    int currentExploredSize = exploredWorldChunks.size();
-                    int currentExploredHash = exploredWorldChunks.hashCode();
                     int distanceFromCachedCenter = (cachedCenterX == Integer.MIN_VALUE) ? Integer.MAX_VALUE :
                             Math.abs(cx - cachedCenterX) + Math.abs(cz - cachedCenterZ);
 
-                    reusableMapChunks.clear();
-                    
-                    for (Long chunkIdx : exploredWorldChunks) {
-                        int wx = ChunkUtil.indexToChunkX(chunkIdx);
-                        int wz = ChunkUtil.indexToChunkZ(chunkIdx);
-
-                        int mx = wx >> 1;
-                        int mz = wz >> 1;
-
-                        long mapChunkIdx = com.hypixel.hytale.math.util.ChunkUtil.indexChunk(mx, mz);
-                        reusableMapChunks.add(mapChunkIdx);
-                    }
-
                     MapExpansionManager.MapBoundaries bounds = data.getMapExpansion().getCurrentBoundaries();
-                    reusableBoundaryChunks.clear();
+                    Set<Long> boundaryChunks = new HashSet<>(4);
 
                     if (bounds.minX != Integer.MAX_VALUE) {
-                        reusableBoundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.minX >> 1, bounds.minZ >> 1));
-                        reusableBoundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.maxX >> 1, bounds.minZ >> 1));
-                        reusableBoundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.minX >> 1, bounds.maxZ >> 1));
-                        reusableBoundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.maxX >> 1, bounds.maxZ >> 1));
+                        boundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.minX >> 1, bounds.minZ >> 1));
+                        boundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.maxX >> 1, bounds.minZ >> 1));
+                        boundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.minX >> 1, bounds.maxZ >> 1));
+                        boundaryChunks.add(com.hypixel.hytale.math.util.ChunkUtil.indexChunk(bounds.maxX >> 1, bounds.maxZ >> 1));
                     }
 
                     boolean boundaryChunksChanged = cachedBoundaryChunks == null ||
-                            !reusableBoundaryChunks.equals(cachedBoundaryChunks);
+                            !boundaryChunks.equals(cachedBoundaryChunks);
 
                     boolean needsResort = cachedRankedChunks == null ||
                             distanceFromCachedCenter > RESORT_DISTANCE_THRESHOLD ||
-                            currentExploredSize != cachedExploredChunksSize ||
-                            currentExploredHash != cachedExploredChunksHash ||
+                            currentExploredVersion != cachedExploredVersion ||
                             boundaryChunksChanged;
 
                     List<Long> rankedChunks;
                     
                     if (needsResort) {
-                        rankedChunks = new ArrayList<>(reusableMapChunks.size());
+                        rankedChunks = new ArrayList<>(mapChunksSet.size());
                         
-                        for (Long chunk : reusableMapChunks) {
-                            if (!reusableBoundaryChunks.contains(chunk)) {
+                        for (Long chunk : mapChunksSet) {
+                            if (!boundaryChunks.contains(chunk)) {
                                 rankedChunks.add(chunk);
                             }
                         }
@@ -1621,15 +1700,14 @@ public class WorldMapHook {
                         this.cachedRankedChunks = rankedChunks;
                         this.cachedCenterX = cx;
                         this.cachedCenterZ = cz;
-                        this.cachedExploredChunksSize = currentExploredSize;
-                        this.cachedExploredChunksHash = currentExploredHash;
-                        this.cachedBoundaryChunks = new HashSet<>(reusableBoundaryChunks);
+                        this.cachedExploredVersion = currentExploredVersion;
+                        this.cachedBoundaryChunks = new HashSet<>(boundaryChunks);
                     } else {
                         rankedChunks = cachedRankedChunks;
                     }
 
                     int maxChunks = ModConfig.getInstance().getActiveMaxChunksToLoad();
-                    int searchLimit = maxChunks - reusableBoundaryChunks.size();
+                    int searchLimit = maxChunks - boundaryChunks.size();
                     if (searchLimit < 0) searchLimit = 0;
 
                     List<Long> limitedRankedChunks;
@@ -1642,8 +1720,8 @@ public class WorldMapHook {
                         limitedRankedChunks = rankedChunks;
                     }
 
-                    this.targetMapChunks = new ArrayList<>(reusableBoundaryChunks.size() + limitedRankedChunks.size());
-                    this.targetMapChunks.addAll(reusableBoundaryChunks);
+                    this.targetMapChunks = new ArrayList<>(boundaryChunks.size() + limitedRankedChunks.size());
+                    this.targetMapChunks.addAll(boundaryChunks);
                     this.targetMapChunks.addAll(limitedRankedChunks);
 
                     this.currentIterator = limitedRankedChunks.iterator();
@@ -1659,6 +1737,21 @@ public class WorldMapHook {
                     this.initialized = true;
                 }
             }
+        }
+        
+        /**
+         * Bootstraps initial exploration chunks when none exist.
+         */
+        private void bootstrapExploration(int cx, int cz) {
+            int worldChunkX = cx * 2;
+            int worldChunkZ = cz * 2;
+            int bootstrapRadius = ModConfig.getInstance().getExplorationRadius();
+
+            Set<Long> bootstrapChunks = ChunkUtil.getChunksInCircularArea(worldChunkX, worldChunkZ, bootstrapRadius);
+            data.getExploredChunks().markChunksExplored(bootstrapChunks);
+            data.getMapExpansion().updateBoundaries(worldChunkX, worldChunkZ, bootstrapRadius);
+
+            LOGGER.info("Bootstrapped " + bootstrapChunks.size() + " exploration chunks around (" + worldChunkX + ", " + worldChunkZ + ")");
         }
 
         private void cleanupFarChunks(List<Long> keepChunks) {
