@@ -123,26 +123,49 @@ public class ExplorationPersistence {
                 world.execute(() -> {
                     LOGGER.info("Saving exploration data for world: " + world.getName());
                     world.getPlayerRefs().forEach(playerRef -> {
-                        LOGGER.info(" - Saving player: " + playerRef);
-                        assert playerRef.getHolder() != null;
-                        Player player = playerRef.getHolder().getComponent(Player.getComponentType());
-                        if (player != null) {
-                            String playerName = player.getDisplayName();
-                            UUID uuid = ((CommandSender) player).getUuid();
-                            String worldName = world.getName();
-
-                            ExplorationTracker.PlayerExplorationData data = ExplorationTracker.getInstance().getPlayerData(playerName);
-                            if (data != null && uuid != null) {
-                                Set<Long> chunks = data.getExploredChunks().getExploredChunks();
-                                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> 
-                                    save(playerName, uuid, worldName, chunks)
-                                );
-                                LOGGER.info("Saved exploration data for player: " + playerName);
+                        try {
+                            if (playerRef == null || playerRef.getHolder() == null) {
+                                LOGGER.fine("Skipping player save; player reference is invalid or holder is null.");
+                                return;
                             }
+
+                            Player player = playerRef.getHolder().getComponent(Player.getComponentType());
+                            if (player == null) {
+                                LOGGER.fine("Skipping player save; player component is unavailable.");
+                                return;
+                            }
+
+                            if (!(player instanceof CommandSender sender)) {
+                                LOGGER.warning("Skipping player save; player is not a CommandSender: " + player.getDisplayName());
+                                return;
+                            }
+
+                            UUID uuid = sender.getUuid();
+                            if (uuid == null) {
+                                LOGGER.warning("Skipping player save; UUID is null for: " + player.getDisplayName());
+                                return;
+                            }
+
+                            String playerName = player.getDisplayName();
+                            String worldName = world.getName();
+                            ExplorationTracker.PlayerExplorationData data = ExplorationTracker.getInstance().getPlayerData(playerName);
+                            if (data == null) {
+                                return;
+                            }
+
+                            Set<Long> chunks = new HashSet<>(data.getExploredChunks().getExploredChunks());
+
+                            java.util.concurrent.ForkJoinPool.commonPool().execute(() ->
+                                    save(playerName, uuid, worldName, chunks)
+                            );
+                        } catch (Exception e) {
+                            LOGGER.warning("Failed to queue exploration save for a player in world " + world.getName() + ": " + e.getMessage());
                         }
                     });
                 });
-            } catch (Exception _) {}
+            } catch (Exception e) {
+                LOGGER.warning("Failed to schedule exploration save task for world " + world.getName() + ": " + e.getMessage());
+            }
         });
     }
 
