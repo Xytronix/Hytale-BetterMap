@@ -187,7 +187,7 @@ public class LocationHud extends CustomUIHud {
                 anchor.setBottom(Value.of(MARGIN + 120));
             }
             case BOTTOM_RIGHT -> {
-                anchor.setWidth(Value.of(HUD_WIDTH + 400));
+                anchor.setWidth(Value.of(HUD_WIDTH + 650));
                 anchor.setRight(Value.of(MARGIN));
                 anchor.setBottom(Value.of(MARGIN));
             }
