@@ -328,7 +328,7 @@ $C.@PageOverlay {
 
             @CheckboxRow {
               $C.@CheckBox #PlayerHideAllPois { }
-              Label { Text: "Hide All POIs"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+              Label { Text: "Hide All POIs (Forgotten Temple)"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
 
             @CheckboxRow {
