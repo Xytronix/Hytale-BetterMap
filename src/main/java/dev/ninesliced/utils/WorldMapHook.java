@@ -931,7 +931,12 @@ public class WorldMapHook {
         }
 
         try {
-            player.getPlayerConnection().write(packet);
+            Ref<EntityStore> ref = player.getReference();
+            if (ref == null || !ref.isValid()) return;
+            com.hypixel.hytale.component.Store<EntityStore> store = ref.getStore();
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) return;
+            playerRef.getPacketHandler().write(packet);
         } catch (Exception e) {
             LOGGER.warning("Failed to send world map packet to " + player.getDisplayName() + ": " + e.getMessage());
         }

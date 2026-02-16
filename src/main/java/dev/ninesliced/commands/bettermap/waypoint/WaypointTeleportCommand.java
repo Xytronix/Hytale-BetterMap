@@ -62,7 +62,7 @@ public class WaypointTeleportCommand extends AbstractPlayerCommand {
             return;
         }
 
-        TransformComponent transform = player.getTransformComponent();
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         double fallbackY = transform != null ? transform.getPosition().y : 64.0;
         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
 

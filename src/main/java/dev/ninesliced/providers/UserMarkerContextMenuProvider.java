@@ -1,6 +1,8 @@
 package dev.ninesliced.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.PlacedByMarkerComponent;
@@ -10,14 +12,18 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
+import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.ReflectionHelper;
 
@@ -49,19 +55,38 @@ public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProv
         boolean showTeleport = allowWaypointTeleport && hasTeleportPermission && !hasNativeTeleport;
 
         UUID playerId = ((CommandSender) player).getUuid();
-        Boolean previous = TELEPORT_MENU_STATE.put(playerId, showTeleport);
-        if (previous != null && previous != showTeleport) {
-            forceResyncAllMarkers(player);
+        PlayerConfig playerConfig = playerId != null ? PlayerConfigManager.getInstance().getPlayerConfig(playerId) : null;
+
+        boolean hidePersonalWaypoints = playerConfig != null && playerConfig.isHidePersonalWaypointsOnMap();
+
+        boolean hideGlobalWaypoints = ModConfig.getInstance().isHideGlobalWaypointsOnMap();
+        if (playerConfig != null) {
+            if (playerConfig.isOverrideGlobalWaypointHide()) {
+                hideGlobalWaypoints = playerConfig.isHideGlobalWaypointsOnMap();
+            } else if (playerConfig.isHideGlobalWaypointsOnMap()) {
+                hideGlobalWaypoints = true;
+            }
         }
 
-        PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
-        for (UserMapMarker marker : perWorldData.getUserMapMarkers()) {
-            collector.add(buildMarkerWithContextMenu(marker, showTeleport));
+        if (playerId != null) {
+            Boolean previous = TELEPORT_MENU_STATE.put(playerId, showTeleport);
+            if (previous != null && previous != showTeleport) {
+                forceResyncAllMarkers(player);
+            }
+        }
+
+        if (!hidePersonalWaypoints) {
+            PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
+            for (UserMapMarker marker : perWorldData.getUserMapMarkers()) {
+                collector.add(buildMarkerWithContextMenu(marker, showTeleport));
+            }
         }
         
-        WorldMarkersResource worldMarkersResource = world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
-        for (UserMapMarker marker : worldMarkersResource.getUserMapMarkers()) {
-            collector.add(buildMarkerWithContextMenu(marker, showTeleport));
+        if (!hideGlobalWaypoints) {
+            WorldMarkersResource worldMarkersResource = world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
+            for (UserMapMarker marker : worldMarkersResource.getUserMapMarkers()) {
+                collector.add(buildMarkerWithContextMenu(marker, showTeleport));
+            }
         }
     }
     
@@ -112,7 +137,13 @@ public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProv
             String[] ids = sentMarkers.keySet().toArray(String[]::new);
             sentMarkers.clear();
 
-            player.getPlayerConnection().writeNoCache(new UpdateWorldMap(
+            Ref<EntityStore> ref = player.getReference();
+            if (ref == null || !ref.isValid()) return;
+            Store<EntityStore> store = ref.getStore();
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) return;
+
+            playerRef.getPacketHandler().writeNoCache(new UpdateWorldMap(
                 null,
                 null,
                 ids

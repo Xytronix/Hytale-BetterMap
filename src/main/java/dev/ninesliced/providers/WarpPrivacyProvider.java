@@ -4,7 +4,9 @@ import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
 import com.hypixel.hytale.builtin.teleport.Warp;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -12,7 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
+import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
@@ -46,7 +48,7 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
     @Override
     public void update(World world, Player viewer, MarkersCollector collector) {
         try {
-            if (world == null) {
+            if (world == null || collector == null) {
                 return;
             }
 
@@ -59,7 +61,6 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             if (warps == null || warps.isEmpty()) {
                 return;
             }
-
 
             String viewerName = resolveViewerName(viewer);
 
@@ -142,11 +143,11 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
                 Vector3f rotation = transform.getRotation();
                 float yaw = rotation != null ? rotation.getYaw() : 0.0f;
 
-                if (!collector.isInViewDistance(transform.getPosition().x, transform.getPosition().z)) {
-                    continue;
-                }
+                String markerId = buildMarkerId(warp);
+                String markerName = buildMarkerName(warp);
 
-                collector.add(createMarker(buildMarkerId(warp), buildMarkerName(warp), warp, yaw));
+                MapMarker marker = createMarker(markerId, markerName, warp, yaw);
+                collector.add(marker);
             }
 
         } catch (Exception e) {
@@ -232,8 +233,8 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
     private static boolean isWarpExplored(Transform transform,
                                           @Nullable ExplorationTracker.PlayerExplorationData explorationData,
                                           @Nullable Set<Long> sharedExploredChunks) {
-        int chunkX = ChunkUtil.blockToChunkCoord(transform.getPosition().x);
-        int chunkZ = ChunkUtil.blockToChunkCoord(transform.getPosition().z);
+        int chunkX = ChunkUtil.blockToChunkCoord((int) transform.getPosition().x);
+        int chunkZ = ChunkUtil.blockToChunkCoord((int) transform.getPosition().z);
         long chunkIndex = ChunkUtil.chunkCoordsToIndex(chunkX, chunkZ);
 
         if (sharedExploredChunks != null) {
@@ -255,7 +256,6 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
         return stripped.trim().toLowerCase(Locale.ROOT);
     }
 
-
     private static String buildMarkerId(Warp warp) {
         String id = warp.getId();
         return id != null ? MARKER_PREFIX + id : MARKER_PREFIX;
@@ -268,13 +268,16 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
 
     private static MapMarker createMarker(String id, String name, Warp warp, float yaw) {
         Transform transform = warp.getTransform();
-        com.hypixel.hytale.math.vector.Transform vecTransform = new com.hypixel.hytale.math.vector.Transform(
-            transform.getPosition(),
-            new Vector3f(0, yaw, 0)
+        com.hypixel.hytale.protocol.Transform packetTransform = PositionUtil.toTransformPacket(
+            new com.hypixel.hytale.math.vector.Transform(
+                transform.getPosition(),
+                new Vector3f(0, yaw, 0)
+            )
         );
 
-        return new MapMarkerBuilder(id, MARKER_ICON, vecTransform)
-            .withCustomName(name)
-            .build();
+        FormattedMessage displayName = new FormattedMessage();
+        displayName.rawText = name;
+
+        return new MapMarker(id, displayName, displayName.rawText, MARKER_ICON, packetTransform, null, null);
     }
 }

@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.util.concurrent.CompletableFuture;
 
 import dev.ninesliced.commands.bettermap.config.ConfigCommand;
+import dev.ninesliced.managers.MapPrivacyManager;
+import dev.ninesliced.utils.WorldMapHook;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -19,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.UserMarkerProviderManager;
 import dev.ninesliced.managers.WaypointManager;
 
 public class HideGlobalWaypointsCommand extends AbstractCommand {
@@ -70,7 +73,10 @@ public class HideGlobalWaypointsCommand extends AbstractCommand {
                 PlayerConfigManager.getInstance().savePlayerConfig(playerRef.getUuid());
             }
 
-            WaypointManager.refreshAllPlayersMarkers(world);
+            UserMarkerProviderManager.getInstance().onWorldLoad(world);
+            MapPrivacyManager.getInstance().updatePrivacyState();
+            WorldMapHook.clearMarkerCaches(world);
+            WorldMapHook.refreshTrackers(world);
 
             boolean visible = !newState;
             Color color = visible ? Color.GREEN : Color.RED;

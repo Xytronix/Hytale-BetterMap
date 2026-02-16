@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
 import com.hypixel.hytale.component.Holder;
@@ -246,7 +247,13 @@ public class WaypointManager {
                 sentMarkers.remove(markerId);
             }
 
-            player.getPlayerConnection().writeNoCache(new UpdateWorldMap(
+            Ref<EntityStore> ref = player.getReference();
+            if (ref == null || !ref.isValid()) return;
+            Store<EntityStore> store = ref.getStore();
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) return;
+
+            playerRef.getPacketHandler().writeNoCache(new UpdateWorldMap(
                 null,
                 null,
                 new String[]{markerId}

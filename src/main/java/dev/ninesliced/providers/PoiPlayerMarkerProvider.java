@@ -1,12 +1,16 @@
 package dev.ninesliced.providers;
 
+import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
+import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.exploration.ExplorationTracker;
@@ -17,6 +21,7 @@ import dev.ninesliced.utils.ChunkUtil;
 import dev.ninesliced.utils.PermissionsUtil;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -33,13 +38,12 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
 
     @Override
-    public void update(World world, MapMarkerTracker tracker, int viewRadius, int chunkX, int chunkZ) {
+    public void update(World world, Player viewer, MarkersCollector collector) {
         try {
-            if (world == null || tracker == null) {
+            if (world == null || collector == null) {
                 return;
             }
 
-            Player viewer = tracker.getPlayer();
             if (viewer == null) {
                 return;
             }
@@ -54,8 +58,8 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 return;
             }
 
-            MapMarker[] markers = worldData.getWorldMapMarkers();
-            if (markers == null || markers.length == 0) {
+            Collection<? extends UserMapMarker> markersCollection = worldData.getUserMapMarkers();
+            if (markersCollection == null || markersCollection.isEmpty()) {
                 return;
             }
 
@@ -101,18 +105,18 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
 
             boolean filter = hideAll || hideUnexplored || !hiddenPoiNames.isEmpty();
             if (!filter) {
-                for (MapMarker marker : markers) {
+                for (UserMapMarker marker : markersCollection) {
                     if (marker == null) continue;
-                    tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
+                    collector.add(convertToMapMarker(marker));
                 }
                 return;
             }
 
             Map<String, MapMarker> pointsOfInterest = world.getWorldMapManager().getPointsOfInterest();
             if (pointsOfInterest == null || pointsOfInterest.isEmpty()) {
-                for (MapMarker marker : markers) {
+                for (UserMapMarker marker : markersCollection) {
                     if (marker == null) continue;
-                    tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
+                    collector.add(convertToMapMarker(marker));
                 }
                 return;
             }
@@ -137,22 +141,22 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            for (MapMarker marker : markers) {
+            for (UserMapMarker marker : markersCollection) {
                 if (marker == null) continue;
 
                 boolean isPoi = false;
-                String id = marker.id;
+                String id = marker.getId();
                 if (id != null && poiIds.contains(id)) {
                     isPoi = true;
                 } else {
-                    String identity = markerIdentity(marker);
+                    String identity = userMarkerIdentity(marker);
                     if (identity != null && poiIdentities.contains(identity)) {
                         isPoi = true;
                     }
                 }
 
                 if (!isPoi) {
-                    tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
+                    collector.add(convertToMapMarker(marker));
                     continue;
                 }
 
@@ -162,7 +166,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 }
 
                 if (!hide) {
-                    tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
+                    collector.add(convertToMapMarker(marker));
                 }
             }
         } catch (Exception e) {
@@ -170,14 +174,36 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
         }
     }
 
-    private static boolean shouldHideByName(MapMarker marker, @Nullable List<String> hiddenPoiNames) {
+    /**
+     * Converts a UserMapMarker to a MapMarker for the collector.
+     */
+    private static MapMarker convertToMapMarker(UserMapMarker marker) {
+        com.hypixel.hytale.protocol.Transform packetTransform = PositionUtil.toTransformPacket(
+            new Transform(marker.getX(), 100.0, marker.getZ())
+        );
+
+        FormattedMessage displayName = new FormattedMessage();
+        displayName.rawText = marker.getName();
+
+        return new MapMarker(
+            marker.getId(),
+            displayName,
+            displayName.rawText,
+            marker.getIcon(),
+            packetTransform,
+            null,
+            null
+        );
+    }
+
+    private static boolean shouldHideByName(UserMapMarker marker, @Nullable List<String> hiddenPoiNames) {
         if (hiddenPoiNames == null || hiddenPoiNames.isEmpty()) {
             return false;
         }
 
-        String normalizedName = normalize(marker.name);
-        String normalizedId = normalize(marker.id);
-        String normalizedImage = normalize(marker.markerImage);
+        String normalizedName = normalize(marker.getName());
+        String normalizedId = normalize(marker.getId());
+        String normalizedImage = normalize(marker.getIcon());
 
         for (String hiddenName : hiddenPoiNames) {
             String normalizedHidden = normalize(hiddenName);
@@ -194,15 +220,11 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
         return false;
     }
 
-    private static boolean isMarkerExplored(MapMarker marker,
+    private static boolean isMarkerExplored(UserMapMarker marker,
                                             @Nullable ExplorationTracker.PlayerExplorationData explorationData,
                                             @Nullable Set<Long> sharedExploredChunks) {
-        if (marker.transform == null || marker.transform.position == null) {
-            return true;
-        }
-
-        int chunkX = ChunkUtil.blockToChunkCoord(marker.transform.position.x);
-        int chunkZ = ChunkUtil.blockToChunkCoord(marker.transform.position.z);
+        int chunkX = ChunkUtil.blockToChunkCoord((int) marker.getX());
+        int chunkZ = ChunkUtil.blockToChunkCoord((int) marker.getZ());
         long chunkIndex = ChunkUtil.chunkCoordsToIndex(chunkX, chunkZ);
 
         if (sharedExploredChunks != null) {
@@ -228,14 +250,33 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
         if (marker == null) {
             return null;
         }
-        String name = normalize(marker.name);
+        String name = normalize(getMarkerNameAsString(marker));
         String image = normalize(marker.markerImage);
         long chunkIndex = Long.MIN_VALUE;
         if (marker.transform != null && marker.transform.position != null) {
-            int chunkX = ChunkUtil.blockToChunkCoord(marker.transform.position.x);
-            int chunkZ = ChunkUtil.blockToChunkCoord(marker.transform.position.z);
+            int chunkX = ChunkUtil.blockToChunkCoord((int) marker.transform.position.x);
+            int chunkZ = ChunkUtil.blockToChunkCoord((int) marker.transform.position.z);
             chunkIndex = ChunkUtil.chunkCoordsToIndex(chunkX, chunkZ);
         }
         return name + "|" + image + "|" + chunkIndex;
+    }
+
+    private static String userMarkerIdentity(UserMapMarker marker) {
+        if (marker == null) {
+            return null;
+        }
+        String name = normalize(marker.getName());
+        String image = normalize(marker.getIcon());
+        int chunkX = ChunkUtil.blockToChunkCoord((int) marker.getX());
+        int chunkZ = ChunkUtil.blockToChunkCoord((int) marker.getZ());
+        long chunkIndex = ChunkUtil.chunkCoordsToIndex(chunkX, chunkZ);
+        return name + "|" + image + "|" + chunkIndex;
+    }
+
+    private static String getMarkerNameAsString(MapMarker marker) {
+        if (marker.name == null) {
+            return "";
+        }
+        return marker.name.rawText != null ? marker.name.rawText : "";
     }
 }

@@ -5,7 +5,6 @@ import com.hypixel.hytale.protocol.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import dev.ninesliced.configs.ModConfig;
@@ -40,7 +39,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
     @Override
     public void update(World world, Player viewer, MarkersCollector collector) {
         try {
-            if (world == null) {
+            if (world == null || collector == null) {
                 return;
             }
 
@@ -121,12 +120,6 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
                     continue;
                 }
 
-                if (marker.transform != null && marker.transform.position != null) {
-                    if (!collector.isInViewDistance(marker.transform.position.x, marker.transform.position.z)) {
-                        continue;
-                    }
-                }
-
                 collector.add(marker);
             }
         } catch (Exception e) {
@@ -139,7 +132,7 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             return false;
         }
 
-        String normalizedName = normalize(marker.customName != null ? marker.customName : marker.name != null ? marker.name.rawText : null);
+        String normalizedName = normalize(getMarkerNameAsString(marker));
         String normalizedId = normalize(marker.id);
         String normalizedImage = normalize(marker.markerImage);
 
@@ -158,6 +151,13 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
         return false;
     }
 
+    private static String getMarkerNameAsString(MapMarker marker) {
+        if (marker.name == null) {
+            return "";
+        }
+        return marker.name.rawText != null ? marker.name.rawText : "";
+    }
+
     private static boolean isMarkerExplored(MapMarker marker,
                                             @Nullable ExplorationTracker.PlayerExplorationData explorationData,
                                             @Nullable Set<Long> sharedExploredChunks) {
@@ -167,8 +167,8 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
         }
 
         Position pos = transform.position;
-        int chunkX = ChunkUtil.blockToChunkCoord(pos.x);
-        int chunkZ = ChunkUtil.blockToChunkCoord(pos.z);
+        int chunkX = ChunkUtil.blockToChunkCoord((int) pos.x);
+        int chunkZ = ChunkUtil.blockToChunkCoord((int) pos.z);
         long chunkIndex = ChunkUtil.chunkCoordsToIndex(chunkX, chunkZ);
 
         if (sharedExploredChunks != null) {

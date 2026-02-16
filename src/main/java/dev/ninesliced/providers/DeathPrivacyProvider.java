@@ -1,14 +1,14 @@
 package dev.ninesliced.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerDeathPositionData;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
@@ -25,11 +25,10 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
     private static final String MARKER_ICON = "Death.png";
 
     @Override
-    public void update(World world, MapMarkerTracker tracker, int viewRadius, int chunkX, int chunkZ) {
+    public void update(World world, Player player, MarkersCollector collector) {
         try {
             ModConfig globalConfig = ModConfig.getInstance();
 
-            Player player = tracker.getPlayer();
             if (player == null) {
                 return;
             }
@@ -99,20 +98,8 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
                 int deathDay = deathPosition.getDay();
                 String markerName = "Death (Day " + deathDay + ")";
 
-                Vector3f rotation = transform.getRotation();
-                float yaw = rotation != null ? rotation.getYaw() : 0.0f;
-
-                tracker.trySendMarker(
-                    viewRadius,
-                    chunkX,
-                    chunkZ,
-                    transform.getPosition(),
-                    yaw,
-                    markerId,
-                    markerName,
-                    deathPosition,
-                    DeathPrivacyProvider::createMarker
-                );
+                MapMarker marker = createMarker(markerId, markerName, deathPosition);
+                collector.add(marker);
             }
         } catch (Exception e) {
             LOGGER.warning("Error in DeathPrivacyProvider.update: " + e.getMessage());
@@ -120,11 +107,16 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
     }
 
     private static MapMarker createMarker(String id, String name, PlayerDeathPositionData deathPosition) {
+        FormattedMessage displayName = new FormattedMessage();
+        displayName.rawText = name;
+
         return new MapMarker(
             id,
-            name,
+            displayName,
+            displayName.rawText,
             MARKER_ICON,
             PositionUtil.toTransformPacket(deathPosition.getTransform()),
+            null,
             null
         );
     }

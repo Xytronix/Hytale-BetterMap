@@ -2,13 +2,15 @@ package dev.ninesliced.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
@@ -24,11 +26,10 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
     private static final Logger LOGGER = Logger.getLogger(SpawnPrivacyProvider.class.getName());
 
     @Override
-    public void update(World world, MapMarkerTracker tracker, int viewRadius, int chunkX, int chunkZ) {
+    public void update(World world, Player player, MarkersCollector collector) {
         try {
             ModConfig globalConfig = ModConfig.getInstance();
 
-            Player player = tracker.getPlayer();
             if (player == null) {
                 return;
             }
@@ -73,7 +74,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 }
             }
 
-            var gameplayConfig = world.getGameplayConfig();
+            GameplayConfig gameplayConfig = world.getGameplayConfig();
             if (gameplayConfig == null) {
                 return;
             }
@@ -94,16 +95,20 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
             }
 
             Vector3d position = spawnTransform.getPosition();
-            float yaw = spawnTransform.getRotation().getYaw();
 
-            tracker.trySendMarker(viewRadius, chunkX, chunkZ, position, yaw, "Spawn", "Spawn",
-                position, (id, name, pos) -> new MapMarker(
-                    id,
-                    name,
-                    "Spawn.png",
-                    PositionUtil.toTransformPacket(new Transform(pos)),
-                    null
-                ));
+            FormattedMessage displayName = new FormattedMessage();
+            displayName.rawText = "Spawn";
+
+            MapMarker marker = new MapMarker(
+                "Spawn",
+                displayName,
+                displayName.rawText,
+                "Spawn.png",
+                PositionUtil.toTransformPacket(new Transform(position)),
+                null,
+                null
+            );
+            collector.add(marker);
         } catch (Exception e) {
             LOGGER.warning("Error in SpawnPrivacyProvider.update: " + e.getMessage());
         }

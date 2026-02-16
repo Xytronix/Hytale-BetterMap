@@ -2,22 +2,21 @@ package dev.ninesliced.providers;
 
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.HiddenPlayersManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
+import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.managers.PlayerRadarManager;
 import dev.ninesliced.managers.PlayerRadarManager.RadarData;
 import dev.ninesliced.utils.PermissionsUtil;
-import org.bouncycastle.math.raw.Mod;
 
 import java.util.HashMap;
 import java.util.List;
@@ -113,14 +112,12 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
                     }
 
                     int distance = (int) Math.sqrt(distanceSquared);
-                    if (!collector.isInViewDistance(otherPos.x, otherPos.z)) {
-                        continue;
-                    }
 
                     String markerId = MARKER_PREFIX + otherData.uuid;
                     String markerName = otherData.name + " (" + distance + "m)";
 
-                    collector.add(createMarker(markerId, markerName, otherData));
+                    MapMarker marker = createMarker(markerId, markerName, otherData);
+                    collector.add(marker);
                 } catch (Exception e) {}
             }
         } catch (Exception e) {
@@ -132,13 +129,16 @@ public class PlayerRadarProvider implements WorldMapManager.MarkerProvider {
      * Creates a MapMarker for a player.
      */
     private static MapMarker createMarker(String id, String name, RadarData data) {
-        com.hypixel.hytale.math.vector.Transform vecTransform = new com.hypixel.hytale.math.vector.Transform(
-            data.position,
-            data.rotation != null ? data.rotation : Vector3f.ZERO
+        com.hypixel.hytale.protocol.Transform transform = PositionUtil.toTransformPacket(
+            new com.hypixel.hytale.math.vector.Transform(
+                data.position,
+                data.rotation != null ? data.rotation : Vector3f.ZERO
+            )
         );
 
-        return new MapMarkerBuilder(id, MARKER_ICON, vecTransform)
-            .withCustomName(name)
-            .build();
+        FormattedMessage displayName = new FormattedMessage();
+        displayName.rawText = name;
+
+        return new MapMarker(id, displayName, displayName.rawText, MARKER_ICON, transform, null, null);
     }
 }

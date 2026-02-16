@@ -1,13 +1,14 @@
 package dev.ninesliced.providers;
 
 import com.hypixel.hytale.protocol.Direction;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.meta.state.BlockMapMarkersResource;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
@@ -34,7 +35,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
 
     @Override
-    public void update(World world, MapMarkerTracker tracker, int viewRadius, int chunkX, int chunkZ) {
+    public void update(World world, Player viewer, MarkersCollector collector) {
         try {
             BlockMapMarkersResource resource = world.getChunkStore().getStore()
                 .getResource(BlockMapMarkersResource.getResourceType());
@@ -48,7 +49,6 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
             }
 
             ModConfig globalConfig = ModConfig.getInstance();
-            Player viewer = tracker.getPlayer();
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;
@@ -98,7 +98,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 if (globalConfig.isShareAllExploration()) {
                     sharedExploredChunks = ExplorationManager.getInstance().getAllExploredChunks(world.getName());
                 } else {
-                    explorationData = ExplorationTracker.getInstance().getPlayerData(tracker.getPlayer());
+                    explorationData = ExplorationTracker.getInstance().getPlayerData(viewer);
                 }
             }
 
@@ -119,17 +119,22 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
 
                 var pos = markerData.getPosition();
                 Transform transform = new Transform();
-                transform.position = new Position(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+                transform.position = new Position(pos.getX() + 0.5f, pos.getY(), pos.getZ() + 0.5f);
                 transform.orientation = new Direction(0, 0, 0);
+
+                FormattedMessage displayName = new FormattedMessage();
+                displayName.rawText = name;
 
                 MapMarker marker = new MapMarker(
                     markerData.getMarkerId(),
-                    name,
+                    displayName,
+                    displayName.rawText,
                     icon,
                     transform,
+                    null,
                     null
                 );
-                tracker.trySendMarker(viewRadius, chunkX, chunkZ, marker);
+                collector.add(marker);
             }
         } catch (Exception e) {
             LOGGER.warning("Error in BlockMapMarkerPrivacyProvider.update: " + e.getMessage());

@@ -112,19 +112,15 @@ public class UserMarkerProviderManager {
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
             if (providers == null) return;
             
-            if (providers.containsKey(BETTERMAP_PROVIDER_KEY)) {
-                return;
-            }
-            
             WorldMapManager.MarkerProvider existingPersonal = providers.remove(PERSONAL_PROVIDER_KEY);
             if (existingPersonal != null && !(existingPersonal instanceof UserMarkerContextMenuProvider)) {
-                backedUpPersonalProviders.put(world, existingPersonal);
+                backedUpPersonalProviders.putIfAbsent(world, existingPersonal);
                 LOGGER.info("Backed up personal provider for world " + world.getName());
             }
             
             WorldMapManager.MarkerProvider existingShared = providers.remove(SHARED_PROVIDER_KEY);
             if (existingShared != null && !(existingShared instanceof UserMarkerContextMenuProvider)) {
-                backedUpSharedProviders.put(world, existingShared);
+                backedUpSharedProviders.putIfAbsent(world, existingShared);
                 LOGGER.info("Backed up shared provider for world " + world.getName());
             }
             

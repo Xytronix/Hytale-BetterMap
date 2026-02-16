@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
@@ -58,6 +59,21 @@ public final class PermissionsUtil {
         }
 
         return perms.hasPermission(uuid, TELEPORT_PERMISSION);
+    }
+
+    public static boolean hasNativeCreativeOpMarkerTeleport(@Nonnull Player player) {
+        if (player.getGameMode() != GameMode.Creative) {
+            return false;
+        }
+
+        PermissionsModule perms = PermissionsModule.get();
+        if (perms == null) {
+            return false;
+        }
+
+        UUID uuid = ((CommandSender) player).getUuid();
+        Set<String> groups = perms.getGroupsForUser(uuid);
+        return groups != null && groups.contains("OP");
     }
 
     /**

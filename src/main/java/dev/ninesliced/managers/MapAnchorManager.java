@@ -229,7 +229,10 @@ public class MapAnchorManager {
      * This injects UI into the {@code MapServerContent} anchor on the Map page.
      */
     public void sendWaypointAnchor(@Nonnull Player player) {
-        PlayerRef playerRef = player.getPlayerRef();
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) return;
+        Store<EntityStore> store = ref.getStore();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return;
 
         try {
@@ -299,7 +302,10 @@ public class MapAnchorManager {
      * Clears the anchor UI for a player.
      */
     public void clearAnchor(@Nonnull Player player) {
-        PlayerRef playerRef = player.getPlayerRef();
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) return;
+        Store<EntityStore> store = ref.getStore();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return;
 
         try {

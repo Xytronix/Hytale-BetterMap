@@ -74,7 +74,9 @@ public class MarkerTeleportCommand extends AbstractCommand {
                 }
             }
 
-            WaypointManager.refreshAllPlayersMarkers(world);
+            MapPrivacyManager.getInstance().updatePrivacyState();
+            WorldMapHook.clearMarkerCaches(world);
+            WorldMapHook.refreshTrackers(world);
 
             String status = newState ? "ENABLED" : "DISABLED";
             Color color = newState ? Color.GREEN : Color.RED;

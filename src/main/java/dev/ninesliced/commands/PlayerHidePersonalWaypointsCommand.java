@@ -7,8 +7,11 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.managers.MapPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.UserMarkerProviderManager;
 import dev.ninesliced.managers.WaypointManager;
+import dev.ninesliced.utils.WorldMapHook;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -51,7 +54,10 @@ public class PlayerHidePersonalWaypointsCommand extends AbstractCommand {
             config.setHidePersonalWaypointsOnMap(newState);
             PlayerConfigManager.getInstance().savePlayerConfig(uuid);
 
-            WaypointManager.refreshAllPlayersMarkers(world);
+            UserMarkerProviderManager.getInstance().onWorldLoad(world);
+            MapPrivacyManager.getInstance().updatePrivacyState();
+            WorldMapHook.clearMarkerCaches(world);
+            WorldMapHook.refreshTrackers(world);
 
             boolean visible = !newState;
             Color color = visible ? Color.GREEN : Color.RED;
