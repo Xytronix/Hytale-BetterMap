@@ -3,13 +3,17 @@ package dev.ninesliced.ui;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerDeathPositionData;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -27,8 +31,12 @@ import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.ModConfig.MapQuality;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.hud.HudPosition;
+import dev.ninesliced.integration.ExtendedTeleportIntegration;
 import dev.ninesliced.managers.MapPrivacyManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.UserMarkerProviderManager;
+import dev.ninesliced.managers.WarpPrivacyManager;
 import dev.ninesliced.managers.WorldBorderManager;
 import dev.ninesliced.managers.CaveModeManager;
 import dev.ninesliced.utils.PermissionsUtil;
@@ -86,11 +94,28 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
             ui.set("#PlayerCaveModeCard.Visible", false);
         }
 
+        ui.set("#PlayerHidePlayers.Value", pConfig.isHidePlayersOnMap());
+        ui.set("#PlayerHideAllWarps.Value", pConfig.isHideAllWarpsOnMap());
+        ui.set("#PlayerHideOtherWarps.Value", pConfig.isHideOtherWarpsOnMap());
+        ui.set("#PlayerHideAllPois.Value", pConfig.isHideAllPoiOnMap());
+        ui.set("#PlayerHideSpawn.Value", pConfig.isHideSpawnOnMap());
+        ui.set("#PlayerHideDeath.Value", pConfig.isHideDeathMarkerOnMap());
+        ui.set("#PlayerHideGlobalWaypoints.Value", pConfig.isHideGlobalWaypointsOnMap());
+        ui.set("#PlayerHidePersonalWaypoints.Value", pConfig.isHidePersonalWaypointsOnMap());
+
         bindChange(events, "#PlayerMinScale", "player_min_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerMaxScale", "player_max_scale", BindingType.NUMBER);
         bindChange(events, "#PlayerLocationEnabled", "player_location", BindingType.BOOLEAN);
         bindChange(events, "#PlayerLocationPosition", "player_location_pos", BindingType.STRING);
         bindChange(events, "#PlayerCaveModeEnabled", "player_cavemode", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHidePlayers", "player_hide_players", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHideAllWarps", "player_hide_all_warps", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHideOtherWarps", "player_hide_other_warps", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHideAllPois", "player_hide_all_pois", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHideSpawn", "player_hide_spawn", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHideDeath", "player_hide_death", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHideGlobalWaypoints", "player_hide_global_waypoints", BindingType.BOOLEAN);
+        bindChange(events, "#PlayerHidePersonalWaypoints", "player_hide_personal_waypoints", BindingType.BOOLEAN);
         bindClick(events, "#PlayerViewBtn", "view_player");
         bindClick(events, "#PlayerViewBtnSelected", "view_player");
         bindClick(events, "#AdminViewBtn", "view_admin");
@@ -247,6 +272,56 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
 
         if (ModConfig.getInstance().isCaveModeEnabled()) {
             ui.set("#PlayerCaveModeEnabled.Value", pConfig.isCaveModeEnabled());
+        }
+
+        ui.set("#PlayerHidePlayers.Value", pConfig.isHidePlayersOnMap());
+        ui.set("#PlayerHideAllWarps.Value", pConfig.isHideAllWarpsOnMap());
+        ui.set("#PlayerHideOtherWarps.Value", pConfig.isHideOtherWarpsOnMap());
+        ui.set("#PlayerHideAllPois.Value", pConfig.isHideAllPoiOnMap());
+        ui.set("#PlayerHideSpawn.Value", pConfig.isHideSpawnOnMap());
+        ui.set("#PlayerHideDeath.Value", pConfig.isHideDeathMarkerOnMap());
+        ui.set("#PlayerHideGlobalWaypoints.Value", pConfig.isHideGlobalWaypointsOnMap());
+        ui.set("#PlayerHidePersonalWaypoints.Value", pConfig.isHidePersonalWaypointsOnMap());
+    }
+
+    private static boolean determineNewVisibilityState(boolean currentlyWantsVisible, boolean currentlyWantsHidden) {
+        if (currentlyWantsVisible) {
+            return false;
+        } else if (currentlyWantsHidden) {
+            return true;
+        }
+        return false;
+    }
+
+    private void refreshHideState(World world) {
+        if (world == null) return;
+        WorldMapHook.clearMarkerCaches(world);
+        WorldMapHook.refreshTrackers(world);
+    }
+
+    private void removeDeathMarkersFromClient(Player player, World world) {
+        try {
+            PlayerWorldData worldData = player.getPlayerConfigData().getPerWorldData(world.getName());
+            if (worldData == null) return;
+
+            List<PlayerDeathPositionData> deathPositions = worldData.getDeathPositions();
+            if (deathPositions == null || deathPositions.isEmpty()) return;
+
+            List<String> markerIdsToRemove = new ArrayList<>();
+            for (PlayerDeathPositionData deathPosition : deathPositions) {
+                if (deathPosition != null && deathPosition.getMarkerId() != null) {
+                    markerIdsToRemove.add(deathPosition.getMarkerId());
+                }
+            }
+
+            if (markerIdsToRemove.isEmpty()) return;
+
+            playerRef.getPacketHandler().write(new UpdateWorldMap(
+                null,
+                null,
+                markerIdsToRemove.toArray(new String[0])
+            ));
+        } catch (Exception ignored) {
         }
     }
 
@@ -515,6 +590,106 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     if (world != null) {
                         world.execute(() -> WorldMapHook.forceFullMapRefresh(player));
                     }
+                    break;
+                case "player_hide_players":
+                    if (world == null) break;
+                    boolean newPlayersVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalPlayersHide() && !pConfig.isHidePlayersOnMap(),
+                        pConfig.isHidePlayersOnMap()
+                    );
+                    pConfig.setOverrideGlobalPlayersHide(newPlayersVisible);
+                    pConfig.setHidePlayersOnMap(!newPlayersVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    MapPrivacyManager.getInstance().updatePrivacyState();
+                    refreshHideState(world);
+                    break;
+                case "player_hide_all_warps":
+                    if (world == null) break;
+                    boolean newAllWarpsVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalAllWarpsHide() && !pConfig.isHideAllWarpsOnMap(),
+                        pConfig.isHideAllWarpsOnMap()
+                    );
+                    pConfig.setOverrideGlobalAllWarpsHide(newAllWarpsVisible);
+                    pConfig.setHideAllWarpsOnMap(!newAllWarpsVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    WarpPrivacyManager.getInstance().updatePrivacyState();
+                    refreshHideState(world);
+                    break;
+                case "player_hide_other_warps":
+                    if (world == null) break;
+                    if (!ExtendedTeleportIntegration.getInstance().isAvailable()) {
+                        playerRef.sendMessage(Message.raw("This feature requires ExtendedTeleport to be installed."));
+                        break;
+                    }
+                    boolean newOtherWarpsVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalOtherWarpsHide() && !pConfig.isHideOtherWarpsOnMap(),
+                        pConfig.isHideOtherWarpsOnMap()
+                    );
+                    pConfig.setOverrideGlobalOtherWarpsHide(newOtherWarpsVisible);
+                    pConfig.setHideOtherWarpsOnMap(!newOtherWarpsVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    WarpPrivacyManager.getInstance().updatePrivacyState();
+                    refreshHideState(world);
+                    break;
+                case "player_hide_all_pois":
+                    if (world == null) break;
+                    boolean newPoisVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalPoiHide() && !pConfig.isHideAllPoiOnMap(),
+                        pConfig.isHideAllPoiOnMap()
+                    );
+                    pConfig.setOverrideGlobalPoiHide(newPoisVisible);
+                    pConfig.setHideAllPoiOnMap(!newPoisVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
+                    refreshHideState(world);
+                    break;
+                case "player_hide_spawn":
+                    if (world == null) break;
+                    boolean newSpawnVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalSpawnHide() && !pConfig.isHideSpawnOnMap(),
+                        pConfig.isHideSpawnOnMap()
+                    );
+                    pConfig.setOverrideGlobalSpawnHide(newSpawnVisible);
+                    pConfig.setHideSpawnOnMap(!newSpawnVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
+                    refreshHideState(world);
+                    break;
+                case "player_hide_death":
+                    if (world == null) break;
+                    boolean newDeathVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalDeathHide() && !pConfig.isHideDeathMarkerOnMap(),
+                        pConfig.isHideDeathMarkerOnMap()
+                    );
+                    pConfig.setOverrideGlobalDeathHide(newDeathVisible);
+                    pConfig.setHideDeathMarkerOnMap(!newDeathVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    if (!newDeathVisible) {
+                        removeDeathMarkersFromClient(player, world);
+                    }
+                    PoiPrivacyManager.getInstance().updatePrivacyStateSync(world);
+                    refreshHideState(world);
+                    break;
+                case "player_hide_global_waypoints":
+                    if (world == null) break;
+                    boolean newGlobalWaypointsVisible = determineNewVisibilityState(
+                        pConfig.isOverrideGlobalWaypointHide() && !pConfig.isHideGlobalWaypointsOnMap(),
+                        pConfig.isHideGlobalWaypointsOnMap()
+                    );
+                    pConfig.setOverrideGlobalWaypointHide(newGlobalWaypointsVisible);
+                    pConfig.setHideGlobalWaypointsOnMap(!newGlobalWaypointsVisible);
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    UserMarkerProviderManager.getInstance().onWorldLoad(world);
+                    MapPrivacyManager.getInstance().updatePrivacyState();
+                    refreshHideState(world);
+                    break;
+                case "player_hide_personal_waypoints":
+                    if (world == null) break;
+                    pConfig.setHidePersonalWaypointsOnMap(!pConfig.isHidePersonalWaypointsOnMap());
+                    PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());
+                    UserMarkerProviderManager.getInstance().onWorldLoad(world);
+                    MapPrivacyManager.getInstance().updatePrivacyState();
+                    refreshHideState(world);
                     break;
             }
             PlayerConfigManager.getInstance().savePlayerConfig(((CommandSender) player).getUuid());

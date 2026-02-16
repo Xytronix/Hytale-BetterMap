@@ -319,7 +319,11 @@ $C.@PageOverlay {
                 }
                 @ParamRow {
                   Label { Text: "Hide Other Warps"; Style: @ParamNameStyle; }
-                  Label { Text: "Hides warp markers placed by other players from the map. Your own warps remain visible."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                  Label { Text: "Hides warp markers placed by other players from the map. Your own warps remain visible. Requires the ExtendedTeleport mod to determine warp ownership."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide All Warps"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides all warp markers from the map, including your own warps. This is stronger than Hide Other Warps and takes priority for visibility."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
                   Label { Text: "Hide Unexplored Warps"; Style: @ParamNameStyle; }
@@ -330,12 +334,31 @@ $C.@PageOverlay {
                   Label { Text: "Hides all Point of Interest markers from the map entirely. POIs are special locations defined by the game world (villages, dungeons, etc.)."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
+                  Label { Text: "Hide Spawn"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides the world spawn marker from the map. Useful for servers that do not want to reveal spawn position once players are exploring."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide Death Markers"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides death location markers from the map. When enabled globally, existing death markers are removed from clients until re-enabled."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide Global Waypoints"; Style: @ParamNameStyle; }
+                  Label { Text: "Hides shared/global user waypoints on the map. Players can still keep personal waypoints visible if they prefer."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
+                  Label { Text: "Hide Personal Waypoints"; Style: @ParamNameStyle; }
+                  Label { Text: "Player-specific option available via player commands to hide your own personal waypoints from your map view."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @ParamRow {
                   Label { Text: "Hide Unexplored POIs"; Style: @ParamNameStyle; }
                   Label { Text: "Hides POI markers in areas the player has not explored yet. Enabled by default to encourage organic discovery of locations."; Style: @ParamDescStyle; Anchor: (Top: 4); }
                 }
                 @ParamRow {
                   Label { Text: "Hidden POI Names"; Style: @ParamNameStyle; }
                   Label { Text: "A comma-separated list of specific POI type names to hide from the map. Use this to selectively hide certain POI types while keeping others visible (e.g. 'Village, Dungeon')."; Style: @ParamDescStyle; Anchor: (Top: 4); }
+                }
+                @NoteBox {
+                  Label { Text: "ExtendedTeleport dependency: 'Hide Other Warps' requires ExtendedTeleport to identify ownership correctly."; Style: (FontSize: 12, TextColor: #ffaa44, Wrap: true); }
                 }
               }
             }
