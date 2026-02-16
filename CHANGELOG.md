@@ -1,22 +1,33 @@
 # Changelog
 
-# v1.2.7-pre-release-2026.02.11-255364b8e
+## v1.3.0
 
-* Fixed API packet changes for sending map chunks
-
-## v1.2.7-b-pre-release-2026.01.29-301e13929
-
+* Added cave mode which add cave chunks on map when inside a cave
+* Added back the position HUD with multipleHUD compatibility
+* Added new UI configurations for all the user/admin parameters of the mod (accessible using /bm)
+* Added World border on map configuration
+* Option to discover surface while still underground in cave mode
+* Option to have a fog of war (only see the cave mode/surface mode) during cave mode
+* Added big optimization thanks to the contribution of @DARKACE (you can now show 8K chunks in HIGH quality instead of 3K, 25K chunks in MEDIUM instead of 10K, 80K chunks instead of 30K for LOW quality)
+* Vanished players are no longer visible on the map
+* Added option for different location on the screen for the location HUD
+* Added new help menu that you can find directly in the config menu (with the help button in the menu found using /bm help)
 * Fix message being send of world not being tracked on world with different name than "world" or "default" when it is tracked
+* Auto track world on first join if no world is tracked yet
 * remove global permission to use hytale permission system for global markers
 * updated the edit waypoint menu to be more user friendly and added 'here' button to update waypoint at current position
 * fix icon changes between players not updating correctly
 * added migration for old waypoint in our old saves to the new marker system
-
-## v1.2.7-pre-release-2026.01.29-301e13929
-
 * Fix issue with the new release changes in the marker API (map not becoming black)
 * Added "Edit" context menu option for waypoints
 * Waypoint menu now have the marker from hytale itself instead of our system
+* Added option to teleport on right click on map (require permission) without needing to be op/in creative
+* Fixed the options to hide POis (forgotten temple gateway,...)
+* Fixed hide deaths icons
+* Fixed warps not being hidden when the option is enabled
+* Added option to hide global/personal waypoints on the map
+* Added with the new anchor UI system an UI on map for shortcuts to our menu (waypoints, config)
+
 
 ## v1.2.7
 

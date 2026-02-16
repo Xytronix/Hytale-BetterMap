@@ -24,29 +24,34 @@ By default, the Hytale in-game map is fleeting. It only displays a small circula
 ## Key Features
 
 1.  **Persistent Exploration:** The map retains all previously visited areas across sessions. Data is saved automatically to prevent loss during server crashes.
-2.  **Waypoint System:** Never lose a location again. Open the waypoint menu to add markers at your current position, customize their names and colors, and share them with other players.
-3.  **Teleport:** Players with permission can teleport directly to their saved waypoints.
-4.  **Linked Exploration (Shared Map):** Optionally enable a shared map mode where all players contribute to a single global map, allowing you to see areas discovered by friends in real-time.
-5.  **Compass Radar:** Easily locate other players nearby directly on your compass. The range can be customized or toggled off by admins.
-6.  **Location Overlay:** Display your current coordinates and direction on-screen via a toggleable HUD (`/bm location`). (_Temporarily disabled for compatibility fixes_)
-7.  **Customizable Zoom:** You are no longer locked to the default zoom. Set your own Minimum (zoom out) and Maximum (zoom in) scales. Settings are saved per player.
-8.  **Multi-World Support:** Whitelist specific worlds for the mod to track, resolving compatibility issues with server hosts (like Apex) that change default world names.
+2.  **Cave Mode:** Seamlessly switch to cave chunks when entering underground areas. Includes options to view surface data while mining or use a specific "Fog of War" for caves.
+3.  **Enhanced Waypoint System:** Manage locations using Hytale's native markers. Includes a user-friendly menu, "Here" button for quick updates, and context-menu editing options.
+4.  **Interactive Teleportation:** Players with permission can teleport to waypoints via the UI or by simply right-clicking a location on the map.
+5.  **World Border Visualization:** View the server's world border limits directly on your map.
+6.  **Linked Exploration (Shared Map):** Optionally enable a shared map mode where all players contribute to a single global map, allowing you to see areas discovered by friends in real-time.
+7.  **Compass/Map player Radar:** Easily locate other players nearby directly on your compass. The range can be customized or toggled off by admins.
+8.  **Customizable HUD & UI:** A new in-game configuration menu (`/bm`) allows you to adjust settings, manage waypoints, and access help without doing other commands.
+10. **Position HUD:** A Position HUD (compatible with MultipleHUD) that displays your coordinates on-screen.
+9.  **Map Anchors:** Quick-access shortcuts on the map UI for opening the waypoint and configuration menus.
+10. **Multi-World Support:** Whitelist specific worlds for the mod to track, resolving compatibility issues with server hosts that change default world names. Auto-tracks the world on first join.
 
 ## Performance & Optimization
 
-*   **Dynamic Chunk Loading:** The plugin intelligently manages memory by loading only the explored chunks nearest to the player and unloading distant ones.
-*   **Map Quality Settings:** Admins can balance visual fidelity and performance by choosing between `LOW`, `MEDIUM`, or `HIGH` quality.
-*   `LOW`: Loads up to 30,000 chunks (8x8 resolution).
-*   `MEDIUM`: Loads up to 10,000 chunks (16x16 resolution).
-*   `HIGH`: Loads up to 3,000 chunks (32x32 resolution).
+Thanks to major optimizations, the map can now handle significantly higher chunk counts without performance loss.
+
+* **Dynamic Chunk Loading:** The plugin intelligently manages memory by loading only the explored chunks nearest to the player and unloading distant ones.
+* **Map Quality Settings:** Admins can balance visual fidelity and performance by choosing between `LOW`, `MEDIUM`, or `HIGH` quality.
+* `LOW`: Loads up to **80,000** chunks (8x8 resolution).
+* `MEDIUM`: Loads up to **25,000** chunks (16x16 resolution).
+* `HIGH`: Loads up to **8,000** chunks (32x32 resolution).
 
 _Note: High quality strictly limits loaded chunks to prevent memory errors._
 
-You can also manually set the maximum number of loaded chunks via `/bm config maxchunk`, within recommended limits.
+You can also manually set the maximum number of loaded chunks via `/bm config maxchunk`, within recommended limits or using our UI config menu with `/bm` and in the admin tab (need admin permission).
 
 ## Commands & Permissions
 
-The command system has been updated. Basic features are now available to all players by default, while configuration commands require specific permissions.
+The command system has been overhauled with a new UI-based configuration. Basic features are available to all players, while admin features require specific permissions.
 
 You can either do `/op add <player>` to give full access or assign specific permissions as needed using `/perm group add Adventure <permission>`.
 
@@ -54,112 +59,106 @@ You can either do `/op add <player>` to give full access or assign specific perm
 
 1.  `/bettermap` (or `/bm`)
     
-    *   Displays current map settings and status.
+    * Opens the main **BetterMap Configuration UI** to manage user settings and view help.
 2.  `/bm waypoint menu` or `/waypoint` or `/wp`
     
-    *   Opens the Waypoint UI to manage, share, or delete waypoints.
+    * Opens the Waypoint UI to manage, share, or delete waypoints.
 3.  `/bm min <value>`
     
-    *   Sets your personal minimum zoom scale (default base is 32).
+    * Sets your personal minimum zoom scale (default base is 32).
 4.  `/bm max <value>`
     
-    *   Sets your personal maximum zoom scale (default base is 256).
+    * Sets your personal maximum zoom scale (default base is 256).
 
 ### Admin
 
 **Permission:** `bettermap.admin`
 
-*   Grants full admin access to BetterMap. Allows viewing all settings and overrides under `/bettermap`.
-
-### Global Waypoints
-
-**Permission:** `bettermap.command.waypoint.global`
-
-*   Allows the user to create, view, and manage global (shared) waypoints visible to all players.
+* Grants full admin access to BetterMap. Allows viewing all settings and overrides under `/bettermap`.
 
 ### Teleportation
 
 **Permission:** `bettermap.command.teleport`
 
-*   **Waypoint Teleport:** Allows the user to teleport to locations via the Waypoint UI buttons.
+* **Map Teleport:** Allows the user to teleport to locations via the Waypoint UI buttons or by **right-clicking** anywhere on the map.
 
 ### Map Privacy Overrides
 
 **Permissions:**
 
-*   `bettermap.command.override.players` - Bypass global hide players
-*   `bettermap.command.override.warps` - Bypass global hide all/other warps
-*   `bettermap.command.override.unexploredwarps` - Bypass global hide unexplored warps
-*   `bettermap.command.override.poi` - Bypass global hide all POIs and hidden POI names
-*   `bettermap.command.override.unexploredpoi` - Bypass global hide unexplored POIs
-*   `bettermap.command.override.spawn` - Bypass global hide spawn
-*   `bettermap.command.override.death` - Bypass global hide death markers
-*   `bettermap.command.override.waypoints` - Bypass global hide waypoints
+* `bettermap.command.override.players` - Bypass global hide players
+* `bettermap.command.override.warps` - Bypass global hide all/other warps
+* `bettermap.command.override.unexploredwarps` - Bypass global hide unexplored warps
+* `bettermap.command.override.poi` - Bypass global hide all POIs and hidden POI names
+* `bettermap.command.override.unexploredpoi` - Bypass global hide unexplored POIs
+* `bettermap.command.override.spawn` - Bypass global hide spawn
+* `bettermap.command.override.death` - Bypass global hide death markers
+* `bettermap.command.override.waypoints` - Bypass global hide waypoints
 
 ### Configuration Commands
 
 **Permission:** `bettermap.command.config`
 
-*   Required to use `/bm config` subcommands and to see config values under `/bettermap`.
+* Required to use `/bm config` subcommands and to access admin settings in the UI.
 
 1.  `/bm config radar <range>`
     
-    *   Sets the radar range (use `-1` for infinite).
+    * Sets the radar range (use `-1` for infinite).
 2.  `/bm config location`
     
-    *   Toggles the server-wide default for the location HUD.
+    * Toggles the server-wide default for the location HUD.
 3.  `/bm config hideplayers`
     
-    *   Hides player cursors on the map.
+    * Hides player cursors on the map.
 4.  `/bm config hidewarps`
     
-    *   Hides other players' warps on the map.
+    * Hides other players' warps on the map.
 5.  `/bm config hideunexploredwarps`
     
-    *   Hides warps in unexplored regions.
+    * Hides warps in unexplored regions.
 6.  `/bm config hidepois`
     
-    *   Hides all POI markers on the map.
+    * Hides all POI markers on the map.
 7.  `/bm config hideunexploredpoi`
     
-    *   Hides POIs in unexplored regions.
+    * Hides POIs in unexplored regions.
 8.  `/bm config hideglobalwaypoints`
 
-    *   Hides global waypoints on the map for all players.
+    * Hides global waypoints on the map for all players.
 9.  `/bm config waypointteleport`
 
-    *   Toggles the ability to teleport to waypoints.
+    * Toggles the ability to teleport to waypoints.
 10. `/bm config markerteleport`
 
-    *   Toggles the ability to teleport to map markers.
+    * Toggles the ability to teleport to map markers.
 11. `/bm config shareallexploration`
 
-    *   Toggles "Linked Map" mode (shared exploration data).
+    * Toggles "Linked Map" mode (shared exploration data).
 12. `/bm config track` / `untrack`
 
-    *   Adds or removes the current world from the active whitelist.
+    * Adds or removes the current world from the active whitelist.
 13. `/bm config maxchunk <number>`
 
-    *   Manually overrides the maximum number of loaded chunks.
+    * Manually overrides the maximum number of loaded chunks.
 14. `/bm config autosave <minutes>`
 
-    *   Sets the interval for auto-saving map data.
-14.  `/bm config worldborder`
+    * Sets the interval for auto-saving map data.
+15. `/bm config worldborder`
     
-    *   Toggles the world border visualization on the map.
-15.  `/bm config worldborderradius <radius>`
+    * Toggles the world border visualization on the map.
+16. `/bm config worldborderradius <radius>`
     
-    *   Sets the world border radius in blocks.
-16.  `/bm config worldborderoffset <x> <z>`
+    * Sets the world border radius in blocks.
+17. `/bm config worldborderoffset <x> <z>`
     
-    *   Sets the world border center offset (X and Z coordinates).
+    * Sets the world border center offset (X and Z coordinates).
 
 ### Reload Command
 
 **Permission:** `bettermap.command.reload`
 
-*   `/bm reload`
-*   Reloads the configuration file immediately.
+* `/bm reload`
+* Reloads the configuration file immediately.
 
 ## Configuration & Data Storage
 
@@ -173,7 +172,7 @@ _Note: Changing `mapQuality` or `maxChunksToLoad` requires a server restart to t
 
 **Default Configuration:**
 
-```
+```json
 {
   "explorationRadius": 16,
   "updateRateMs": 500,
@@ -182,24 +181,36 @@ _Note: Changing `mapQuality` or `maxChunksToLoad` requires a server restart to t
   "maxScale": 256.0,
   "debug": false,
   "locationEnabled": true,
+  "locationHudPosition": "top_right",
   "shareAllExploration": false,
-  "maxChunksToLoad": 10000,
+  "maxChunksToLoad": 25000,
   "radarEnabled": true,
   "radarRange": -1,
   "hidePlayersOnMap": false,
+  "hideAllWarpsOnMap": false,
   "hideOtherWarpsOnMap": false,
   "hideUnexploredWarpsOnMap": true,
   "allowWaypointTeleports": true,
   "allowMapMarkerTeleports": true,
   "hideAllPoiOnMap": false,
   "hideUnexploredPoiOnMap": true,
+  "hideSpawnOnMap": false,
+  "hideDeathMarkerOnMap": false,
   "hideGlobalWaypointsOnMap": false,
   "hiddenPoiNames": [],
   "autoSaveInterval": 5,
+  "maxPersonalMarkersPerPlayer": 12,
+  "maxSharedMarkersPerPlayer": 12,
   "allowedWorlds": [
     "default",
     "world"
   ],
+  "caveModeEnabled": true,
+  "caveModeLayerSize": 10,
+  "caveModeUndergroundThreshold": 100,
+  "caveModeRadius": 4,
+  "discoverSurfaceUnderground": false,
+  "caveFogOfWar": false,
   "worldBorderEnabled": false,
   "worldBorderRadius": 5000,
   "worldBorderOffsetX": 0,
@@ -228,7 +239,7 @@ Map data is saved per world. You can find the saved exploration files here: `mod
 This project was created to improve the exploration quality of life in Hytale.
 
 *   **Created by:** Paralaxe and Theobosse
-*   **Contributors:** Xytronix
+*   **Contributors:** Xytronix and DARKACE
 *   **Team:** [Ninesliced](https://ninesliced.com/)
 
 ***
