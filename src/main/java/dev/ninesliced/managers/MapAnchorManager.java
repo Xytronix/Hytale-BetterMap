@@ -229,11 +229,11 @@ public class MapAnchorManager {
      * This injects UI into the {@code MapServerContent} anchor on the Map page.
      */
     public void sendWaypointAnchor(@Nonnull Player player) {
-        Ref<EntityStore> ref = player.getReference();
-        if (ref == null || !ref.isValid()) return;
-        Store<EntityStore> store = ref.getStore();
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) return;
+        PlayerRef playerRef = resolvePlayerRef(player);
+        if (playerRef == null) {
+            LOGGER.warning("MapAnchorManager: Could not resolve PlayerRef for " + player.getDisplayName() + ", skipping anchor UI send.");
+            return;
+        }
 
         try {
             UICommandBuilder commands = new UICommandBuilder();
@@ -287,13 +287,45 @@ public class MapAnchorManager {
      * Use this on player join instead of {@link #sendWaypointAnchor(Player)}.
      */
     public void sendWaypointAnchorDelayed(@Nonnull Player player, long delayMs) {
+        String playerName = player.getDisplayName();
+
         ExplorationTicker.getInstance().scheduleDelayedTask(() -> {
             try {
-                if (player.getReference() != null && player.getReference().isValid()) {
-                    sendWaypointAnchor(player);
+                Ref<EntityStore> ref = player.getReference();
+                if (ref == null || !ref.isValid()) {
+                    LOGGER.fine("MapAnchorManager: Delayed anchor send skipped; reference invalid for " + playerName);
+                    return;
                 }
+
+                Store<EntityStore> store = ref.getStore();
+                if (store == null || store.getExternalData() == null) return;
+
+                World world = store.getExternalData().getWorld();
+                if (world == null || !world.isAlive()) return;
+
+                world.execute(() -> {
+                    try {
+                        Ref<EntityStore> worldRef = player.getReference();
+                        if (worldRef == null || !worldRef.isValid()) {
+                            return;
+                        }
+
+                        Store<EntityStore> worldStore = worldRef.getStore();
+                        if (worldStore == null) {
+                            return;
+                        }
+
+                        Player worldPlayer = worldStore.getComponent(worldRef, Player.getComponentType());
+                        if (worldPlayer == null || worldPlayer.getReference() == null || !worldPlayer.getReference().isValid()) {
+                            return;
+                        }
+                        sendWaypointAnchor(worldPlayer);
+                    } catch (Exception e) {
+                        LOGGER.warning("Failed to send delayed anchor UI to " + playerName + " on world thread: " + e.getMessage());
+                    }
+                });
             } catch (Exception e) {
-                LOGGER.warning("Failed to send delayed anchor UI to " + player.getDisplayName() + ": " + e.getMessage());
+                LOGGER.warning("Failed to dispatch delayed anchor UI for " + playerName + ": " + e.getMessage());
             }
         }, delayMs, TimeUnit.MILLISECONDS);
     }
@@ -302,11 +334,11 @@ public class MapAnchorManager {
      * Clears the anchor UI for a player.
      */
     public void clearAnchor(@Nonnull Player player) {
-        Ref<EntityStore> ref = player.getReference();
-        if (ref == null || !ref.isValid()) return;
-        Store<EntityStore> store = ref.getStore();
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef == null) return;
+        PlayerRef playerRef = resolvePlayerRef(player);
+        if (playerRef == null) {
+            LOGGER.warning("MapAnchorManager: Could not resolve PlayerRef for " + player.getDisplayName() + ", skipping anchor UI clear.");
+            return;
+        }
 
         try {
             playerRef.getPacketHandler().writeNoCache(
@@ -347,6 +379,18 @@ public class MapAnchorManager {
         activePlayers.remove(playerName);
         lastMarkerCounts.remove(playerName);
         expandedPlayers.remove(playerName);
+    }
+
+    private PlayerRef resolvePlayerRef(@Nonnull Player player) {
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
+            return null;
+        }
+        Store<EntityStore> store = ref.getStore();
+        if (store == null) {
+            return null;
+        }
+        return store.getComponent(ref, PlayerRef.getComponentType());
     }
 
     private List<UserMapMarker> buildWaypointEntries(
