@@ -101,7 +101,6 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             ui.set(itemPath + " #NameLabel.Text", name != null && !name.isEmpty() ? name : "Unnamed");
             
             String icon = marker.getIcon();
-            ui.set(itemPath + " #IconLabel.Text", "[" + formatIcon(icon) + "]");
 
             boolean isShared = WaypointManager.isSharedId(marker.getId());
             ui.set(itemPath + " #SharedLabel.Text", isShared ? "(Shared)" : "(Personal)");
@@ -164,16 +163,6 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
 
             index++;
         }
-    }
-
-    private static String formatIcon(String icon) {
-        if (icon == null || icon.isEmpty()) {
-            return "Default";
-        }
-        if (icon.endsWith(".png")) {
-            return icon.substring(0, icon.length() - 4);
-        }
-        return icon;
     }
 
     @Override

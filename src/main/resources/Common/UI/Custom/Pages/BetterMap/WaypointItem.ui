@@ -27,16 +27,6 @@ Group #WaypointItem {
       Padding: (Right: 8);
     }
 
-    Label #IconLabel {
-      Style: (
-        FontSize: 12,
-        RenderBold: false,
-        TextColor: #93844c
-      );
-      Anchor: (Top: 4);
-      Padding: (Right: 8);
-    }
-
     Label #SharedLabel {
       Style: (
         FontSize: 12,

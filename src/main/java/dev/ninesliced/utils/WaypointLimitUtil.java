@@ -1,10 +1,12 @@
 package dev.ninesliced.utils;
 
+import dev.ninesliced.configs.ModConfig;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.asset.type.gameplay.worldmap.UserMapMarkerConfig;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarkersStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
 
@@ -26,15 +28,8 @@ public final class WaypointLimitUtil {
      * Returns the current max markers per player for the given scope.
      */
     public static int getMaxMarkers(@Nullable World world, boolean shared) {
-        if (world == null) {
-            return -1;
-        }
-        try {
-            UserMapMarkerConfig config = world.getGameplayConfig().getWorldMapConfig().getUserMapMarkerConfig();
-            return shared ? config.getMaxSharedMarkersPerPlayer() : config.getMaxPersonalMarkersPerPlayer();
-        } catch (Exception e) {
-            return -1;
-        }
+        ModConfig cfg = ModConfig.getInstance();
+        return shared ? cfg.getMaxSharedMarkersPerPlayer() : cfg.getMaxPersonalMarkersPerPlayer();
     }
 
     /**
@@ -45,14 +40,44 @@ public final class WaypointLimitUtil {
         if (world == null) {
             return -1;
         }
-        UserMapMarkersStore store = shared
-            ? world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType())
-            : player.getPlayerConfigData().getPerWorldData(world.getName());
-        if (store == null) {
+
+        if (!shared) {
+            UserMapMarkersStore personalStore = player.getPlayerConfigData().getPerWorldData(world.getName());
+            if (personalStore == null) {
+                return -1;
+            }
+            return personalStore.getUserMapMarkers().size();
+        }
+
+        UserMapMarkersStore sharedStore = world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
+        if (sharedStore == null) {
             return -1;
         }
+
         UUID uuid = ((CommandSender) player).getUuid();
-        return store.getUserMapMarkers(uuid).size();
+        String displayName = player.getDisplayName();
+        int count = 0;
+
+        for (UserMapMarker marker : sharedStore.getUserMapMarkers()) {
+            if (marker == null) {
+                continue;
+            }
+
+            UUID createdBy = marker.getCreatedByUuid();
+            if (createdBy != null && createdBy.equals(uuid)) {
+                count++;
+                continue;
+            }
+
+            if (createdBy == null && displayName != null) {
+                String createdByName = marker.getCreatedByName();
+                if (createdByName != null && createdByName.equalsIgnoreCase(displayName)) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 
     /**
@@ -69,7 +94,13 @@ public final class WaypointLimitUtil {
             if (!config.isAllowCreatingMarkers()) {
                 return "Waypoint creation is disabled in this world.";
             }
-            int limit = shared ? config.getMaxSharedMarkersPerPlayer() : config.getMaxPersonalMarkersPerPlayer();
+
+            ModConfig cfg = ModConfig.getInstance();
+            int limit = shared ? cfg.getMaxSharedMarkersPerPlayer() : cfg.getMaxPersonalMarkersPerPlayer();
+
+            if (limit < 0) {
+                return null;
+            }
             if (limit <= 0) {
                 return shared
                     ? "Shared waypoint creation is disabled (limit 0)."
@@ -106,13 +137,24 @@ public final class WaypointLimitUtil {
     public static void applyOverridesToWorld(@Nonnull World world, int personalOverride, int sharedOverride) {
         try {
             UserMapMarkerConfig config = world.getGameplayConfig().getWorldMapConfig().getUserMapMarkerConfig();
-            int personal = personalOverride >= 0 ? personalOverride : Integer.MAX_VALUE;
-            int shared = sharedOverride >= 0 ? sharedOverride : Integer.MAX_VALUE;
+            int personal = toNativeLimit(personalOverride);
+            int shared = toNativeLimit(sharedOverride);
 
             ReflectionHelper.setFieldValue(config, "maxPersonalMarkersPerPlayer", personal);
             ReflectionHelper.setFieldValue(config, "maxSharedMarkersPerPlayer", shared);
         } catch (Exception e) {
             LOGGER.warning("Failed to apply marker limit overrides: " + e.getMessage());
         }
+    }
+
+    private static int toNativeLimit(int configuredLimit) {
+        if (configuredLimit < 0) {
+            return Integer.MAX_VALUE;
+        }
+        if (configuredLimit == 0) {
+            return 0;
+        }
+
+        return configuredLimit + 1;
     }
 }
