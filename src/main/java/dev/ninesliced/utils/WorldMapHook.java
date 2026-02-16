@@ -82,6 +82,18 @@ public class WorldMapHook {
 
     private static final Map<String, Integer> caveModeRetryCounter = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /**
+     * Tracks last observed shared cave chunk count per player.
+     * Used to detect shared exploration updates and force target recomputation.
+     */
+    private static final Map<String, Integer> caveModeLastSharedCount = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Tracks whether share-all-exploration was enabled for the player's last cave tick.
+     * Used to force recompute when toggled on/off while underground.
+     */
+    private static final Map<String, Boolean> caveModeLastShareEnabled = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static final Map<String, Set<Long>> sharedCaveExploredChunks = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
@@ -117,6 +129,21 @@ public class WorldMapHook {
     }
 
     /**
+     * Gets shared cave explored chunks and lazily hydrates the cache from persisted/active data.
+     * This keeps cave sharing working after restarts and for players who are not currently underground.
+     */
+    private static Set<Long> getHydratedSharedCaveExploredChunks(@Nonnull String worldName) {
+        Set<Long> shared = getSharedCaveExploredChunks(worldName);
+        if (shared.isEmpty()) {
+            Set<Long> allKnown = ExplorationManager.getInstance().getAllExploredCaveChunks(worldName);
+            if (!allKnown.isEmpty()) {
+                shared.addAll(allKnown);
+            }
+        }
+        return shared;
+    }
+
+    /**
      * Clears the cave mode loaded chunks for a player.
      */
     public static void clearCaveModeLoadedChunks(String playerName) {
@@ -140,6 +167,8 @@ public class WorldMapHook {
             pending.clear();
         }
         caveModeRetryCounter.remove(playerName);
+        caveModeLastSharedCount.remove(playerName);
+        caveModeLastShareEnabled.remove(playerName);
     }
 
     /**
@@ -157,6 +186,8 @@ public class WorldMapHook {
         caveModeTargetChunks.remove(playerName);
         caveModePendingChunks.remove(playerName);
         caveModeRetryCounter.remove(playerName);
+        caveModeLastSharedCount.remove(playerName);
+        caveModeLastShareEnabled.remove(playerName);
     }
 
     /**
@@ -547,13 +578,34 @@ public class WorldMapHook {
             Set<Long> loadedCaveChunks = state.getLoadedCaveChunks();
             Set<Long> pendingCaveChunks = state.getPendingCaveChunks();
             Set<Long> exploredCaveChunks = state.getExploredCaveChunks();
-            Set<Long> sharedExplored = shareCaves ? getSharedCaveExploredChunks(world.getName()) : null;
+            Set<Long> sharedExplored = shareCaves ? getHydratedSharedCaveExploredChunks(world.getName()) : null;
+
+            if (shareCaves && sharedExplored != null && !exploredCaveChunks.isEmpty()) {
+                sharedExplored.addAll(exploredCaveChunks);
+            }
 
             String playerName = player.getDisplayName();
             Set<Long> failedChunks = getCaveModeFailedChunks(playerName);
             List<MapChunk> chunksToSend = new ArrayList<>();
             Set<Long> trackerToAdd = new HashSet<>();
             Set<Long> trackerToRemove = new HashSet<>();
+
+            boolean shareModeChanged = false;
+            Boolean previousShareEnabled = caveModeLastShareEnabled.get(playerName);
+            if (previousShareEnabled == null || previousShareEnabled.booleanValue() != shareCaves) {
+                shareModeChanged = true;
+            }
+            caveModeLastShareEnabled.put(playerName, shareCaves);
+
+            boolean sharedChanged = false;
+            if (shareCaves && sharedExplored != null) {
+                int currentSharedCount = sharedExplored.size();
+                int previousSharedCount = caveModeLastSharedCount.getOrDefault(playerName, -1);
+                sharedChanged = previousSharedCount != currentSharedCount;
+                caveModeLastSharedCount.put(playerName, currentSharedCount);
+            } else {
+                caveModeLastSharedCount.remove(playerName);
+            }
 
             for (Long pendingIdx : new ArrayList<>(pendingCaveChunks)) {
                 CompletableFuture<CaveModeImageBuilder> future = pendingCaveModeFutures.get(playerName + "_" + pendingIdx);
@@ -572,7 +624,6 @@ public class WorldMapHook {
                         chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
                         loadedCaveChunks.add(pendingIdx);
                         trackerToAdd.add(pendingIdx);
-                        state.markCaveChunkExplored(pendingIdx);
                         if (shareCaves && sharedExplored != null) {
                             sharedExplored.add(pendingIdx);
                         }
@@ -587,7 +638,7 @@ public class WorldMapHook {
                 }
             }
 
-            boolean needsTargetRecompute = movedMapChunk || needsRefresh || state.getCachedTargetChunks() == null;
+            boolean needsTargetRecompute = movedMapChunk || needsRefresh || shareModeChanged || sharedChanged || state.getCachedTargetChunks() == null;
             Set<Long> targetCaveChunks;
 
             if (needsTargetRecompute) {
@@ -732,7 +783,6 @@ public class WorldMapHook {
                             chunksToSend.add(new MapChunk(mx, mz, builder.getImage()));
                             loadedCaveChunks.add(chunkIdx);
                             trackerToAdd.add(chunkIdx);
-                            state.markCaveChunkExplored(chunkIdx);
                             if (shareCaves && sharedExplored != null) {
                                 sharedExplored.add(chunkIdx);
                             }
@@ -1147,10 +1197,10 @@ public class WorldMapHook {
             if (state != null) {
                 exploredWorldChunks = new HashSet<>(state.getExploredCaveChunks());
                 if (shareCaves) {
-                    exploredWorldChunks.addAll(getSharedCaveExploredChunks(world.getName()));
+                    exploredWorldChunks.addAll(getHydratedSharedCaveExploredChunks(world.getName()));
                 }
             } else if (shareCaves) {
-                exploredWorldChunks = getSharedCaveExploredChunks(world.getName());
+                exploredWorldChunks = getHydratedSharedCaveExploredChunks(world.getName());
             } else {
                 exploredWorldChunks = Collections.emptySet();
             }
