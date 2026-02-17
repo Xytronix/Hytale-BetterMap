@@ -743,6 +743,12 @@ $C.@PageOverlay {
             }
           }
 
+          TextButton #HostingBannerBtn {
+            Anchor: (Top: 24, Height: 100);
+            Style: @BannerButtonStyle;
+            Background: "Assets/HostingBanner.png";
+          }
+
           TextButton #AdminResetDefaultsBtn {
             Anchor: (Height: 34, Top: 10, Bottom: 6);
             Text: "RESET ADMIN SETTINGS";

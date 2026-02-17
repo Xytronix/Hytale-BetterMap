@@ -471,7 +471,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         var packetHandler = playerRef.getPacketHandler();
         var primaryMessage = Message.raw("ZAP-Hosting Partner").color("#00aa00").bold(true);
         var secondaryMessage = Message.raw("Click the link below to get a discount!").color("#bfcdd5");
-        var icon = new ItemStack("Currency_Emerald", 1).toPacket();
+        var icon = new ItemStack("Deco_Trophy_Harvest", 1).toPacket();
 
         NotificationUtil.sendNotification(
             packetHandler,
