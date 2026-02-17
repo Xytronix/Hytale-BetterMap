@@ -22,9 +22,7 @@
 * Added "Edit" context menu option for waypoints
 * Waypoint menu now have the marker from hytale itself instead of our system
 * Added option to teleport on right click on map (require permission) without needing to be op/in creative
-* Fixed the options to hide POis (forgotten temple gateway,...)
-* Fixed hide deaths icons
-* Fixed warps not being hidden when the option is enabled
+* Added the options to hide all the markers on the map (forgotten temple gateway, waypoints, ...) thanks to a contribution of @Xytronix
 * Added option to hide global/personal waypoints on the map
 * Added with the new anchor UI system an UI on map for shortcuts to our menu (waypoints, config)
 
