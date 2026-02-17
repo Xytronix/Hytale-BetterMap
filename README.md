@@ -6,6 +6,10 @@
 
 ---
 
+<a href="https://zap-hosting.com/ninesliced?voucher=ninesliced"><img src="https://media.forgecdn.net/attachments/1538/710/zap-hosting-collaboration-banner-png.png" alt="ZAP-Hosting Gameserver and Webhosting"></a>
+
+---
+
 ## License
 
 **ALL RIGHTS RESERVED.**
@@ -224,15 +228,41 @@ Map data is saved per world. You can find the saved exploration files here: `mod
 
 ## Examples:
 
+* BetterMap config menu (using `/bm`):
+
+![alt text](https://media.forgecdn.net/attachments/1538/760/bettermap_config_ui-png.png)
+
+* BetterMap help menu (using `/bm help`):
+
+![help](https://media.forgecdn.net/attachments/1538/761/bettermap_help_ui-png.png)
+
 *   Waypoint list using command `/bettermap waypoint menu`:
 
 ![alt text](https://media.forgecdn.net/attachments/1473/704/waypoint-menu-png.png)
 
-*   Waypoint on map: ![alt text](https://media.forgecdn.net/attachments/1473/705/waypoint-example-png.png)
-*   Waypoint edit menu: ![alt text](https://media.forgecdn.net/attachments/1473/706/waypoint-edit-png.png)
-*   High Quality map: ![alt text](https://media.forgecdn.net/attachments/1467/936/capture-decran-2026-01-15-181745.png)
-*   Medium Quality map: ![alt text](https://media.forgecdn.net/attachments/1470/4/example-map-quality-medium-png.png)
-*   Low Quality map: ![alt text](https://media.forgecdn.net/attachments/1470/2/example-map-quality-low-png.png)
+*   Waypoint on map:
+
+![alt text](https://media.forgecdn.net/attachments/1538/758/waypoint_create-png.png) ![alt text](https://media.forgecdn.net/attachments/1538/757/waypoint_conextmenu-png.png)
+
+*   Waypoint edit menu:
+
+![alt text](https://media.forgecdn.net/attachments/1538/759/waypoint_edit-png.png)
+*   Cave mode:
+
+<div style="display: flex; justify-content: space-between;">
+  <img src="https://media.forgecdn.net/attachments/1538/742/cave_mode_2-png.png" alt="Description 1" style="width: 50%;">
+  <img src="https://media.forgecdn.net/attachments/1538/743/cave_mode-png.png" alt="Description 2" style="width: 49%;">
+</div>
+
+*   High Quality map:
+
+![alt text](https://media.forgecdn.net/attachments/1467/936/capture-decran-2026-01-15-181745.png)
+*   Medium Quality map:
+
+![alt text](https://media.forgecdn.net/attachments/1470/4/example-map-quality-medium-png.png)
+*   Low Quality map:
+
+![alt text](https://media.forgecdn.net/attachments/1470/2/example-map-quality-low-png.png)
 
 ## Credits
 
