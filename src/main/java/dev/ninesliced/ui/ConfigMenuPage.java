@@ -219,6 +219,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindClick(events, "#AdminResetConfirmAllBtn", "admin_reset_confirm_all");
              bindClick(events, "#AdminResetConfirmKeepWorldsBtn", "admin_reset_confirm_keep_worlds");
              bindClick(events, "#AdminResetConfirmCancelBtn", "admin_reset_cancel");
+
+             bindClick(events, "#HostingBannerBtn", "open_hosting_link");
         }
     }
 
@@ -463,6 +465,28 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         refreshWorldPlayersMap(player.getWorld());
     }
 
+    private void sendHostingLink(Player player) {
+        String url = "https://zap-hosting.com/ninesliced?voucher=ninesliced";
+
+        var packetHandler = playerRef.getPacketHandler();
+        var primaryMessage = Message.raw("ZAP-Hosting Partner").color("#00aa00").bold(true);
+        var secondaryMessage = Message.raw("Click the link below to get a discount!").color("#bfcdd5");
+        var icon = new ItemStack("Currency_Emerald", 1).toPacket();
+
+        NotificationUtil.sendNotification(
+            packetHandler,
+            primaryMessage,
+            secondaryMessage,
+            icon
+        );
+
+        Message linkMessage = Message.raw("")
+            .insert(Message.raw("[BetterMap] ").color("#93844c").bold(true))
+            .insert(Message.raw("Click here to get a discount on your game server: ").color("#bfcdd5"))
+            .insert(Message.raw(url).color("#4c9cff").link(url));
+        player.sendMessage(linkMessage);
+    }
+
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull ConfigEventData data) {
         Player player = store.getComponent(ref, Player.getComponentType());
@@ -551,6 +575,10 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     );
                 }
                 player.getPageManager().setPage(ref, store, Page.None);
+                return;
+            }
+            case "open_hosting_link" -> {
+                sendHostingLink(player);
                 return;
             }
         }
@@ -955,7 +983,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                                     if (ref == null || !ref.isValid()) continue;
                                     Player p = ref.getStore().getComponent(ref, Player.getComponentType());
                                     if (p == null) continue;
-                                    
+
                                     try {
                                         WorldMapHook.forceFullMapRefresh(p);
                                     } catch (Exception e) {
@@ -984,7 +1012,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                                     if (ref == null || !ref.isValid()) continue;
                                     Player p = ref.getStore().getComponent(ref, Player.getComponentType());
                                     if (p == null) continue;
-                                    
+
                                     try {
                                         WorldMapHook.forceFullMapRefresh(p);
                                     } catch (Exception e) {
