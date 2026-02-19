@@ -48,10 +48,12 @@ public class ExploredChunksTracker {
      */
     public boolean markChunkExplored(long chunkIndex) {
         if (persistentComponent != null) {
-            persistentComponent.addExploredChunk(chunkIndex);
-            version++;
-            cachedSnapshot = null;
-            return true;
+            boolean added = persistentComponent.addExploredChunk(chunkIndex);
+            if (added) {
+                version++;
+                cachedSnapshot = null;
+            }
+            return added;
         }
 
         lock.writeLock().lock();
@@ -77,12 +79,17 @@ public class ExploredChunksTracker {
         if (chunkIndices.isEmpty()) return 0;
         
         if (persistentComponent != null) {
+            int added = 0;
             for (Long chunk : chunkIndices) {
-                persistentComponent.addExploredChunk(chunk);
+                if (persistentComponent.addExploredChunk(chunk)) {
+                    added++;
+                }
             }
-            version++;
-            cachedSnapshot = null;
-            return chunkIndices.size();
+            if (added > 0) {
+                version++;
+                cachedSnapshot = null;
+            }
+            return added;
         }
 
         lock.writeLock().lock();
