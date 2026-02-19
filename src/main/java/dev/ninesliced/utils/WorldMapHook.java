@@ -144,6 +144,14 @@ public class WorldMapHook {
     }
 
     /**
+     * Clears cached shared cave exploration data for all worlds.
+     * Used when cave exploration is reset from the admin panel.
+     */
+    public static void clearSharedCaveExplorationCache() {
+        sharedCaveExploredChunks.clear();
+    }
+
+    /**
      * Clears the cave mode loaded chunks for a player.
      */
     public static void clearCaveModeLoadedChunks(String playerName) {
