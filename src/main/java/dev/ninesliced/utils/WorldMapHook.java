@@ -1871,10 +1871,6 @@ public class WorldMapHook {
                         Map.Entry<?, ?> entry = it.next();
                         if (entry.getKey() instanceof Long idx) {
                             if (!currentTargetSet.contains(idx)) {
-                                Object value = entry.getValue();
-                                if (value instanceof CompletableFuture<?> future) {
-                                    future.cancel(false);
-                                }
                                 it.remove();
                                 removedFutures++;
                             }
