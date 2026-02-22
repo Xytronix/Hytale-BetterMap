@@ -534,14 +534,10 @@ public class WorldMapHook {
         float imageScale = settings.getImageScale();
         int imageSize = MathUtil.fastFloor(32.0F * imageScale);
 
-        Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
-        @SuppressWarnings("unchecked")
-        Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : null;
-
         state.setCaveProcessingInProgress(true);
         dev.ninesliced.exploration.ExplorationTicker.getInstance().scheduleUpdate(() -> {
             try {
-                processCaveOverlayAsync(player, world, tracker, trackerLoaded, playerX, playerZ, state, imageSize);
+                processCaveOverlayAsync(player, world, tracker, playerX, playerZ, state, imageSize);
             } finally {
                 state.setCaveProcessingInProgress(false);
             }
@@ -555,7 +551,6 @@ public class WorldMapHook {
      */
     private static void processCaveOverlayAsync(@Nonnull Player player, @Nonnull World world,
                                                   @Nonnull WorldMapTracker tracker,
-                                                  @Nullable Set<Long> trackerLoaded,
                                                   double playerX, double playerZ,
                                                   @Nonnull CaveModeManager.DynamicCaveModeState state,
                                                   int imageSize) {
@@ -838,7 +833,15 @@ public class WorldMapHook {
                         Ref<EntityStore> ref = player.getReference();
                         if (ref == null || !ref.isValid()) return;
 
-                        if (trackerLoaded != null) {
+                        withTrackerLoadedWriteLock(tracker, () -> {
+                            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+                            if (!(loadedObj instanceof Set<?>)) {
+                                return;
+                            }
+
+                            @SuppressWarnings("unchecked")
+                            Set<Long> trackerLoaded = (Set<Long>) loadedObj;
+
                             for (Long idx : finalTrackerToRemove) {
                                 trackerLoaded.remove(idx);
                             }
@@ -871,7 +874,7 @@ public class WorldMapHook {
                                     trackerLoaded.remove(idx);
                                 }
                             }
-                        }
+                        });
 
                         if (!finalChunksToUnload.isEmpty()) {
                             UpdateWorldMap unloadPacket = new UpdateWorldMap(finalChunksToUnload.toArray(new MapChunk[0]), null, null);
@@ -915,17 +918,23 @@ public class WorldMapHook {
             }
             state.getPendingCaveChunks().clear();
 
-            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
-            @SuppressWarnings("unchecked")
-            Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
-
             List<MapChunk> chunksToUnload = new ArrayList<>();
-            for (Long caveChunkIdx : loadedCaveChunks) {
-                int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(caveChunkIdx);
-                int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(caveChunkIdx);
-                chunksToUnload.add(new MapChunk(mx, mz, null));
-                trackerLoaded.remove(caveChunkIdx);
-            }
+            withTrackerLoadedWriteLock(tracker, () -> {
+                Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+                if (!(loadedObj instanceof Set<?>)) {
+                    return;
+                }
+
+                @SuppressWarnings("unchecked")
+                Set<Long> trackerLoaded = (Set<Long>) loadedObj;
+
+                for (Long caveChunkIdx : loadedCaveChunks) {
+                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(caveChunkIdx);
+                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(caveChunkIdx);
+                    chunksToUnload.add(new MapChunk(mx, mz, null));
+                    trackerLoaded.remove(caveChunkIdx);
+                }
+            });
 
             if (!chunksToUnload.isEmpty()) {
                 int batchSize = 50;
@@ -972,13 +981,6 @@ public class WorldMapHook {
 
     private static void manageLoadedChunks(@Nonnull Player player, @Nonnull WorldMapTracker tracker, int cx, int cz) {
         try {
-            Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
-            if (!(loadedObj instanceof Set))
-                return;
-            
-            @SuppressWarnings("unchecked")
-            Set<Long> loaded = (Set<Long>) loadedObj;
-
             Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
             if (!(spiralIterator instanceof RestrictedSpiralIterator))
                 return;
@@ -1003,22 +1005,32 @@ public class WorldMapHook {
 
             streamingManager.processLoadQueue(player);
 
-            List<Long> loadedSnapshot = new ArrayList<>(loaded);
             List<Long> toUnload = new ArrayList<>();
             List<MapChunk> unloadPackets = new ArrayList<>();
 
-            for (Long idx : loadedSnapshot) {
-                if (!targetSet.contains(idx)) {
-                    toUnload.add(idx);
-                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                    unloadPackets.add(new MapChunk(mx, mz, null));
+            withTrackerLoadedWriteLock(tracker, () -> {
+                Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
+                if (!(loadedObj instanceof Set<?>)) {
+                    return;
                 }
-            }
+
+                @SuppressWarnings("unchecked")
+                Set<Long> loaded = (Set<Long>) loadedObj;
+
+                List<Long> loadedSnapshot = new ArrayList<>(loaded);
+                for (Long idx : loadedSnapshot) {
+                    if (!targetSet.contains(idx)) {
+                        toUnload.add(idx);
+                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                        unloadPackets.add(new MapChunk(mx, mz, null));
+                    }
+                }
+
+                toUnload.forEach(loaded::remove);
+            });
 
             if (toUnload.isEmpty()) return;
-
-            toUnload.forEach(loaded::remove);
 
             streamingManager.markChunksUnloaded(playerName, toUnload);
 
@@ -1065,6 +1077,21 @@ public class WorldMapHook {
         } catch (Exception e) {
             LOGGER.warning("[DEBUG] Failed to force tracker update: " + e.getMessage());
         }
+    }
+
+    private static void withTrackerLoadedWriteLock(@Nonnull WorldMapTracker tracker, @Nonnull Runnable action) {
+        Object lockObj = ReflectionHelper.getFieldValueRecursive(tracker, "loadedLock");
+        if (lockObj instanceof java.util.concurrent.locks.ReentrantReadWriteLock lock) {
+            lock.writeLock().lock();
+            try {
+                action.run();
+            } finally {
+                lock.writeLock().unlock();
+            }
+            return;
+        }
+
+        action.run();
     }
 
     /**
