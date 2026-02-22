@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.MarkerTeleportUtil;
 import dev.ninesliced.utils.PermissionsUtil;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.List;
@@ -87,9 +88,6 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
 
             boolean hasNativeTeleport = player.getWorldMapTracker() != null
                 && player.getWorldMapTracker().isAllowTeleportToMarkers();
-            boolean showTeleport = globalConfig.isAllowMapMarkerTeleports()
-                && PermissionsUtil.canTeleport(player)
-                && !hasNativeTeleport;
 
             for (PlayerDeathPositionData deathPosition : deathPositions) {
                 if (deathPosition == null) {
@@ -105,7 +103,8 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
                 int deathDay = deathPosition.getDay();
                 String markerName = "Death (Day " + deathDay + ")";
 
-                MapMarker marker = createMarker(markerId, markerName, deathPosition, showTeleport);
+                MapMarker marker = createMarker(markerId, markerName, deathPosition);
+                MarkerTeleportUtil.injectTeleportContextMenu(marker, player, PermissionsUtil.MarkerType.DEATH);
                 collector.add(marker);
             }
         } catch (Exception e) {
@@ -113,19 +112,9 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
         }
     }
 
-    private static MapMarker createMarker(String id, String name, PlayerDeathPositionData deathPosition, boolean showTeleport) {
+    private static MapMarker createMarker(String id, String name, PlayerDeathPositionData deathPosition) {
         FormattedMessage displayName = new FormattedMessage();
         displayName.rawText = name;
-
-        ContextMenuItem[] contextMenuItems = null;
-        if (showTeleport && deathPosition.getTransform() != null && deathPosition.getTransform().getPosition() != null) {
-            int x = (int) Math.round(deathPosition.getTransform().getPosition().x);
-            int y = (int) Math.round(deathPosition.getTransform().getPosition().y);
-            int z = (int) Math.round(deathPosition.getTransform().getPosition().z);
-            contextMenuItems = new ContextMenuItem[]{
-                new ContextMenuItem("Teleport", "bettermap waypoint markertp " + x + " " + y + " " + z)
-            };
-        }
 
         return new MapMarker(
             id,
@@ -133,7 +122,7 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
             displayName.rawText,
             MARKER_ICON,
             PositionUtil.toTransformPacket(deathPosition.getTransform()),
-            contextMenuItems,
+            null,
             null
         );
     }

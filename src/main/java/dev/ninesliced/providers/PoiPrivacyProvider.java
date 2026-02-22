@@ -15,7 +15,9 @@ import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
+import dev.ninesliced.utils.MarkerTeleportUtil;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.PermissionsUtil.MarkerType;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 
 import java.util.ArrayList;
@@ -58,10 +60,6 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             boolean hasNativeTeleport = viewer != null
                 && viewer.getWorldMapTracker() != null
                 && viewer.getWorldMapTracker().isAllowTeleportToMarkers();
-            boolean showTeleport = viewer != null
-                && globalConfig.isAllowMapMarkerTeleports()
-                && PermissionsUtil.canTeleport(viewer)
-                && !hasNativeTeleport;
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;
@@ -128,43 +126,16 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
                     continue;
                 }
 
-                collector.add(withTeleportContextMenu(marker, showTeleport));
+                MapMarker markerCopy = marker.clone();
+                MarkerTeleportUtil.injectTeleportContextMenu(markerCopy, viewer, MarkerType.POI);
+                collector.add(markerCopy);
             }
         } catch (Exception e) {
             LOGGER.warning("Error in PoiPrivacyProvider.update: " + e.getMessage());
         }
     }
 
-    private static MapMarker withTeleportContextMenu(MapMarker marker, boolean showTeleport) {
-        if (!showTeleport || marker == null || marker.transform == null || marker.transform.position == null) {
-            return marker;
-        }
 
-        int x = (int) Math.round(marker.transform.position.x);
-        int y = (int) Math.round(marker.transform.position.y);
-        int z = (int) Math.round(marker.transform.position.z);
-        String command = "bettermap waypoint markertp " + x + " " + y + " " + z;
-
-        MapMarker copy = new MapMarker(marker);
-        ContextMenuItem teleportItem = new ContextMenuItem("Teleport", command);
-
-        if (copy.contextMenuItems == null || copy.contextMenuItems.length == 0) {
-            copy.contextMenuItems = new ContextMenuItem[]{teleportItem};
-            return copy;
-        }
-
-        for (ContextMenuItem item : copy.contextMenuItems) {
-            if (item != null && command.equals(item.command)) {
-                return copy;
-            }
-        }
-
-        ContextMenuItem[] updated = new ContextMenuItem[copy.contextMenuItems.length + 1];
-        System.arraycopy(copy.contextMenuItems, 0, updated, 0, copy.contextMenuItems.length);
-        updated[copy.contextMenuItems.length] = teleportItem;
-        copy.contextMenuItems = updated;
-        return copy;
-    }
 
     private static boolean shouldHideByName(MapMarker marker, @Nullable List<String> hiddenPoiNames) {
         if (hiddenPoiNames == null || hiddenPoiNames.isEmpty()) {

@@ -50,9 +50,9 @@ public class UserMarkerContextMenuProvider implements WorldMapManager.MarkerProv
     @Override
     public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
         boolean allowWaypointTeleport = ModConfig.getInstance().isAllowWaypointTeleports();
-        boolean hasTeleportPermission = PermissionsUtil.canTeleport(player);
+        boolean hasTeleportPermission = PermissionsUtil.canTeleportToWaypoints(player);
         boolean hasNativeTeleport = player.getWorldMapTracker() != null && player.getWorldMapTracker().isAllowTeleportToMarkers();
-        boolean showTeleport = allowWaypointTeleport && hasTeleportPermission && !hasNativeTeleport;
+        boolean showTeleport = (allowWaypointTeleport || hasTeleportPermission) && !hasNativeTeleport;
 
         UUID playerId = ((CommandSender) player).getUuid();
         PlayerConfig playerConfig = playerId != null ? PlayerConfigManager.getInstance().getPlayerConfig(playerId) : null;

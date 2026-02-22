@@ -1,7 +1,5 @@
 package dev.ninesliced.configs;
 
-import com.google.gson.*;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -13,6 +11,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 /**
  * Configuration manager for the BetterMap mod.
@@ -42,7 +46,11 @@ public class ModConfig {
     private boolean hideOtherWarpsOnMap = false;
     private boolean hideUnexploredWarpsOnMap = true;
     private boolean allowWaypointTeleports = true;
-    private boolean allowMapMarkerTeleports = true;
+    private boolean allowPoiTeleports = true;
+    private boolean allowWarpTeleports = true;
+    private boolean allowDeathTeleports = true;
+    private boolean allowSpawnTeleports = true;
+    private boolean allowCoordinateTeleports = true;
     private boolean hideAllPoiOnMap = false;
     private boolean hideUnexploredPoiOnMap = true;
     private boolean hideSpawnOnMap = false;
@@ -234,8 +242,29 @@ public class ModConfig {
                         needsSave = true;
                     }
 
-                    if (jsonObject.has("allowMapMarkerTeleports")) {
-                        this.allowMapMarkerTeleports = loaded.allowMapMarkerTeleports;
+                    if (jsonObject.has("allowPoiTeleports")) {
+                        this.allowPoiTeleports = loaded.allowPoiTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+                    if (jsonObject.has("allowWarpTeleports")) {
+                        this.allowWarpTeleports = loaded.allowWarpTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+                    if (jsonObject.has("allowDeathTeleports")) {
+                        this.allowDeathTeleports = loaded.allowDeathTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+                    if (jsonObject.has("allowSpawnTeleports")) {
+                        this.allowSpawnTeleports = loaded.allowSpawnTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("allowCoordinateTeleports")) {
+                        this.allowCoordinateTeleports = loaded.allowCoordinateTeleports;
                     } else {
                         needsSave = true;
                     }
@@ -722,21 +751,46 @@ public class ModConfig {
     }
 
     /**
-     * Checks if waypoint teleports are allowed.
+     * Checks if waypoint teleports are granted to all players by default.
      *
-     * @return True if waypoint teleports are allowed.
+     * @return True if waypoint teleports are allowed for all players.
      */
     public boolean isAllowWaypointTeleports() {
         return allowWaypointTeleports;
     }
 
-    /**
-     * Checks if map marker teleports (POIs/warps) are allowed.
-     *
-     * @return True if map marker teleports are allowed.
-     */
-    public boolean isAllowMapMarkerTeleports() {
-        return allowMapMarkerTeleports;
+    public boolean isAllowPoiTeleports() {
+        return allowPoiTeleports;
+    }
+
+    public boolean isAllowWarpTeleports() {
+        return allowWarpTeleports;
+    }
+
+    public boolean isAllowDeathTeleports() {
+        return allowDeathTeleports;
+    }
+
+    public boolean isAllowSpawnTeleports() {
+        return allowSpawnTeleports;
+    }
+
+    public boolean isAllowTeleportForMarkerType(dev.ninesliced.utils.PermissionsUtil.MarkerType markerType) {
+        return switch (markerType) {
+            case POI -> allowPoiTeleports;
+            case WARP -> allowWarpTeleports;
+            case DEATH -> allowDeathTeleports;
+            case SPAWN -> allowSpawnTeleports;
+        };
+    }
+
+    public boolean isAnyMarkerTeleportEnabled() {
+        return allowPoiTeleports || allowWarpTeleports || allowDeathTeleports || allowSpawnTeleports;
+    }
+
+
+    public boolean isAllowCoordinateTeleports() {
+        return allowCoordinateTeleports;
     }
 
     /**
@@ -810,22 +864,50 @@ public class ModConfig {
     }
 
     /**
-     * Sets whether waypoint teleports are allowed.
+     * Sets whether waypoint teleports are granted to all players by default.
      *
-     * @param allowWaypointTeleports True to allow waypoint teleports.
+     * @param allowWaypointTeleports True to grant waypoint teleports to all players.
      */
     public void setAllowWaypointTeleports(boolean allowWaypointTeleports) {
         this.allowWaypointTeleports = allowWaypointTeleports;
         save();
     }
 
+    public void setAllowPoiTeleports(boolean allowPoiTeleports) {
+        this.allowPoiTeleports = allowPoiTeleports;
+        save();
+    }
+
+    public void setAllowWarpTeleports(boolean allowWarpTeleports) {
+        this.allowWarpTeleports = allowWarpTeleports;
+        save();
+    }
+
+    public void setAllowDeathTeleports(boolean allowDeathTeleports) {
+        this.allowDeathTeleports = allowDeathTeleports;
+        save();
+    }
+
+    public void setAllowSpawnTeleports(boolean allowSpawnTeleports) {
+        this.allowSpawnTeleports = allowSpawnTeleports;
+        save();
+    }
+
+    public void setAllMarkerTeleports(boolean state) {
+        this.allowPoiTeleports = state;
+        this.allowWarpTeleports = state;
+        this.allowDeathTeleports = state;
+        this.allowSpawnTeleports = state;
+        save();
+    }
+
     /**
-     * Sets whether map marker teleports (POIs/warps) are allowed.
+     * Sets whether coordinate teleports (click-on-map) are granted to all players by default.
      *
-     * @param allowMapMarkerTeleports True to allow map marker teleports.
+     * @param allowCoordinateTeleports True to grant coordinate teleports to all players.
      */
-    public void setAllowMapMarkerTeleports(boolean allowMapMarkerTeleports) {
-        this.allowMapMarkerTeleports = allowMapMarkerTeleports;
+    public void setAllowCoordinateTeleports(boolean allowCoordinateTeleports) {
+        this.allowCoordinateTeleports = allowCoordinateTeleports;
         save();
     }
 
@@ -969,7 +1051,11 @@ public class ModConfig {
         this.hideOtherWarpsOnMap = defaults.hideOtherWarpsOnMap;
         this.hideUnexploredWarpsOnMap = defaults.hideUnexploredWarpsOnMap;
         this.allowWaypointTeleports = defaults.allowWaypointTeleports;
-        this.allowMapMarkerTeleports = defaults.allowMapMarkerTeleports;
+        this.allowPoiTeleports = defaults.allowPoiTeleports;
+        this.allowWarpTeleports = defaults.allowWarpTeleports;
+        this.allowDeathTeleports = defaults.allowDeathTeleports;
+        this.allowSpawnTeleports = defaults.allowSpawnTeleports;
+        this.allowCoordinateTeleports = defaults.allowCoordinateTeleports;
         this.hideAllPoiOnMap = defaults.hideAllPoiOnMap;
         this.hideUnexploredPoiOnMap = defaults.hideUnexploredPoiOnMap;
         this.hiddenPoiNames = new ArrayList<>(defaults.hiddenPoiNames);

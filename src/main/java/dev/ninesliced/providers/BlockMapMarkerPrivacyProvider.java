@@ -18,6 +18,7 @@ import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
 import dev.ninesliced.utils.ChunkUtil;
+import dev.ninesliced.utils.MarkerTeleportUtil;
 import dev.ninesliced.utils.PermissionsUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
@@ -107,7 +108,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 && viewer.getWorldMapTracker() != null
                 && viewer.getWorldMapTracker().isAllowTeleportToMarkers();
             boolean showTeleport = viewer != null
-                && globalConfig.isAllowMapMarkerTeleports()
+                && globalConfig.isAllowPoiTeleports()
                 && PermissionsUtil.canTeleport(viewer)
                 && !hasNativeTeleport;
 
@@ -153,6 +154,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                     contextMenuItems,
                     null
                 );
+                MarkerTeleportUtil.injectTeleportContextMenu(marker, viewer, PermissionsUtil.MarkerType.POI);
                 collector.add(marker);
             }
         } catch (Exception e) {

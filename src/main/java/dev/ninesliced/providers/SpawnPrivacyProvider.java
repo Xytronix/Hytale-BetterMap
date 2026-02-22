@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.utils.MarkerTeleportUtil;
 import dev.ninesliced.utils.PermissionsUtil;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import java.util.List;
@@ -99,7 +100,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
 
             boolean hasNativeTeleport = player.getWorldMapTracker() != null
                 && player.getWorldMapTracker().isAllowTeleportToMarkers();
-            boolean showTeleport = globalConfig.isAllowMapMarkerTeleports()
+            boolean showTeleport = globalConfig.isAllowSpawnTeleports()
                 && PermissionsUtil.canTeleport(player)
                 && !hasNativeTeleport;
             ContextMenuItem[] contextMenuItems = null;
@@ -124,6 +125,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
                 contextMenuItems,
                 null
             );
+            MarkerTeleportUtil.injectTeleportContextMenu(marker, player, PermissionsUtil.MarkerType.SPAWN);
             collector.add(marker);
         } catch (Exception e) {
             LOGGER.warning("Error in SpawnPrivacyProvider.update: " + e.getMessage());

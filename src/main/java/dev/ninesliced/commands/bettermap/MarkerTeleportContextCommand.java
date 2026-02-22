@@ -1,13 +1,16 @@
-package dev.ninesliced.commands.bettermap.waypoint;
+package dev.ninesliced.commands.bettermap;
 
 import javax.annotation.Nonnull;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.protocol.packets.worldmap.MapMarkerComponent;
+import com.hypixel.hytale.protocol.packets.worldmap.PlayerMarkerComponent;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -21,48 +24,54 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
-import dev.ninesliced.configs.ModConfig;
-import dev.ninesliced.managers.WaypointManager;
-import dev.ninesliced.utils.PermissionsUtil;
-import dev.ninesliced.utils.WorldMapHook;
 
-public class WaypointTeleportCommand extends AbstractPlayerCommand {
-    private final RequiredArg<String> targetArg = this.withRequiredArg("target", "Waypoint name or marker id", ArgTypes.STRING);
+import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.utils.PermissionsUtil;
+
+public class MarkerTeleportContextCommand extends AbstractPlayerCommand {
+    private final RequiredArg<String> markerIdArg = this.withRequiredArg("markerId", "Marker ID", ArgTypes.STRING);
+
+    public MarkerTeleportContextCommand() {
+        super("mtp", "Teleport to a map marker");
+    }
 
     @Override
     protected boolean canGeneratePermission() {
         return false;
     }
 
-    public WaypointTeleportCommand() {
-        super("teleport", "Teleport to a map waypoint");
-        this.addAliases("tp");
-    }
-
     @Override
-    protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+    protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store,
+                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        if (!ModConfig.getInstance().isAllowWaypointTeleports() && !PermissionsUtil.canTeleportToWaypoints(player)) {
-            context.sendMessage(Message.raw("You don't have permission to teleport to waypoints."));
+        if (!ModConfig.getInstance().isAnyMarkerTeleportEnabled() && !PermissionsUtil.canTeleportToMarkers(player)) {
+            context.sendMessage(Message.raw("You don't have permission to teleport to markers."));
             return;
         }
 
-        String target = this.targetArg.get(context);
-        UserMapMarker marker = WaypointManager.findMarker(player, target);
+        String markerId = this.markerIdArg.get(context);
+        MapMarker marker = player.getWorldMapTracker().getSentMarkers().get(markerId);
         if (marker == null) {
-            context.sendMessage(Message.raw("Could not find waypoint with that name or id."));
+            context.sendMessage(Message.raw("Marker not found."));
             return;
         }
+
+        if (hasPlayerMarkerComponent(marker)) {
+            context.sendMessage(Message.raw("Cannot teleport to player markers."));
+            return;
+        }
+
+        double markerX = marker.transform.position.x;
+        double markerZ = marker.transform.position.z;
 
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         double fallbackY = transform != null ? transform.getPosition().y : 64.0;
         Vector3f currentRotation = transform != null ? transform.getRotation() : Vector3f.ZERO;
 
-        int blockX = MathUtil.floor(marker.getX());
-        int blockZ = MathUtil.floor(marker.getZ());
+        int blockX = MathUtil.floor(markerX);
+        int blockZ = MathUtil.floor(markerZ);
         long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
 
         world.getChunkStore().getChunkReferenceAsync(chunkIndex).thenAcceptAsync(chunkRef -> {
@@ -76,12 +85,17 @@ public class WaypointTeleportCommand extends AbstractPlayerCommand {
             } catch (Exception ignored) {
             }
 
-            Vector3d destination = new Vector3d(marker.getX(), destinationY, marker.getZ());
+            Vector3d destination = new Vector3d(markerX, destinationY, markerZ);
             Teleport teleport = new Teleport(destination, currentRotation);
             store.addComponent(ref, Teleport.getComponentType(), teleport);
-
-            String markerName = marker.getName() != null ? marker.getName() : target;
-            context.sendMessage(Message.raw("Teleported to waypoint: " + markerName));
         }, world);
+    }
+
+    private static boolean hasPlayerMarkerComponent(MapMarker marker) {
+        if (marker.components == null) return false;
+        for (MapMarkerComponent component : marker.components) {
+            if (component instanceof PlayerMarkerComponent) return true;
+        }
+        return false;
     }
 }

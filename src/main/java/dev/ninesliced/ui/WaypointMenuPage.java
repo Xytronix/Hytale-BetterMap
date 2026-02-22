@@ -96,8 +96,8 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             return;
         }
 
-        boolean canTeleport = PermissionsUtil.canTeleport(player)
-            && ModConfig.getInstance().isAllowWaypointTeleports();
+        boolean canTeleport = ModConfig.getInstance().isAllowWaypointTeleports()
+            || PermissionsUtil.canTeleportToWaypoints(player);
 
         int index = 0;
         for (UserMapMarker marker : markers) {
@@ -236,8 +236,8 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                 }
             }
             case TELEPORT -> {
-                if (!PermissionsUtil.canTeleport(player)
-                    || !ModConfig.getInstance().isAllowWaypointTeleports()) {
+                if (!ModConfig.getInstance().isAllowWaypointTeleports()
+                    && !PermissionsUtil.canTeleportToWaypoints(player)) {
                     return;
                 }
                 if (data.targetId != null && !data.targetId.isEmpty()) {
