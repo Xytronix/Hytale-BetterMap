@@ -148,7 +148,7 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
                 );
             }
 
-            boolean canEdit = !isShared || PermissionsUtil.canUseGlobalWaypoints(player);
+            boolean canEdit = !isShared || PermissionsUtil.canEditSharedWaypoint(player, marker);
             ui.set(itemPath + " #EditButton.Visible", canEdit);
             if (canEdit) {
                 events.addEventBinding(
@@ -216,9 +216,12 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             }
             case DELETE -> {
                 if (data.targetId != null && !data.targetId.isEmpty()) {
-                    if (WaypointManager.isSharedId(data.targetId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
-                        player.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
-                        return;
+                    if (WaypointManager.isSharedId(data.targetId)) {
+                        UserMapMarker marker = WaypointManager.getMarker(player, data.targetId);
+                        if (marker == null || !PermissionsUtil.canEditSharedWaypoint(player, marker)) {
+                            player.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
+                            return;
+                        }
                     }
                     boolean removed = WaypointManager.removeMarker(player, data.targetId);
                     if (removed) {
@@ -228,9 +231,12 @@ public class WaypointMenuPage extends InteractiveCustomUIPage<WaypointMenuPage.W
             }
             case EDIT -> {
                 if (data.targetId != null && !data.targetId.isEmpty()) {
-                    if (WaypointManager.isSharedId(data.targetId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
-                        player.sendMessage(Message.raw("You do not have permission to edit shared waypoints."));
-                        return;
+                    if (WaypointManager.isSharedId(data.targetId)) {
+                        UserMapMarker marker = WaypointManager.getMarker(player, data.targetId);
+                        if (marker == null || !PermissionsUtil.canEditSharedWaypoint(player, marker)) {
+                            player.sendMessage(Message.raw("You do not have permission to edit shared waypoints."));
+                            return;
+                        }
                     }
                      player.getPageManager().openCustomPage(ref, store, new WaypointEditPage(this.playerRef, data.targetId));
                 }

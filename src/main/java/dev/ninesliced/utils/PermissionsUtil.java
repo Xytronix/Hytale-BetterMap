@@ -11,6 +11,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.asset.type.gameplay.worldmap.UserMapMarkerConfig;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
+import dev.ninesliced.configs.ModConfig;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -20,6 +22,7 @@ public final class PermissionsUtil {
     private static final String ADMIN_COMMAND_PERMISSION = "bettermap.command.admin";
     private static final String TELEPORT_PERMISSION = "bettermap.command.teleport";
     private static final String GLOBAL_WAYPOINT_PERMISSION = "bettermap.command.waypoint.global";
+    private static final String EDIT_GLOBAL_WAYPOINT_PERMISSION = "bettermap.command.waypoint.editglobal";
     private static final String OVERRIDE_PLAYERS_PERMISSION = "bettermap.command.override.players";
     private static final String OVERRIDE_WARPS_PERMISSION = "bettermap.command.override.warps";
     private static final String OVERRIDE_UNEXPLORED_WARPS_PERMISSION = "bettermap.command.override.unexploredwarps";
@@ -94,6 +97,36 @@ public final class PermissionsUtil {
         }
     }
 
+    /**
+     * Checks whether a player may edit/delete a shared waypoint marker.
+     *
+     * Rules:
+     * - Marker creator can always edit/delete their own shared marker.
+     * - Players with {@code bettermap.command.waypoint.editglobal} can edit/delete any shared marker.
+     * - If enabled in config, everyone can edit/delete shared markers.
+     */
+    public static boolean canEditSharedWaypoint(@Nonnull Player player, @Nonnull UserMapMarker marker) {
+        if (!isSharedWaypointMarker(marker)) {
+            return true;
+        }
+
+        UUID playerUuid = ((CommandSender) player).getUuid();
+        UUID creatorUuid = marker.getCreatedByUuid();
+        if (creatorUuid != null && creatorUuid.equals(playerUuid)) {
+            return true;
+        }
+
+        if (hasPermission(player, EDIT_GLOBAL_WAYPOINT_PERMISSION)) {
+            return true;
+        }
+
+        return ModConfig.getInstance().isAllowGlobalWaypointEditsForEveryone();
+    }
+
+    public static boolean canEditSharedWaypointByPermission(@Nonnull Player player) {
+        return hasPermission(player, EDIT_GLOBAL_WAYPOINT_PERMISSION);
+    }
+
     public static boolean canAccessConfig(@Nonnull Player player) {
         PermissionsModule perms = PermissionsModule.get();
         if (perms == null) {
@@ -142,11 +175,20 @@ public final class PermissionsUtil {
     }
 
     private static boolean hasOverridePermission(@Nonnull Player player, String permission) {
+        return hasPermission(player, permission);
+    }
+
+    private static boolean hasPermission(@Nonnull Player player, String permission) {
         PermissionsModule perms = PermissionsModule.get();
         if (perms == null) {
             return false;
         }
         UUID uuid = ((CommandSender) player).getUuid();
         return perms.hasPermission(uuid, permission);
+    }
+
+    private static boolean isSharedWaypointMarker(@Nonnull UserMapMarker marker) {
+        String id = marker.getId();
+        return id != null && id.startsWith("user_shared_");
     }
 }

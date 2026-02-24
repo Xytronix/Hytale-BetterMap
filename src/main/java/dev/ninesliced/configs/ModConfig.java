@@ -42,6 +42,7 @@ public class ModConfig {
     private boolean hideOtherWarpsOnMap = false;
     private boolean hideUnexploredWarpsOnMap = true;
     private boolean allowWaypointTeleports = true;
+    private boolean allowGlobalWaypointEditsForEveryone = false;
     private boolean allowMapMarkerTeleports = true;
     private boolean hideAllPoiOnMap = false;
     private boolean hideUnexploredPoiOnMap = true;
@@ -230,6 +231,12 @@ public class ModConfig {
                     }
                     if (jsonObject.has("allowWaypointTeleports")) {
                         this.allowWaypointTeleports = loaded.allowWaypointTeleports;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("allowGlobalWaypointEditsForEveryone")) {
+                        this.allowGlobalWaypointEditsForEveryone = loaded.allowGlobalWaypointEditsForEveryone;
                     } else {
                         needsSave = true;
                     }
@@ -731,6 +738,16 @@ public class ModConfig {
     }
 
     /**
+     * Checks if editing/deleting shared waypoints is globally allowed for all players.
+     * Marker creators can always edit their own shared waypoints regardless of this setting.
+     *
+     * @return True if all players can edit/delete shared waypoints.
+     */
+    public boolean isAllowGlobalWaypointEditsForEveryone() {
+        return allowGlobalWaypointEditsForEveryone;
+    }
+
+    /**
      * Checks if map marker teleports (POIs/warps) are allowed.
      *
      * @return True if map marker teleports are allowed.
@@ -816,6 +833,16 @@ public class ModConfig {
      */
     public void setAllowWaypointTeleports(boolean allowWaypointTeleports) {
         this.allowWaypointTeleports = allowWaypointTeleports;
+        save();
+    }
+
+    /**
+     * Sets whether editing/deleting shared waypoints is globally allowed for all players.
+     *
+     * @param allowGlobalWaypointEditsForEveryone True to allow everyone to edit/delete shared waypoints.
+     */
+    public void setAllowGlobalWaypointEditsForEveryone(boolean allowGlobalWaypointEditsForEveryone) {
+        this.allowGlobalWaypointEditsForEveryone = allowGlobalWaypointEditsForEveryone;
         save();
     }
 
@@ -969,6 +996,7 @@ public class ModConfig {
         this.hideOtherWarpsOnMap = defaults.hideOtherWarpsOnMap;
         this.hideUnexploredWarpsOnMap = defaults.hideUnexploredWarpsOnMap;
         this.allowWaypointTeleports = defaults.allowWaypointTeleports;
+        this.allowGlobalWaypointEditsForEveryone = defaults.allowGlobalWaypointEditsForEveryone;
         this.allowMapMarkerTeleports = defaults.allowMapMarkerTeleports;
         this.hideAllPoiOnMap = defaults.hideAllPoiOnMap;
         this.hideUnexploredPoiOnMap = defaults.hideUnexploredPoiOnMap;

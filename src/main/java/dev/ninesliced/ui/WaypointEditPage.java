@@ -103,6 +103,15 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
             initialized = true;
         }
 
+        if (targetId != null && WaypointManager.isSharedId(targetId)) {
+            UserMapMarker marker = WaypointManager.getMarker(player, targetId);
+            if (marker == null || !PermissionsUtil.canEditSharedWaypoint(player, marker)) {
+                player.sendMessage(com.hypixel.hytale.server.core.Message.raw("You do not have permission to edit shared waypoints."));
+                player.getPageManager().openCustomPage(ref, store, new WaypointMenuPage(this.playerRef));
+                return;
+            }
+        }
+
         ui.set("#NameInput.Value", this.nameInput);
         ui.set("#InputX.Value", this.inputX);
         ui.set("#InputZ.Value", this.inputZ);
@@ -191,7 +200,14 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         }
 
         boolean canShared = PermissionsUtil.canUseGlobalWaypoints(player);
-        if (targetId != null && WaypointManager.isSharedId(targetId) && !canShared) {
+        UserMapMarker targetMarker = null;
+        if (targetId != null) {
+            targetMarker = WaypointManager.getMarker(player, targetId);
+        }
+        if (targetMarker != null && WaypointManager.isSharedId(targetMarker.getId())
+            && !PermissionsUtil.canEditSharedWaypoint(player, targetMarker)) {
+            player.sendMessage(com.hypixel.hytale.server.core.Message.raw("You do not have permission to edit shared waypoints."));
+            player.getPageManager().openCustomPage(ref, store, new WaypointMenuPage(this.playerRef));
             return;
         }
 
@@ -254,6 +270,10 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                 if (targetId != null) {
                     UserMapMarker existing = WaypointManager.getMarker(player, targetId);
                     boolean wasShared = WaypointManager.isSharedId(targetId);
+
+                    if (wasShared && !canShared) {
+                        wantsShared = true;
+                    }
 
                     if (existing != null && wantsShared != wasShared) {
                         String limitError = WaypointLimitUtil.getCreationError(player, wantsShared);

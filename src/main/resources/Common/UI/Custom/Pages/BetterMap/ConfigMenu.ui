@@ -509,6 +509,11 @@ $C.@PageOverlay {
             }
 
             @CheckboxRow {
+              $C.@CheckBox #AllowGlobalWaypointEdits { }
+              Label { Text: "Allow Global Waypoint Edit/Delete For Everyone"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+            }
+
+            @CheckboxRow {
               $C.@CheckBox #ShareAllExploration { }
               Label { Text: "Share All Exploration"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }

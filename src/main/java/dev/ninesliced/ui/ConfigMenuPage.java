@@ -168,6 +168,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AdminMaxScale.Value", (int) gConfig.getMaxScale());
 
              ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
+             ui.set("#AllowGlobalWaypointEdits.Value", gConfig.isAllowGlobalWaypointEditsForEveryone());
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
              ui.set("#DebugMode.Value", gConfig.isDebug());
              ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
@@ -212,6 +213,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AdminMaxScale", "admin_max_scale", BindingType.NUMBER);
 
              bindChange(events, "#AllowWaypointTeleport", "admin_wp_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowGlobalWaypointEdits", "admin_global_waypoint_edits", BindingType.BOOLEAN);
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
              bindChange(events, "#DebugMode", "admin_debug", BindingType.BOOLEAN);
              bindChange(events, "#LocationHudEnabled", "admin_location_enabled", BindingType.BOOLEAN);
@@ -384,6 +386,7 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#AdminMaxScale.Value", (int) gConfig.getMaxScale());
 
         ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
+        ui.set("#AllowGlobalWaypointEdits.Value", gConfig.isAllowGlobalWaypointEditsForEveryone());
         ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
         ui.set("#DebugMode.Value", gConfig.isDebug());
         ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
@@ -1183,6 +1186,20 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_wp_teleport":
                     if (val != null) gConfig.setAllowWaypointTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_global_waypoint_edits":
+                    if (val != null) {
+                        gConfig.setAllowGlobalWaypointEditsForEveryone(Boolean.parseBoolean(val));
+
+                        Universe universe = Universe.get();
+                        if (universe != null) {
+                            universe.getWorlds().values().forEach(world -> {
+                                if (world == null) return;
+                                WorldMapHook.clearMarkerCaches(world);
+                                WorldMapHook.refreshTrackers(world);
+                            });
+                        }
+                    }
                     break;
                 case "admin_share_exp":
                     if (val != null) {

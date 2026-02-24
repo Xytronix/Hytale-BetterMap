@@ -138,9 +138,12 @@ public class MapAnchorManager {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) return;
 
-            if (WaypointManager.isSharedId(waypointId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
-                player.sendMessage(Message.raw("You do not have permission to edit shared waypoints."));
-                return;
+            if (WaypointManager.isSharedId(waypointId)) {
+                UserMapMarker marker = WaypointManager.getMarker(player, waypointId);
+                if (marker == null || !PermissionsUtil.canEditSharedWaypoint(player, marker)) {
+                    player.sendMessage(Message.raw("You do not have permission to edit shared waypoints."));
+                    return;
+                }
             }
             player.getPageManager().openCustomPage(ref, store, new WaypointEditPage(playerRef, waypointId));
         });
@@ -152,9 +155,12 @@ public class MapAnchorManager {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) return;
 
-            if (WaypointManager.isSharedId(waypointId) && !PermissionsUtil.canUseGlobalWaypoints(player)) {
-                player.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
-                return;
+            if (WaypointManager.isSharedId(waypointId)) {
+                UserMapMarker marker = WaypointManager.getMarker(player, waypointId);
+                if (marker == null || !PermissionsUtil.canEditSharedWaypoint(player, marker)) {
+                    player.sendMessage(Message.raw("You do not have permission to delete shared waypoints."));
+                    return;
+                }
             }
             boolean removed = WaypointManager.removeMarker(player, waypointId);
             if (removed) {
@@ -466,7 +472,7 @@ public class MapAnchorManager {
                     String.format("#%02X%02X%02X", tint.red & 0xFF, tint.green & 0xFF, tint.blue & 0xFF));
             }
 
-            boolean canEdit = !isShared || PermissionsUtil.canUseGlobalWaypoints(player);
+            boolean canEdit = !isShared || PermissionsUtil.canEditSharedWaypoint(player, marker);
 
             commands.set(itemPath + " #EditButton.Visible", canEdit);
             if (canEdit) {
