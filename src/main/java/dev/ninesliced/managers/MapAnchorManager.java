@@ -187,18 +187,21 @@ public class MapAnchorManager {
 
             float markerX = marker.getX();
             float markerZ = marker.getZ();
+            Double storedY = WaypointManager.getMarkerY(world, player, marker.getId());
 
-            double destinationY = 64.0;
+            double destinationY = storedY != null ? storedY : 64.0;
             try {
-                long chunkIndex = ChunkUtil.indexChunkFromBlock(markerX, markerZ);
-                WorldChunk chunk = world.getChunk(chunkIndex);
-                if (chunk != null) {
-                    int blockX = MathUtil.floor(markerX);
-                    int blockZ = MathUtil.floor(markerZ);
-                    int localX = blockX & 31;
-                    int localZ = blockZ & 31;
-                    short surfaceHeight = chunk.getHeight(localX, localZ);
-                    destinationY = surfaceHeight + 1.0;
+                if (storedY == null) {
+                    long chunkIndex = ChunkUtil.indexChunkFromBlock(markerX, markerZ);
+                    WorldChunk chunk = world.getChunk(chunkIndex);
+                    if (chunk != null) {
+                        int blockX = MathUtil.floor(markerX);
+                        int blockZ = MathUtil.floor(markerZ);
+                        int localX = blockX & 31;
+                        int localZ = blockZ & 31;
+                        short surfaceHeight = chunk.getHeight(localX, localZ);
+                        destinationY = surfaceHeight + 1.0;
+                    }
                 }
             } catch (Exception e) {
                 TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());

@@ -57,7 +57,8 @@ public class WaypointUpdateCommand extends AbstractPlayerCommand {
                 context.sendMessage(Message.raw("You do not have permission to edit shared waypoints."));
                 return;
             }
-            WaypointManager.updateMarker(player, marker.getId(), newNameRaw, marker.getIcon(), marker.getX(), marker.getZ(), marker.getColorTint());
+            Double markerY = WaypointManager.getMarkerY(world, player, marker.getId());
+            WaypointManager.updateMarker(player, marker.getId(), newNameRaw, marker.getIcon(), marker.getX(), marker.getZ(), markerY, marker.getColorTint());
             String oldName = marker.getName() != null ? marker.getName() : "Unnamed";
             context.sendMessage(Message.raw("Updated waypoint: " + oldName + " -> " + newNameRaw));
         } else {

@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
@@ -51,6 +52,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
     private String nameInput = "";
     private String inputX = "0.00";
     private String inputZ = "0.00";
+    private double inputY = 100.0;
     private int selectedIconIndex = 0;
     private int selectedTintIndex = 0;
     private String errorMessage = null;
@@ -78,6 +80,10 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     this.nameInput = marker.getName() != null ? marker.getName() : "";
                     this.inputX = String.format(Locale.ROOT, "%.2f", marker.getX());
                     this.inputZ = String.format(Locale.ROOT, "%.2f", marker.getZ());
+                    World world = player.getWorld();
+                    this.inputY = world != null
+                        ? WaypointManager.getMarkerYOrDefault(world, player, marker.getId(), this.inputY)
+                        : this.inputY;
                     this.shared = WaypointManager.isSharedId(targetId);
 
                     String markerIcon = marker.getIcon();
@@ -98,6 +104,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     var pos = transform.getPosition();
                     this.inputX = String.format(Locale.ROOT, "%.2f", pos.x);
                     this.inputZ = String.format(Locale.ROOT, "%.2f", pos.z);
+                    this.inputY = pos.y;
                 }
             }
             initialized = true;
@@ -114,6 +121,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
         ui.set("#NameInput.Value", this.nameInput);
         ui.set("#InputX.Value", this.inputX);
+        ui.set("#InputY.Value", String.format(Locale.ROOT, "%.2f", this.inputY));
         ui.set("#InputZ.Value", this.inputZ);
 
         Color tintColor = AVAILABLE_TINTS[selectedTintIndex];
@@ -146,6 +154,9 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputX", 
             new EventData().put(EditData.KEY_INPUT_X, "#InputX.Value"), false);
+
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputY", 
+            new EventData().put(EditData.KEY_INPUT_Y, "#InputY.Value"), false);
 
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#InputZ", 
             new EventData().put(EditData.KEY_INPUT_Z, "#InputZ.Value"), false);
@@ -185,6 +196,12 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         
         if (data.nameInput != null) this.nameInput = data.nameInput;
         if (data.inputX != null) this.inputX = data.inputX;
+        if (data.inputY != null) {
+            try {
+                this.inputY = Double.parseDouble(data.inputY);
+            } catch (NumberFormatException ignored) {
+            }
+        }
         if (data.inputZ != null) this.inputZ = data.inputZ;
         if (data.global != null) this.shared = data.global;
 
@@ -250,6 +267,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                     var pos = transform.getPosition();
                     this.inputX = String.format(Locale.ROOT, "%.2f", pos.x);
                     this.inputZ = String.format(Locale.ROOT, "%.2f", pos.z);
+                    this.inputY = pos.y;
                     refreshCoordinates(ref, store);
                 }
                 break;
@@ -266,6 +284,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                 String selectedIcon = AVAILABLE_ICONS[selectedIconIndex];
                 Color selectedTint = AVAILABLE_TINTS[selectedTintIndex];
                 boolean wantsShared = this.shared && canShared;
+                double y = this.inputY;
 
                 if (targetId != null) {
                     UserMapMarker existing = WaypointManager.getMarker(player, targetId);
@@ -285,9 +304,9 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
 
                     if (wantsShared != wasShared && existing != null) {
                         WaypointManager.removeMarker(player, targetId);
-                        WaypointManager.addMarker(player, newName, selectedIcon, x, z, selectedTint, wantsShared);
+                        WaypointManager.addMarker(player, newName, selectedIcon, x, z, y, selectedTint, wantsShared);
                     } else if (existing != null) {
-                        WaypointManager.updateMarker(player, targetId, newName, selectedIcon, x, z, selectedTint);
+                        WaypointManager.updateMarker(player, targetId, newName, selectedIcon, x, z, y, selectedTint);
                     }
                 } else {
                     String limitError = WaypointLimitUtil.getCreationError(player, wantsShared);
@@ -295,7 +314,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                         showError(ref, store, limitError);
                         return;
                     }
-                    WaypointManager.addMarker(player, newName, selectedIcon, x, z, selectedTint, wantsShared);
+                    WaypointManager.addMarker(player, newName, selectedIcon, x, z, y, selectedTint, wantsShared);
                 }
                 
                 WaypointMenuPage menuPage = new WaypointMenuPage(this.playerRef);
@@ -410,6 +429,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         UIEventBuilder events = new UIEventBuilder();
 
         ui.set("#InputX.Value", this.inputX);
+        ui.set("#InputY.Value", String.format(Locale.ROOT, "%.2f", this.inputY));
         ui.set("#InputZ.Value", this.inputZ);
 
         sendUpdate(ui, events, false);
@@ -441,12 +461,14 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
         public static final String KEY_ACTION = "Action";
         public static final String KEY_NAME_INPUT = "@NameInput";
         public static final String KEY_INPUT_X = "@InputX";
+        public static final String KEY_INPUT_Y = "@InputY";
         public static final String KEY_INPUT_Z = "@InputZ";
         public static final String KEY_GLOBAL = "@Global";
         
         public String action;
         public String nameInput;
         public String inputX;
+        public String inputY;
         public String inputZ;
         public Boolean global;
 
@@ -454,6 +476,7 @@ public class WaypointEditPage extends InteractiveCustomUIPage<WaypointEditPage.E
                 .addField(new KeyedCodec<>(KEY_ACTION, Codec.STRING), (data, value) -> data.action = value, data -> data.action)
                 .addField(new KeyedCodec<>(KEY_NAME_INPUT, Codec.STRING), (data, value) -> data.nameInput = value, data -> data.nameInput)
                 .addField(new KeyedCodec<>(KEY_INPUT_X, Codec.STRING), (data, value) -> data.inputX = value, data -> data.inputX)
+                .addField(new KeyedCodec<>(KEY_INPUT_Y, Codec.STRING), (data, value) -> data.inputY = value, data -> data.inputY)
                 .addField(new KeyedCodec<>(KEY_INPUT_Z, Codec.STRING), (data, value) -> data.inputZ = value, data -> data.inputZ)
                 .addField(new KeyedCodec<>(KEY_GLOBAL, Codec.BOOLEAN), (data, value) -> data.global = value, data -> data.global)
                 .build();

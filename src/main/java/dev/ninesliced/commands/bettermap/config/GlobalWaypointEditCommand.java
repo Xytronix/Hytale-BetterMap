@@ -1,5 +1,6 @@
 package dev.ninesliced.commands.bettermap.config;
 
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -65,6 +66,14 @@ public class GlobalWaypointEditCommand extends AbstractCommand {
             if (universe != null) {
                 universe.getWorlds().values().forEach(w -> {
                     if (w == null) return;
+                    for (PlayerRef pr : w.getPlayerRefs()) {
+                        Holder<EntityStore> holder = pr.getHolder();
+                        if (holder == null) continue;
+                        Player p = holder.getComponent(Player.getComponentType());
+                        if (p != null) {
+                            WorldMapHook.sendMapSettingsToPlayer(p);
+                        }
+                    }
                     WorldMapHook.clearMarkerCaches(w);
                     WorldMapHook.refreshTrackers(w);
                 });

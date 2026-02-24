@@ -103,13 +103,9 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
                 }
             }
 
-            boolean hasNativeTeleport = viewer != null
-                && viewer.getWorldMapTracker() != null
-                && viewer.getWorldMapTracker().isAllowTeleportToMarkers();
             boolean showTeleport = viewer != null
                 && globalConfig.isAllowMapMarkerTeleports()
-                && PermissionsUtil.canTeleport(viewer)
-                && !hasNativeTeleport;
+                && PermissionsUtil.canTeleport(viewer);
 
             for (BlockMapMarkersResource.BlockMapMarkerData markerData : markers.values()) {
                 String name = markerData.getName();

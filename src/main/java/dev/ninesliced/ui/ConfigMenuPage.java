@@ -1195,6 +1195,13 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         if (universe != null) {
                             universe.getWorlds().values().forEach(world -> {
                                 if (world == null) return;
+                                for (PlayerRef pRef : world.getPlayerRefs()) {
+                                    Ref<EntityStore> pStoreRef = pRef.getReference();
+                                    if (pStoreRef == null || !pStoreRef.isValid()) continue;
+                                    Player p = pStoreRef.getStore().getComponent(pStoreRef, Player.getComponentType());
+                                    if (p == null) continue;
+                                    WorldMapHook.sendMapSettingsToPlayer(p);
+                                }
                                 WorldMapHook.clearMarkerCaches(world);
                                 WorldMapHook.refreshTrackers(world);
                             });

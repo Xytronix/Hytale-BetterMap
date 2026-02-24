@@ -17,6 +17,7 @@ import dev.ninesliced.exploration.ExplorationTracker;
 import dev.ninesliced.listeners.ExplorationListener;
 import dev.ninesliced.managers.ExplorationManager;
 import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.WaypointManager;
 import dev.ninesliced.utils.ChunkUtil;
 import dev.ninesliced.utils.PermissionsUtil;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
@@ -107,7 +108,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
             if (!filter) {
                 for (UserMapMarker marker : markersCollection) {
                     if (marker == null) continue;
-                    collector.add(convertToMapMarker(marker));
+                    collector.add(convertToMapMarker(world, viewer, marker));
                 }
                 return;
             }
@@ -116,7 +117,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
             if (pointsOfInterest == null || pointsOfInterest.isEmpty()) {
                 for (UserMapMarker marker : markersCollection) {
                     if (marker == null) continue;
-                    collector.add(convertToMapMarker(marker));
+                    collector.add(convertToMapMarker(world, viewer, marker));
                 }
                 return;
             }
@@ -156,7 +157,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 }
 
                 if (!isPoi) {
-                    collector.add(convertToMapMarker(marker));
+                    collector.add(convertToMapMarker(world, viewer, marker));
                     continue;
                 }
 
@@ -166,7 +167,7 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
                 }
 
                 if (!hide) {
-                    collector.add(convertToMapMarker(marker));
+                    collector.add(convertToMapMarker(world, viewer, marker));
                 }
             }
         } catch (Exception e) {
@@ -177,9 +178,10 @@ public class PoiPlayerMarkerProvider implements WorldMapManager.MarkerProvider {
     /**
      * Converts a UserMapMarker to a MapMarker for the collector.
      */
-    private static MapMarker convertToMapMarker(UserMapMarker marker) {
+    private static MapMarker convertToMapMarker(World world, Player viewer, UserMapMarker marker) {
+        double markerY = WaypointManager.getMarkerYOrDefault(world, viewer, marker.getId(), 100.0);
         com.hypixel.hytale.protocol.Transform packetTransform = PositionUtil.toTransformPacket(
-            new Transform(marker.getX(), 100.0, marker.getZ())
+            new Transform(marker.getX(), markerY, marker.getZ())
         );
 
         FormattedMessage displayName = new FormattedMessage();
