@@ -420,6 +420,7 @@ public class ModConfig {
         setLoggerLevel("dev.ninesliced.listeners.ExplorationListener", level);
         setLoggerLevel("dev.ninesliced.configs.CavePersistence", level);
         setLoggerLevel("dev.ninesliced.managers.WaypointMigrationManager", level);
+        setLoggerLevel("dev.ninesliced.managers.CaveModeManager", level);
     }
 
     private void setLoggerLevel(String loggerName, Level level) {
