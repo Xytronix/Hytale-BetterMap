@@ -66,8 +66,10 @@ public class WarpPrivacyProvider implements WorldMapManager.MarkerProvider {
             String viewerName = resolveViewerName(viewer);
 
             ModConfig globalConfig = ModConfig.getInstance();
+            boolean isPrivileged = viewer != null && PermissionsUtil.isAdmin(viewer);
             boolean showTeleport = viewer != null
                 && globalConfig.isAllowMapMarkerTeleports()
+                && (globalConfig.isAllowContextMenuWaypointTeleports() || isPrivileged)
                 && PermissionsUtil.canTeleport(viewer);
             boolean canOverrideWarps = viewer != null && PermissionsUtil.canOverrideWarps(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredWarps(viewer);

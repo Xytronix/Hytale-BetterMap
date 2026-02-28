@@ -98,6 +98,7 @@ public class SpawnPrivacyProvider implements WorldMapManager.MarkerProvider {
             Vector3d position = spawnTransform.getPosition();
 
             boolean showTeleport = globalConfig.isAllowMapMarkerTeleports()
+                && (globalConfig.isAllowContextMenuWaypointTeleports() || PermissionsUtil.isAdmin(player))
                 && PermissionsUtil.canTeleport(player);
             ContextMenuItem[] contextMenuItems = null;
             if (showTeleport) {

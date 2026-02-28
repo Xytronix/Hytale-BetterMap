@@ -105,6 +105,7 @@ public class BlockMapMarkerPrivacyProvider implements WorldMapManager.MarkerProv
 
             boolean showTeleport = viewer != null
                 && globalConfig.isAllowMapMarkerTeleports()
+                && (globalConfig.isAllowContextMenuWaypointTeleports() || PermissionsUtil.isAdmin(viewer))
                 && PermissionsUtil.canTeleport(viewer);
 
             for (BlockMapMarkersResource.BlockMapMarkerData markerData : markers.values()) {

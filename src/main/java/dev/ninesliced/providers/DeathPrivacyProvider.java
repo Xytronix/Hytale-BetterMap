@@ -86,6 +86,7 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
             }
 
             boolean showTeleport = globalConfig.isAllowMapMarkerTeleports()
+                && (globalConfig.isAllowContextMenuWaypointTeleports() || PermissionsUtil.isAdmin(player))
                 && PermissionsUtil.canTeleport(player);
 
             for (PlayerDeathPositionData deathPosition : deathPositions) {

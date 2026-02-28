@@ -9,7 +9,6 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
-import com.hypixel.hytale.server.core.asset.type.gameplay.worldmap.UserMapMarkerConfig;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
 import dev.ninesliced.configs.ModConfig;
@@ -80,8 +79,10 @@ public final class PermissionsUtil {
     }
 
     /**
-     * Checks if the player can use global/shared waypoints based on Hytale's UserMapMarkerConfig.
-     * Returns true if the world allows creating markers and the max shared markers limit is > 0.
+     * Checks if shared waypoints are enabled for BetterMap.
+     *
+     * This intentionally ignores Hytale's native marker-creation setting because
+     * BetterMap can manage waypoint creation independently of the default map UI.
      */
     public static boolean canUseGlobalWaypoints(@Nonnull Player player) {
         World world = player.getWorld();
@@ -90,8 +91,8 @@ public final class PermissionsUtil {
         }
 
         try {
-            UserMapMarkerConfig config = world.getGameplayConfig().getWorldMapConfig().getUserMapMarkerConfig();
-            return config.isAllowCreatingMarkers() && config.getMaxSharedMarkersPerPlayer() > 0;
+            int maxShared = ModConfig.getInstance().getMaxSharedMarkersPerPlayer();
+            return maxShared != 0;
         } catch (Exception e) {
             return false;
         }

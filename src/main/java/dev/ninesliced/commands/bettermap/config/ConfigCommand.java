@@ -37,7 +37,9 @@ public class ConfigCommand extends AbstractCommandCollection {
         this.addSubCommand(new GlobalWaypointEditCommand());
         this.addSubCommand(new HiddenPoiCommand());
         this.addSubCommand(new WaypointTeleportCommand());
+        this.addSubCommand(new WaypointContextMenuTeleportCommand());
         this.addSubCommand(new MarkerTeleportCommand());
+        this.addSubCommand(new MapMarkerCreationCommand());
         this.addSubCommand(new TrackWorldCommand());
         this.addSubCommand(new UntrackWorldCommand());
         this.addSubCommand(new AutoSaveIntervalCommand());
