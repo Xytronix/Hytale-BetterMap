@@ -57,9 +57,11 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             }
 
             ModConfig globalConfig = ModConfig.getInstance();
-            boolean hasNativeTeleport = viewer != null
-                && viewer.getWorldMapTracker() != null
-                && viewer.getWorldMapTracker().isAllowTeleportToMarkers();
+            boolean isPrivileged = viewer != null && PermissionsUtil.isAdmin(viewer);
+            boolean showTeleport = viewer != null
+                && globalConfig.isAllowMapMarkerTeleports()
+                && (globalConfig.isAllowContextMenuWaypointTeleports() || isPrivileged)
+                && PermissionsUtil.canTeleport(viewer);
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;

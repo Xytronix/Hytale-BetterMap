@@ -173,6 +173,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AllowDeathTeleport.Value", gConfig.isAllowDeathTeleports());
              ui.set("#AllowSpawnTeleport.Value", gConfig.isAllowSpawnTeleports());
              ui.set("#AllowCoordinateTeleport.Value", gConfig.isAllowCoordinateTeleports());
+             ui.set("#AllowWaypointContextMenuTeleport.Value", gConfig.isAllowContextMenuWaypointTeleports());
+             ui.set("#AllowNativeMapMarkerCreation.Value", gConfig.isAllowNativeMapMarkerCreation());
+             ui.set("#AllowGlobalWaypointEdits.Value", gConfig.isAllowGlobalWaypointEditsForEveryone());
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
              ui.set("#DebugMode.Value", gConfig.isDebug());
              ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
@@ -222,6 +225,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AllowDeathTeleport", "admin_death_teleport", BindingType.BOOLEAN);
              bindChange(events, "#AllowSpawnTeleport", "admin_spawn_teleport", BindingType.BOOLEAN);
              bindChange(events, "#AllowCoordinateTeleport", "admin_coord_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowWaypointContextMenuTeleport", "admin_wp_context_menu_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowNativeMapMarkerCreation", "admin_native_marker_creation", BindingType.BOOLEAN);
+             bindChange(events, "#AllowGlobalWaypointEdits", "admin_global_waypoint_edits", BindingType.BOOLEAN);
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
              bindChange(events, "#DebugMode", "admin_debug", BindingType.BOOLEAN);
              bindChange(events, "#LocationHudEnabled", "admin_location_enabled", BindingType.BOOLEAN);
@@ -399,6 +405,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#AllowDeathTeleport.Value", gConfig.isAllowDeathTeleports());
         ui.set("#AllowSpawnTeleport.Value", gConfig.isAllowSpawnTeleports());
         ui.set("#AllowCoordinateTeleport.Value", gConfig.isAllowCoordinateTeleports());
+        ui.set("#AllowWaypointContextMenuTeleport.Value", gConfig.isAllowContextMenuWaypointTeleports());
+        ui.set("#AllowNativeMapMarkerCreation.Value", gConfig.isAllowNativeMapMarkerCreation());
+        ui.set("#AllowGlobalWaypointEdits.Value", gConfig.isAllowGlobalWaypointEditsForEveryone());
         ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
         ui.set("#DebugMode.Value", gConfig.isDebug());
         ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
@@ -1213,6 +1222,61 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_coord_teleport":
                     if (val != null) gConfig.setAllowCoordinateTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_wp_context_menu_teleport":
+                    if (val != null) {
+                        gConfig.setAllowContextMenuWaypointTeleports(Boolean.parseBoolean(val));
+
+                        Universe universe = Universe.get();
+                        if (universe != null) {
+                            universe.getWorlds().values().forEach(w -> {
+                                if (w == null) return;
+                                w.execute(() -> {
+                                    WorldMapHook.clearMarkerCaches(w);
+                                    WorldMapHook.refreshTrackers(w);
+                                });
+                            });
+                        }
+                    }
+                    break;
+                case "admin_native_marker_creation":
+                    if (val != null) {
+                        gConfig.setAllowNativeMapMarkerCreation(Boolean.parseBoolean(val));
+
+                        Universe universe = Universe.get();
+                        if (universe != null) {
+                            universe.getWorlds().values().forEach(w -> {
+                                if (w == null) return;
+                                w.execute(() -> {
+                                    WorldMapHook.updateWorldMapConfigs(w);
+                                    WorldMapHook.broadcastMapSettings(w);
+                                    WorldMapHook.clearMarkerCaches(w);
+                                    WorldMapHook.refreshTrackers(w);
+                                });
+                            });
+                        }
+                    }
+                    break;
+                case "admin_global_waypoint_edits":
+                    if (val != null) {
+                        gConfig.setAllowGlobalWaypointEditsForEveryone(Boolean.parseBoolean(val));
+
+                        Universe universe = Universe.get();
+                        if (universe != null) {
+                            universe.getWorlds().values().forEach(world -> {
+                                if (world == null) return;
+                                for (PlayerRef pRef : world.getPlayerRefs()) {
+                                    Ref<EntityStore> pStoreRef = pRef.getReference();
+                                    if (pStoreRef == null || !pStoreRef.isValid()) continue;
+                                    Player p = pStoreRef.getStore().getComponent(pStoreRef, Player.getComponentType());
+                                    if (p == null) continue;
+                                    WorldMapHook.sendMapSettingsToPlayer(p);
+                                }
+                                WorldMapHook.clearMarkerCaches(world);
+                                WorldMapHook.refreshTrackers(world);
+                            });
+                        }
+                    }
                     break;
                 case "admin_share_exp":
                     if (val != null) {

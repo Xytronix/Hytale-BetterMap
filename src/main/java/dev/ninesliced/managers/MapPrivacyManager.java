@@ -28,6 +28,7 @@ import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.utils.PermissionsUtil;
 import dev.ninesliced.utils.ReflectionHelper;
+import dev.ninesliced.utils.WorldMapHook;
 
 /**
  * Manages player privacy on the map by hiding players if configured.
@@ -390,7 +391,7 @@ public class MapPrivacyManager {
 
             World world = player.getWorld();
             if (world != null) {
-                tracker.sendSettings(world);
+                WorldMapHook.sendMapSettingsToPlayer(player);
             }
         } catch (Exception e) {
             LOGGER.fine("Failed to sync teleport overrides for " + player.getDisplayName() + ": " + e.getMessage());

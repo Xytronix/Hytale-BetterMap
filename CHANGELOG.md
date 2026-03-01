@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.3.3
+
+* Added option to disable teleport on right click on map without needing to be op/in creative (require permission)
+* Added option to disable native map right-click marker creation (require permission)
+* Fix issue where map doesn't show when changing world due to file saving/loading issue thanks to @darkace1998 
+* Fix order of waypoint in waypoint menu to be in a alphabetical order instead of random
+* Add save of y coordinate for waypoints and show it in the waypoint menu (need to recreate waypoints for it to work)
+* Add option to enable/disable editing of global waypoints in the waypoint menu if you are not the creator or an admin (also can use permission to edit global waypoints)
+* Add Hstats compatibility for better tracking of the mod usage
+
+## v1.3.2
+
+* Issue where map becomes black due to cave layer thanks to @darkace1998 for the fix
+* Fixed warning Failed to refresh marker context menu: Assert not in thread
+* Fix exception caused by the processPendingReloadChunks function
+* Fix Issue on mac where "Data" folder will be deleted instead of "data" folder
+
 ## v1.3.1
 
 * Issue where map becomes black/doesn't load new chunks after a certain time (~60 minutes) issue #25 on github thanks to @darkace1998 for the fix
