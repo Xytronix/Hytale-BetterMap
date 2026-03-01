@@ -168,6 +168,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AdminMaxScale.Value", (int) gConfig.getMaxScale());
 
              ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
+             ui.set("#AllowPoiTeleport.Value", gConfig.isAllowPoiTeleports());
+             ui.set("#AllowWarpTeleport.Value", gConfig.isAllowWarpTeleports());
+             ui.set("#AllowDeathTeleport.Value", gConfig.isAllowDeathTeleports());
+             ui.set("#AllowSpawnTeleport.Value", gConfig.isAllowSpawnTeleports());
+             ui.set("#AllowCoordinateTeleport.Value", gConfig.isAllowCoordinateTeleports());
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
              ui.set("#DebugMode.Value", gConfig.isDebug());
              ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
@@ -212,6 +217,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AdminMaxScale", "admin_max_scale", BindingType.NUMBER);
 
              bindChange(events, "#AllowWaypointTeleport", "admin_wp_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowPoiTeleport", "admin_poi_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowWarpTeleport", "admin_warp_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowDeathTeleport", "admin_death_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowSpawnTeleport", "admin_spawn_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowCoordinateTeleport", "admin_coord_teleport", BindingType.BOOLEAN);
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
              bindChange(events, "#DebugMode", "admin_debug", BindingType.BOOLEAN);
              bindChange(events, "#LocationHudEnabled", "admin_location_enabled", BindingType.BOOLEAN);
@@ -384,6 +394,11 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#AdminMaxScale.Value", (int) gConfig.getMaxScale());
 
         ui.set("#AllowWaypointTeleport.Value", gConfig.isAllowWaypointTeleports());
+        ui.set("#AllowPoiTeleport.Value", gConfig.isAllowPoiTeleports());
+        ui.set("#AllowWarpTeleport.Value", gConfig.isAllowWarpTeleports());
+        ui.set("#AllowDeathTeleport.Value", gConfig.isAllowDeathTeleports());
+        ui.set("#AllowSpawnTeleport.Value", gConfig.isAllowSpawnTeleports());
+        ui.set("#AllowCoordinateTeleport.Value", gConfig.isAllowCoordinateTeleports());
         ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
         ui.set("#DebugMode.Value", gConfig.isDebug());
         ui.set("#LocationHudEnabled.Value", gConfig.isLocationEnabled());
@@ -1183,6 +1198,21 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                     break;
                 case "admin_wp_teleport":
                     if (val != null) gConfig.setAllowWaypointTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_poi_teleport":
+                    if (val != null) gConfig.setAllowPoiTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_warp_teleport":
+                    if (val != null) gConfig.setAllowWarpTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_death_teleport":
+                    if (val != null) gConfig.setAllowDeathTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_spawn_teleport":
+                    if (val != null) gConfig.setAllowSpawnTeleports(Boolean.parseBoolean(val));
+                    break;
+                case "admin_coord_teleport":
+                    if (val != null) gConfig.setAllowCoordinateTeleports(Boolean.parseBoolean(val));
                     break;
                 case "admin_share_exp":
                     if (val != null) {

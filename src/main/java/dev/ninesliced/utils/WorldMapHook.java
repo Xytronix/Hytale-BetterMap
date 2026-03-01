@@ -53,7 +53,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
 
 /**
@@ -127,17 +126,6 @@ public class WorldMapHook {
 
     private static Set<Long> getSharedCaveExploredChunks(@Nonnull String worldName) {
         return sharedCaveExploredChunks.computeIfAbsent(worldName, k -> java.util.Collections.synchronizedSet(new HashSet<>()));
-    }
-
-    @Nullable
-    private static ReentrantReadWriteLock getLoadedLock(@Nonnull WorldMapTracker tracker) {
-        try {
-            Object lock = ReflectionHelper.getFieldValueRecursive(tracker, "loadedLock");
-            return (lock instanceof ReentrantReadWriteLock) ? (ReentrantReadWriteLock) lock : null;
-        } catch (Exception e) {
-            LOGGER.warning("[SYNC] Failed to get loadedLock from tracker: " + e.getMessage());
-            return null;
-        }
     }
 
     /**
@@ -851,43 +839,37 @@ public class WorldMapHook {
                         if (ref == null || !ref.isValid()) return;
 
                         if (trackerLoaded != null) {
-                            ReentrantReadWriteLock lock = getLoadedLock(tracker);
-                            if (lock != null) lock.writeLock().lock();
-                            try {
-                                for (Long idx : finalTrackerToRemove) {
+                            for (Long idx : finalTrackerToRemove) {
+                                trackerLoaded.remove(idx);
+                            }
+                            for (Long idx : finalTrackerToAdd) {
+                                trackerLoaded.add(idx);
+                            }
+
+                            int totalLoaded = trackerLoaded.size();
+                            if (totalLoaded > maxChunks) {
+                                List<Long> surfaceToEvict = new ArrayList<>();
+                                for (Long idx : trackerLoaded) {
+                                    if (!loadedCaveChunks.contains(idx)) {
+                                        surfaceToEvict.add(idx);
+                                    }
+                                }
+                                surfaceToEvict.sort(Comparator.comparingLong(idx -> {
+                                    int emx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                                    int emz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                                    long ddx = (long) emx - playerMapChunkX;
+                                    long ddz = (long) emz - playerMapChunkZ;
+                                    return -(ddx * ddx + ddz * ddz);
+                                }));
+
+                                int toRemove = totalLoaded - maxChunks;
+                                for (int i = 0; i < toRemove && i < surfaceToEvict.size(); i++) {
+                                    Long idx = surfaceToEvict.get(i);
+                                    int emx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                                    int emz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                                    finalChunksToUnload.add(new MapChunk(emx, emz, null));
                                     trackerLoaded.remove(idx);
                                 }
-                                for (Long idx : finalTrackerToAdd) {
-                                    trackerLoaded.add(idx);
-                                }
-
-                                int totalLoaded = trackerLoaded.size();
-                                if (totalLoaded > maxChunks) {
-                                    List<Long> surfaceToEvict = new ArrayList<>();
-                                    for (Long idx : trackerLoaded) {
-                                        if (!loadedCaveChunks.contains(idx)) {
-                                            surfaceToEvict.add(idx);
-                                        }
-                                    }
-                                    surfaceToEvict.sort(Comparator.comparingLong(idx -> {
-                                        int emx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                                        int emz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                                        long ddx = (long) emx - playerMapChunkX;
-                                        long ddz = (long) emz - playerMapChunkZ;
-                                        return -(ddx * ddx + ddz * ddz);
-                                    }));
-
-                                    int toRemove = totalLoaded - maxChunks;
-                                    for (int i = 0; i < toRemove && i < surfaceToEvict.size(); i++) {
-                                        Long idx = surfaceToEvict.get(i);
-                                        int emx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                                        int emz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                                        finalChunksToUnload.add(new MapChunk(emx, emz, null));
-                                        trackerLoaded.remove(idx);
-                                    }
-                                }
-                            } finally {
-                                if (lock != null) lock.writeLock().unlock();
                             }
                         }
 
@@ -938,17 +920,11 @@ public class WorldMapHook {
             Set<Long> trackerLoaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
 
             List<MapChunk> chunksToUnload = new ArrayList<>();
-            ReentrantReadWriteLock lock = getLoadedLock(tracker);
-            if (lock != null) lock.writeLock().lock();
-            try {
-                for (Long caveChunkIdx : loadedCaveChunks) {
-                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(caveChunkIdx);
-                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(caveChunkIdx);
-                    chunksToUnload.add(new MapChunk(mx, mz, null));
-                    trackerLoaded.remove(caveChunkIdx);
-                }
-            } finally {
-                if (lock != null) lock.writeLock().unlock();
+            for (Long caveChunkIdx : loadedCaveChunks) {
+                int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(caveChunkIdx);
+                int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(caveChunkIdx);
+                chunksToUnload.add(new MapChunk(mx, mz, null));
+                trackerLoaded.remove(caveChunkIdx);
             }
 
             if (!chunksToUnload.isEmpty()) {
@@ -1027,30 +1003,22 @@ public class WorldMapHook {
 
             streamingManager.processLoadQueue(player);
 
-            ReentrantReadWriteLock lock = getLoadedLock(tracker);
-            List<Long> toUnload;
-            List<MapChunk> unloadPackets;
-            if (lock != null) lock.writeLock().lock();
-            try {
-                List<Long> loadedSnapshot = new ArrayList<>(loaded);
-                toUnload = new ArrayList<>();
-                unloadPackets = new ArrayList<>();
+            List<Long> loadedSnapshot = new ArrayList<>(loaded);
+            List<Long> toUnload = new ArrayList<>();
+            List<MapChunk> unloadPackets = new ArrayList<>();
 
-                for (Long idx : loadedSnapshot) {
-                    if (!targetSet.contains(idx)) {
-                        toUnload.add(idx);
-                        int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
-                        int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
-                        unloadPackets.add(new MapChunk(mx, mz, null));
-                    }
+            for (Long idx : loadedSnapshot) {
+                if (!targetSet.contains(idx)) {
+                    toUnload.add(idx);
+                    int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(idx);
+                    int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(idx);
+                    unloadPackets.add(new MapChunk(mx, mz, null));
                 }
-
-                if (toUnload.isEmpty()) return;
-
-                toUnload.forEach(loaded::remove);
-            } finally {
-                if (lock != null) lock.writeLock().unlock();
             }
+
+            if (toUnload.isEmpty()) return;
+
+            toUnload.forEach(loaded::remove);
 
             streamingManager.markChunksUnloaded(playerName, toUnload);
 
@@ -1219,7 +1187,6 @@ public class WorldMapHook {
             Object loadedObj = ReflectionHelper.getFieldValueRecursive(tracker, "loaded");
             @SuppressWarnings("unchecked")
             final Set<Long> loaded = (loadedObj instanceof Set) ? (Set<Long>) loadedObj : new HashSet<>();
-            final ReentrantReadWriteLock loadedLock = getLoadedLock(tracker);
 
             String playerName = player.getDisplayName();
             Set<Long> caveModeLoaded = getCaveModeLoadedChunks(playerName);
@@ -1289,8 +1256,7 @@ public class WorldMapHook {
                             int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(pendingIdx);
                             int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(pendingIdx);
                             chunksToSend.add(new MapChunk(mx, mz, image));
-                            if (loadedLock != null) loadedLock.writeLock().lock();
-                            try { loaded.add(pendingIdx); } finally { if (loadedLock != null) loadedLock.writeLock().unlock(); }
+                            loaded.add(pendingIdx);
                             caveModeLoaded.add(pendingIdx);
                             caveModeFailed.remove(pendingIdx);
                         } else {
@@ -1320,8 +1286,7 @@ public class WorldMapHook {
                             int mx = com.hypixel.hytale.math.util.ChunkUtil.xOfChunkIndex(chunkIdx);
                             int mz = com.hypixel.hytale.math.util.ChunkUtil.zOfChunkIndex(chunkIdx);
                             chunksToSend.add(new MapChunk(mx, mz, image));
-                            if (loadedLock != null) loadedLock.writeLock().lock();
-                            try { loaded.add(chunkIdx); } finally { if (loadedLock != null) loadedLock.writeLock().unlock(); }
+                            loaded.add(chunkIdx);
                             caveModeLoaded.add(chunkIdx);
                             caveModeFailed.remove(chunkIdx);
                         } else {
