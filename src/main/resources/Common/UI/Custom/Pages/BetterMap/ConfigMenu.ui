@@ -529,13 +529,13 @@ $C.@PageOverlay {
             }
 
             @CheckboxRow {
-              $C.@CheckBox #AllowCoordinateTeleport { }
-              Label { Text: "Allow Coordinate Teleports"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+              $C.@CheckBox #AllowPlayerTeleport { }
+              Label { Text: "Allow Player Teleports"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
 
             @CheckboxRow {
-              $C.@CheckBox #AllowWaypointContextMenuTeleport { }
-              Label { Text: "Allow Map Marker Context-Menu Teleports"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+              $C.@CheckBox #AllowCoordinateTeleport { }
+              Label { Text: "Allow Coordinate Teleports"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
 
             @CheckboxRow {

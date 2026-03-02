@@ -46,7 +46,12 @@ public class MarkerTeleportContextCommand extends AbstractPlayerCommand {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-        if (!ModConfig.getInstance().isAnyMarkerTeleportEnabled() && !PermissionsUtil.canTeleportToMarkers(player)) {
+        ModConfig config = ModConfig.getInstance();
+        boolean configAllows = config.isAllowMapMarkerTeleports()
+                && (config.isAnyMarkerTeleportEnabled() || config.isAllowPlayerTeleports());
+        if (!configAllows
+                && !PermissionsUtil.canTeleportToMarkers(player)
+                && !PermissionsUtil.canTeleportToPlayers(player)) {
             context.sendMessage(Message.raw("You don't have permission to teleport to markers."));
             return;
         }
@@ -58,9 +63,11 @@ public class MarkerTeleportContextCommand extends AbstractPlayerCommand {
             return;
         }
 
-        if (hasPlayerMarkerComponent(marker)) {
-            context.sendMessage(Message.raw("Cannot teleport to player markers."));
-            return;
+        if (isPlayerMarker(marker)) {
+            if (!ModConfig.getInstance().isAllowPlayerTeleports() && !PermissionsUtil.canTeleportToPlayers(player)) {
+                context.sendMessage(Message.raw("You don't have permission to teleport to players."));
+                return;
+            }
         }
 
         double markerX = marker.transform.position.x;
@@ -91,7 +98,8 @@ public class MarkerTeleportContextCommand extends AbstractPlayerCommand {
         }, world);
     }
 
-    private static boolean hasPlayerMarkerComponent(MapMarker marker) {
+    private static boolean isPlayerMarker(MapMarker marker) {
+        if (marker.id != null && marker.id.startsWith("PlayerRadar-")) return true;
         if (marker.components == null) return false;
         for (MapMarkerComponent component : marker.components) {
             if (component instanceof PlayerMarkerComponent) return true;

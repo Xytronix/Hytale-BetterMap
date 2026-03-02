@@ -52,8 +52,8 @@ public class ModConfig {
     private boolean allowWarpTeleports = true;
     private boolean allowDeathTeleports = true;
     private boolean allowSpawnTeleports = true;
+    private boolean allowPlayerTeleports = false;
     private boolean allowCoordinateTeleports = true;
-    private boolean allowContextMenuWaypointTeleports = true;
     private boolean allowGlobalWaypointEditsForEveryone = false;
     private boolean allowMapMarkerTeleports = true;
     private boolean allowNativeMapMarkerCreation = true;
@@ -269,8 +269,8 @@ public class ModConfig {
                         needsSave = true;
                     }
 
-                    if (jsonObject.has("allowContextMenuWaypointTeleports")) {
-                        this.allowContextMenuWaypointTeleports = loaded.allowContextMenuWaypointTeleports;
+                    if (jsonObject.has("allowPlayerTeleports")) {
+                        this.allowPlayerTeleports = loaded.allowPlayerTeleports;
                     } else {
                         needsSave = true;
                     }
@@ -829,6 +829,7 @@ public class ModConfig {
             case WARP -> allowWarpTeleports;
             case DEATH -> allowDeathTeleports;
             case SPAWN -> allowSpawnTeleports;
+            case PLAYER -> allowPlayerTeleports;
         };
     }
 
@@ -836,12 +837,12 @@ public class ModConfig {
         return allowPoiTeleports || allowWarpTeleports || allowDeathTeleports || allowSpawnTeleports;
     }
 
-    public boolean isAllowCoordinateTeleports() {
-        return allowCoordinateTeleports;
+    public boolean isAllowPlayerTeleports() {
+        return allowPlayerTeleports;
     }
 
-    public boolean isAllowContextMenuWaypointTeleports() {
-        return allowContextMenuWaypointTeleports;
+    public boolean isAllowCoordinateTeleports() {
+        return allowCoordinateTeleports;
     }
 
     public boolean isAllowGlobalWaypointEditsForEveryone() {
@@ -974,18 +975,13 @@ public class ModConfig {
      *
      * @param allowCoordinateTeleports True to grant coordinate teleports to all players.
      */
-    public void setAllowCoordinateTeleports(boolean allowCoordinateTeleports) {
-        this.allowCoordinateTeleports = allowCoordinateTeleports;
+    public void setAllowPlayerTeleports(boolean allowPlayerTeleports) {
+        this.allowPlayerTeleports = allowPlayerTeleports;
         save();
     }
 
-    /**
-     * Sets whether waypoint teleports via context menu are allowed.
-     *
-     * @param allowContextMenuWaypointTeleports True to allow context-menu teleports.
-     */
-    public void setAllowContextMenuWaypointTeleports(boolean allowContextMenuWaypointTeleports) {
-        this.allowContextMenuWaypointTeleports = allowContextMenuWaypointTeleports;
+    public void setAllowCoordinateTeleports(boolean allowCoordinateTeleports) {
+        this.allowCoordinateTeleports = allowCoordinateTeleports;
         save();
     }
 
@@ -1163,8 +1159,8 @@ public class ModConfig {
         this.allowWarpTeleports = defaults.allowWarpTeleports;
         this.allowDeathTeleports = defaults.allowDeathTeleports;
         this.allowSpawnTeleports = defaults.allowSpawnTeleports;
+        this.allowPlayerTeleports = defaults.allowPlayerTeleports;
         this.allowCoordinateTeleports = defaults.allowCoordinateTeleports;
-        this.allowContextMenuWaypointTeleports = defaults.allowContextMenuWaypointTeleports;
         this.allowGlobalWaypointEditsForEveryone = defaults.allowGlobalWaypointEditsForEveryone;
         this.allowMapMarkerTeleports = defaults.allowMapMarkerTeleports;
         this.allowNativeMapMarkerCreation = defaults.allowNativeMapMarkerCreation;

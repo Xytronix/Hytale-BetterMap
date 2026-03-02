@@ -2,7 +2,6 @@ package dev.ninesliced.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.FormattedMessage;
-import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerDeathPositionData;
@@ -85,10 +84,6 @@ public class DeathPrivacyProvider implements WorldMapManager.MarkerProvider {
             if (deathPositions == null || deathPositions.isEmpty()) {
                 return;
             }
-
-            boolean showTeleport = globalConfig.isAllowMapMarkerTeleports()
-                && (globalConfig.isAllowContextMenuWaypointTeleports() || PermissionsUtil.isAdmin(player))
-                && PermissionsUtil.canTeleport(player);
 
             for (PlayerDeathPositionData deathPosition : deathPositions) {
                 if (deathPosition == null) {

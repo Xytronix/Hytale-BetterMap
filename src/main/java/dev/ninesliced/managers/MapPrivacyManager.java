@@ -27,7 +27,6 @@ import dev.ninesliced.BetterMap;
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.configs.PlayerConfig;
 import dev.ninesliced.utils.PermissionsUtil;
-import dev.ninesliced.utils.ReflectionHelper;
 import dev.ninesliced.utils.WorldMapHook;
 
 /**
@@ -374,21 +373,6 @@ public class MapPrivacyManager {
         if (player == null) return;
 
         try {
-            WorldMapTracker tracker = player.getWorldMapTracker();
-            if (tracker == null) return;
-
-            ReflectionHelper.setFieldValueRecursive(tracker, "allowTeleportToMarkersOverride", Boolean.FALSE);
-
-            ModConfig config = ModConfig.getInstance();
-            boolean allowCoordTp;
-            if (config.isAllowCoordinateTeleports()) {
-                allowCoordTp = true;
-            } else {
-                allowCoordTp = PermissionsUtil.canTeleportToCoordinates(player);
-            }
-            ReflectionHelper.setFieldValueRecursive(tracker, "allowTeleportToCoordinatesOverride",
-                allowCoordTp ? Boolean.TRUE : Boolean.FALSE);
-
             World world = player.getWorld();
             if (world != null) {
                 WorldMapHook.sendMapSettingsToPlayer(player);

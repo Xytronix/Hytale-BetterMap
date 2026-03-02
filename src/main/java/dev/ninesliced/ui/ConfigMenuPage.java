@@ -172,8 +172,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#AllowWarpTeleport.Value", gConfig.isAllowWarpTeleports());
              ui.set("#AllowDeathTeleport.Value", gConfig.isAllowDeathTeleports());
              ui.set("#AllowSpawnTeleport.Value", gConfig.isAllowSpawnTeleports());
+             ui.set("#AllowPlayerTeleport.Value", gConfig.isAllowPlayerTeleports());
              ui.set("#AllowCoordinateTeleport.Value", gConfig.isAllowCoordinateTeleports());
-             ui.set("#AllowWaypointContextMenuTeleport.Value", gConfig.isAllowContextMenuWaypointTeleports());
              ui.set("#AllowNativeMapMarkerCreation.Value", gConfig.isAllowNativeMapMarkerCreation());
              ui.set("#AllowGlobalWaypointEdits.Value", gConfig.isAllowGlobalWaypointEditsForEveryone());
              ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
@@ -224,8 +224,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#AllowWarpTeleport", "admin_warp_teleport", BindingType.BOOLEAN);
              bindChange(events, "#AllowDeathTeleport", "admin_death_teleport", BindingType.BOOLEAN);
              bindChange(events, "#AllowSpawnTeleport", "admin_spawn_teleport", BindingType.BOOLEAN);
+             bindChange(events, "#AllowPlayerTeleport", "admin_player_teleport", BindingType.BOOLEAN);
              bindChange(events, "#AllowCoordinateTeleport", "admin_coord_teleport", BindingType.BOOLEAN);
-             bindChange(events, "#AllowWaypointContextMenuTeleport", "admin_wp_context_menu_teleport", BindingType.BOOLEAN);
              bindChange(events, "#AllowNativeMapMarkerCreation", "admin_native_marker_creation", BindingType.BOOLEAN);
              bindChange(events, "#AllowGlobalWaypointEdits", "admin_global_waypoint_edits", BindingType.BOOLEAN);
              bindChange(events, "#ShareAllExploration", "admin_share_exp", BindingType.BOOLEAN);
@@ -365,6 +365,18 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         WorldMapHook.refreshTrackers(world);
     }
 
+    private static void refreshAllMarkers() {
+        Universe universe = Universe.get();
+        if (universe == null) return;
+        universe.getWorlds().values().forEach(w -> {
+            if (w == null) return;
+            w.execute(() -> {
+                WorldMapHook.clearMarkerCaches(w);
+                WorldMapHook.refreshTrackers(w);
+            });
+        });
+    }
+
     private void removeDeathMarkersFromClient(Player player, World world) {
         try {
             PlayerWorldData worldData = player.getPlayerConfigData().getPerWorldData(world.getName());
@@ -404,8 +416,8 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#AllowWarpTeleport.Value", gConfig.isAllowWarpTeleports());
         ui.set("#AllowDeathTeleport.Value", gConfig.isAllowDeathTeleports());
         ui.set("#AllowSpawnTeleport.Value", gConfig.isAllowSpawnTeleports());
+        ui.set("#AllowPlayerTeleport.Value", gConfig.isAllowPlayerTeleports());
         ui.set("#AllowCoordinateTeleport.Value", gConfig.isAllowCoordinateTeleports());
-        ui.set("#AllowWaypointContextMenuTeleport.Value", gConfig.isAllowContextMenuWaypointTeleports());
         ui.set("#AllowNativeMapMarkerCreation.Value", gConfig.isAllowNativeMapMarkerCreation());
         ui.set("#AllowGlobalWaypointEdits.Value", gConfig.isAllowGlobalWaypointEditsForEveryone());
         ui.set("#ShareAllExploration.Value", gConfig.isShareAllExploration());
@@ -1206,34 +1218,56 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                      }
                     break;
                 case "admin_wp_teleport":
-                    if (val != null) gConfig.setAllowWaypointTeleports(Boolean.parseBoolean(val));
+                    if (val != null) {
+                        gConfig.setAllowWaypointTeleports(Boolean.parseBoolean(val));
+                        refreshAllMarkers();
+                    }
                     break;
                 case "admin_poi_teleport":
-                    if (val != null) gConfig.setAllowPoiTeleports(Boolean.parseBoolean(val));
+                    if (val != null) {
+                        gConfig.setAllowPoiTeleports(Boolean.parseBoolean(val));
+                        refreshAllMarkers();
+                    }
                     break;
                 case "admin_warp_teleport":
-                    if (val != null) gConfig.setAllowWarpTeleports(Boolean.parseBoolean(val));
+                    if (val != null) {
+                        gConfig.setAllowWarpTeleports(Boolean.parseBoolean(val));
+                        refreshAllMarkers();
+                    }
                     break;
                 case "admin_death_teleport":
-                    if (val != null) gConfig.setAllowDeathTeleports(Boolean.parseBoolean(val));
+                    if (val != null) {
+                        gConfig.setAllowDeathTeleports(Boolean.parseBoolean(val));
+                        refreshAllMarkers();
+                    }
                     break;
                 case "admin_spawn_teleport":
-                    if (val != null) gConfig.setAllowSpawnTeleports(Boolean.parseBoolean(val));
+                    if (val != null) {
+                        gConfig.setAllowSpawnTeleports(Boolean.parseBoolean(val));
+                        refreshAllMarkers();
+                    }
+                    break;
+                case "admin_player_teleport":
+                    if (val != null) {
+                        gConfig.setAllowPlayerTeleports(Boolean.parseBoolean(val));
+                        refreshAllMarkers();
+                    }
                     break;
                 case "admin_coord_teleport":
-                    if (val != null) gConfig.setAllowCoordinateTeleports(Boolean.parseBoolean(val));
-                    break;
-                case "admin_wp_context_menu_teleport":
                     if (val != null) {
-                        gConfig.setAllowContextMenuWaypointTeleports(Boolean.parseBoolean(val));
+                        gConfig.setAllowCoordinateTeleports(Boolean.parseBoolean(val));
 
                         Universe universe = Universe.get();
                         if (universe != null) {
                             universe.getWorlds().values().forEach(w -> {
                                 if (w == null) return;
                                 w.execute(() -> {
-                                    WorldMapHook.clearMarkerCaches(w);
-                                    WorldMapHook.refreshTrackers(w);
+                                    for (PlayerRef pRef3 : w.getPlayerRefs()) {
+                                        Ref<EntityStore> pStoreRef3 = pRef3.getReference();
+                                        if (pStoreRef3 == null || !pStoreRef3.isValid()) continue;
+                                        Player p3 = pStoreRef3.getStore().getComponent(pStoreRef3, Player.getComponentType());
+                                        if (p3 != null) WorldMapHook.sendMapSettingsToPlayer(p3);
+                                    }
                                 });
                             });
                         }
@@ -1249,7 +1283,12 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                                 if (w == null) return;
                                 w.execute(() -> {
                                     WorldMapHook.updateWorldMapConfigs(w);
-                                    WorldMapHook.broadcastMapSettings(w);
+                                    for (PlayerRef pRef2 : w.getPlayerRefs()) {
+                                        Ref<EntityStore> pStoreRef2 = pRef2.getReference();
+                                        if (pStoreRef2 == null || !pStoreRef2.isValid()) continue;
+                                        Player p2 = pStoreRef2.getStore().getComponent(pStoreRef2, Player.getComponentType());
+                                        if (p2 != null) WorldMapHook.sendMapSettingsToPlayer(p2);
+                                    }
                                     WorldMapHook.clearMarkerCaches(w);
                                     WorldMapHook.refreshTrackers(w);
                                 });

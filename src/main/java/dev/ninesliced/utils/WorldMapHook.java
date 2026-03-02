@@ -1427,12 +1427,22 @@ public class WorldMapHook {
             }
 
             WorldMapTracker tracker = player.getWorldMapTracker();
+
+            boolean allowCoordTp;
+            if (ModConfig.getInstance().isAllowCoordinateTeleports()) {
+                allowCoordTp = true;
+            } else {
+                allowCoordTp = PermissionsUtil.canTeleportToCoordinates(player);
+            }
+
             ReflectionHelper.setFieldValueRecursive(tracker, "allowTeleportToMarkers", false);
-            packet.allowTeleportToCoordinates = tracker.isAllowTeleportToCoordinates();
+            ReflectionHelper.setFieldValueRecursive(tracker, "allowTeleportToCoordinates", allowCoordTp);
+
+            packet.allowTeleportToCoordinates = allowCoordTp;
             packet.allowTeleportToMarkers = false;
 
             WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
-            packet.allowCreatingMapMarkers = ModConfig.getInstance().isAllowNativeMapMarkerCreation();
+            packet.allowCreatingMapMarkers = PermissionsUtil.canCreateMapMarkers(player);
             packet.allowRemovingOtherPlayersMarkers = false;
             packet.allowShowOnMapToggle = worldMapConfig.canTogglePlayersInMap();
             packet.allowCompassTrackingToggle = worldMapConfig.canTrackPlayersInCompass();

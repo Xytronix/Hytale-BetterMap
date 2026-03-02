@@ -2,7 +2,6 @@ package dev.ninesliced.providers;
 
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.Transform;
-import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -57,11 +56,6 @@ public class PoiPrivacyProvider implements WorldMapManager.MarkerProvider {
             }
 
             ModConfig globalConfig = ModConfig.getInstance();
-            boolean isPrivileged = viewer != null && PermissionsUtil.isAdmin(viewer);
-            boolean showTeleport = viewer != null
-                && globalConfig.isAllowMapMarkerTeleports()
-                && (globalConfig.isAllowContextMenuWaypointTeleports() || isPrivileged)
-                && PermissionsUtil.canTeleport(viewer);
             boolean canOverridePoi = viewer != null && PermissionsUtil.canOverridePoi(viewer);
             boolean canOverrideUnexplored = viewer != null && PermissionsUtil.canOverrideUnexploredPoi(viewer);
             PlayerConfig playerConfig = null;

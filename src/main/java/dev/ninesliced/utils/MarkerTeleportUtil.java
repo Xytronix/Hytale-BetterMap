@@ -21,11 +21,9 @@ public final class MarkerTeleportUtil {
         if (player == null) return;
 
         ModConfig config = ModConfig.getInstance();
-        if (!config.isAllowTeleportForMarkerType(markerType) && !PermissionsUtil.canTeleportToMarkerType(player, markerType)) return;
-
-        boolean hasNativeTeleport = player.getWorldMapTracker() != null
-            && player.getWorldMapTracker().isAllowTeleportToMarkers();
-        if (hasNativeTeleport) return;
+        boolean configAllows = config.isAllowMapMarkerTeleports()
+            && config.isAllowTeleportForMarkerType(markerType);
+        if (!configAllows && !PermissionsUtil.canTeleportToMarkerType(player, markerType)) return;
 
         ContextMenuItem teleportItem = new ContextMenuItem("Teleport", TELEPORT_COMMAND_PREFIX + marker.id);
 
