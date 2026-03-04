@@ -229,7 +229,7 @@ public final class PermissionsUtil {
         if (ModConfig.getInstance().isAllowNativeMapMarkerCreation()) {
             return true;
         }
-        return hasPermission(player, CREATE_MARKER_PERMISSION);
+        return isAdmin(player) || hasPermission(player, CREATE_MARKER_PERMISSION);
     }
 
     public static boolean canAccessConfig(@Nonnull Player player) {

@@ -11,9 +11,12 @@ import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.player.RemoveMapMarker;
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.packets.worldmap.CreateUserMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapPosition;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapVisible;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
@@ -35,6 +38,8 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 
 import dev.ninesliced.configs.ModConfig;
 import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.WaypointLimitUtil;
+import dev.ninesliced.utils.WorldMapHook;
 
 /**
  * Overrides native packet handlers that have hardcoded Adventure mode checks.
@@ -44,6 +49,8 @@ import dev.ninesliced.utils.PermissionsUtil;
  * Packet 244 (TeleportToWorldMapMarker): uses PermissionsUtil instead of native
  * permission + game mode check.
  * Packet 245 (TeleportToWorldMapPosition): same as 244.
+ * Packet 246 (CreateUserMarker): same as 244.
+ * Packet 243 (UpdateWorldMapVisible): sends map settings when map is opened.
  */
 public class BetterMapPacketHandler implements SubPacketHandler {
     private final IPacketHandler packetHandler;
@@ -57,6 +64,8 @@ public class BetterMapPacketHandler implements SubPacketHandler {
         IWorldPacketHandler.registerHandler(this.packetHandler, 119, this::handleRemoveMapMarker);
         IWorldPacketHandler.registerHandler(this.packetHandler, 244, this::handleTeleportToWorldMapMarker);
         IWorldPacketHandler.registerHandler(this.packetHandler, 245, this::handleTeleportToWorldMapPosition);
+        IWorldPacketHandler.registerHandler(this.packetHandler, 246, this::handleCreateUserMarker);
+        IWorldPacketHandler.registerHandler(this.packetHandler, 243, this::handleUpdateWorldMapVisible);
     }
 
     private void handleRemoveMapMarker(
@@ -120,6 +129,7 @@ public class BetterMapPacketHandler implements SubPacketHandler {
         assert playerComponent != null;
 
         if (!ModConfig.getInstance().isAllowMapMarkerTeleports()
+                && !PermissionsUtil.isAdmin(playerComponent)
                 && !PermissionsUtil.canTeleportToMarkers(playerComponent)) {
             return;
         }
@@ -151,6 +161,7 @@ public class BetterMapPacketHandler implements SubPacketHandler {
         assert playerComponent != null;
 
         if (!ModConfig.getInstance().isAllowCoordinateTeleports()
+                && !PermissionsUtil.isAdmin(playerComponent)
                 && !PermissionsUtil.canTeleportToCoordinates(playerComponent)) {
             return;
         }
@@ -171,5 +182,66 @@ public class BetterMapPacketHandler implements SubPacketHandler {
             world.getEntityStore().getStore().addComponent(
                     playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
         }, world);
+    }
+
+    private void handleCreateUserMarker(
+            @Nonnull CreateUserMarker packet,
+            @Nonnull PlayerRef playerRef,
+            @Nonnull Ref<EntityStore> ref,
+            @Nonnull World world,
+            @Nonnull Store<EntityStore> store) {
+        Player playerComponent = (Player) store.getComponent(ref, Player.getComponentType());
+        assert playerComponent != null;
+
+        if (!PermissionsUtil.canCreateMapMarkers(playerComponent)) {
+            return;
+        }
+
+        if (packet.name != null && packet.name.length() > 24) {
+            playerRef.sendMessage(Message.translation(
+                    "server.worldmap.markers.create.nameTooLong").color("#ffc800"));
+            return;
+        }
+
+        String limitError = WaypointLimitUtil.getCreationError(playerComponent, packet.shared);
+        if (limitError != null) {
+            playerRef.sendMessage(Message.raw(limitError).color("#ffc800"));
+            return;
+        }
+
+        UserMapMarkersStore markerStore;
+        if (packet.shared) {
+            markerStore = (UserMapMarkersStore) world.getChunkStore().getStore()
+                    .getResource(WorldMarkersResource.getResourceType());
+        } else {
+            markerStore = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
+        }
+
+        UserMapMarker marker = new UserMapMarker();
+        marker.setId("user_" + (packet.shared ? "shared" : "personal") + "_" + UUID.randomUUID());
+        marker.setPosition(packet.x, packet.z);
+        marker.setName(packet.name);
+        marker.setIcon(packet.markerImage == null ? "User1.png" : packet.markerImage);
+        marker.setColorTint(packet.tintColor == null
+                ? new Color((byte) 0, (byte) 0, (byte) 0) : packet.tintColor);
+        marker.withCreatedByName(playerRef.getUsername());
+        marker.withCreatedByUuid(playerRef.getUuid());
+        markerStore.addUserMapMarker(marker);
+    }
+
+    private void handleUpdateWorldMapVisible(
+            @Nonnull UpdateWorldMapVisible packet,
+            @Nonnull PlayerRef playerRef,
+            @Nonnull Ref<EntityStore> ref,
+            @Nonnull World world,
+            @Nonnull Store<EntityStore> store) {
+        Player playerComponent = (Player) store.getComponent(ref, Player.getComponentType());
+        assert playerComponent != null;
+
+        playerComponent.getWorldMapTracker().setClientHasWorldMapVisible(packet.visible);
+
+        if (packet.visible) {
+            WorldMapHook.sendMapSettingsToPlayer(playerComponent);
+        }
     }
 }

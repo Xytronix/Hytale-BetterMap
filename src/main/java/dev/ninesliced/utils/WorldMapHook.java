@@ -378,7 +378,6 @@ public class WorldMapHook {
      */
     public static void updateExplorationState(@Nonnull Player player, @Nonnull WorldMapTracker tracker, double x, double z) {
         try {
-            // Drain any pending trackerLoaded mutations queued from the async cave processing path.
             java.util.concurrent.ConcurrentLinkedQueue<Runnable> pendingMods =
                     pendingTrackerModifications.get(player.getDisplayName());
             if (pendingMods != null) {
@@ -1432,7 +1431,8 @@ public class WorldMapHook {
             if (ModConfig.getInstance().isAllowCoordinateTeleports()) {
                 allowCoordTp = true;
             } else {
-                allowCoordTp = PermissionsUtil.canTeleportToCoordinates(player);
+                allowCoordTp = PermissionsUtil.isAdmin(player)
+                        || PermissionsUtil.canTeleportToCoordinates(player);
             }
 
             ReflectionHelper.setFieldValueRecursive(tracker, "allowTeleportToMarkers", false);
