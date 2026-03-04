@@ -398,6 +398,10 @@ public class ExplorationListener {
      */
     private static void initDynamicCaveMode(@Nonnull Player player) {
         try {
+            if (!CaveModeManager.isEffectivelyEnabledForPlayer(player)) {
+                return;
+            }
+
             CaveModeManager caveManager = CaveModeManager.getInstance();
             caveManager.getOrCreateState(player);
             LOGGER.info("Initialized dynamic cave mode for " + player.getDisplayName());

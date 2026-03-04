@@ -445,28 +445,29 @@ public class WorldMapHook {
             int playerChunkZ = ChunkUtil.blockToChunkCoord(z);
             boolean hasMoved = explorationData.hasMovedToNewChunk(playerChunkX, playerChunkZ);
 
-            Ref<EntityStore> playerRef = player.getReference();
-            TransformComponent transform = (playerRef != null && playerRef.isValid())
-                ? playerRef.getStore().getComponent(playerRef, TransformComponent.getComponentType())
-                : null;
-            int playerY = transform != null ? (int) transform.getPosition().y : 100;
-            boolean hasCeiling = checkForCeiling(world, player, x, playerY, z);
-
             CaveModeManager caveManager = CaveModeManager.getInstance();
-
             boolean caveModeGloballyEnabled = ModConfig.getInstance().isCaveModeEnabled();
+            boolean caveModeEnabledForPlayer = caveModeGloballyEnabled
+                && CaveModeManager.isEffectivelyEnabledForPlayer(player);
 
             boolean stateChanged = false;
             boolean isUnderground = false;
 
-            if (caveModeGloballyEnabled) {
+            if (caveModeEnabledForPlayer) {
+                Ref<EntityStore> playerRef = player.getReference();
+                TransformComponent transform = (playerRef != null && playerRef.isValid())
+                    ? playerRef.getStore().getComponent(playerRef, TransformComponent.getComponentType())
+                    : null;
+                int playerY = transform != null ? (int) transform.getPosition().y : 100;
+                boolean hasCeiling = checkForCeiling(world, player, x, playerY, z);
+
                 stateChanged = caveManager.updateUndergroundState(player, playerY, hasCeiling);
                 isUnderground = caveManager.isPlayerUnderground(player);
             }
 
             boolean discoverSurfaceUnderground = ModConfig.getInstance().isDiscoverSurfaceUnderground();
 
-            if (hasMoved && (!caveModeGloballyEnabled || !isUnderground || discoverSurfaceUnderground)) {
+            if (hasMoved && (!caveModeEnabledForPlayer || !isUnderground || discoverSurfaceUnderground)) {
                 int explorationRadius = ModConfig.getInstance().getExplorationRadius();
                 int beforeCount = explorationData.getExploredChunks().getExploredCount();
                 explorationData.getMapExpansion().updateBoundaries(playerChunkX, playerChunkZ, explorationRadius);
@@ -478,7 +479,7 @@ public class WorldMapHook {
                 }
             }
 
-            if (caveModeGloballyEnabled) {
+            if (caveModeEnabledForPlayer) {
                 if (stateChanged && world != null) {
                     CaveModeManager.DynamicCaveModeState state = caveManager.getState(player);
                     boolean fogOfWar = ModConfig.getInstance().isCaveFogOfWar();
