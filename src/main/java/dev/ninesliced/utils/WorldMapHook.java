@@ -1487,6 +1487,8 @@ public class WorldMapHook {
      * @param world The world.
      */
     public static void refreshTrackers(@Nonnull World world) {
+        boolean isTracked = ModConfig.getInstance().isTrackedWorld(world.getName());
+
         for (PlayerRef playerRef : world.getPlayerRefs()) {
             Holder<EntityStore> holder = playerRef.getHolder();
             if (holder == null) continue;
@@ -1494,14 +1496,33 @@ public class WorldMapHook {
             if (player == null) continue;
 
             try {
+                WorldMapTracker tracker = player.getWorldMapTracker();
+                if (tracker == null) continue;
+
+                Object spiralIterator = ReflectionHelper.getFieldValueRecursive(tracker, "spiralIterator");
+                boolean isHooked = spiralIterator instanceof RestrictedSpiralIterator;
+
+                if (isTracked && !isHooked) {
+                    ExplorationTracker.getInstance().getOrCreatePlayerData(player);
+                    ExplorationManager.getInstance().loadPlayerData(player, world.getName());
+                    hookPlayerMapTracker(player, tracker);
+                    hookWorldMapResolution(world);
+                } else if (!isTracked && isHooked) {
+                    cleanupCaveModeOnDrain(player, world, tracker);
+                    restoreVanillaMapTracker(player, tracker);
+                    ExplorationTracker.getInstance().removePlayerData(player.getDisplayName());
+                    ChunkStreamingManager.getInstance().removeState(player.getDisplayName());
+                    continue;
+                }
+
                 Ref<EntityStore> ref = playerRef.getReference();
                 if (ref != null && ref.isValid()) {
                     TransformComponent tc = ref.getStore().getComponent(ref, TransformComponent.getComponentType());
 
                     if (tc != null) {
                         var pos = tc.getPosition();
-                        forceTrackerUpdate(player, player.getWorldMapTracker(), pos.x, pos.z);
-                        updateExplorationState(player, player.getWorldMapTracker(), pos.x, pos.z);
+                        forceTrackerUpdate(player, tracker, pos.x, pos.z);
+                        updateExplorationState(player, tracker, pos.x, pos.z);
                     }
                 }
             } catch (Exception e) {
@@ -1977,8 +1998,15 @@ public class WorldMapHook {
                         }
 
                         if (!toRemovePackets.isEmpty()) {
-                            UpdateWorldMap packet = new UpdateWorldMap(toRemovePackets.toArray(new MapChunk[0]), null, null);
-                            sendPacket(tracker.getPlayer(), packet);
+                            Player p = tracker.getPlayer();
+                            World w = p != null ? p.getWorld() : null;
+                            if (w != null) {
+                                final List<MapChunk> packets = new ArrayList<>(toRemovePackets);
+                                w.execute(() -> {
+                                    UpdateWorldMap pkt = new UpdateWorldMap(packets.toArray(new MapChunk[0]), null, null);
+                                    sendPacket(p, pkt);
+                                });
+                            }
                         }
                     }
                 }
