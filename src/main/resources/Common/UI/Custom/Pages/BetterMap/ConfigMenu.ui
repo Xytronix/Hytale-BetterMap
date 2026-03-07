@@ -544,6 +544,18 @@ $C.@PageOverlay {
             }
 
             @CheckboxRow {
+              $C.@CheckBox #DisableMarkerCreationDistance { }
+              Label { Text: "Disable Distance Restrictions for Marker Creation"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+              Label { Text: " *"; Style: @AsteriskLabelStyle; }
+            }
+
+            @CheckboxRow {
+              $C.@CheckBox #DisableMarkerDeletionDistance { }
+              Label { Text: "Disable Distance Restrictions for Marker Deletion"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
+              Label { Text: " *"; Style: @AsteriskLabelStyle; }
+            }
+
+            @CheckboxRow {
               $C.@CheckBox #AllowGlobalWaypointEdits { }
               Label { Text: "Allow Global Waypoint Edit/Delete For Everyone"; Style: @CheckboxLabelStyle; Anchor: (Left: 10); }
             }
