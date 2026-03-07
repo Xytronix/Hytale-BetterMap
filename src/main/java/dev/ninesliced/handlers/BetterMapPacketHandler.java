@@ -10,8 +10,8 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.packets.player.RemoveMapMarker;
 import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.packets.player.RemoveMapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.CreateUserMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapMarker;
@@ -61,10 +61,14 @@ public class BetterMapPacketHandler implements SubPacketHandler {
 
     @Override
     public void registerHandlers() {
-        IWorldPacketHandler.registerHandler(this.packetHandler, 119, this::handleRemoveMapMarker);
+        if (ModConfig.getInstance().isDisableDistanceRestrictionsForMarkerDeletion()) {
+            IWorldPacketHandler.registerHandler(this.packetHandler, 119, this::handleRemoveMapMarker);
+        }
         IWorldPacketHandler.registerHandler(this.packetHandler, 244, this::handleTeleportToWorldMapMarker);
         IWorldPacketHandler.registerHandler(this.packetHandler, 245, this::handleTeleportToWorldMapPosition);
-        IWorldPacketHandler.registerHandler(this.packetHandler, 246, this::handleCreateUserMarker);
+        if (ModConfig.getInstance().isDisableDistanceRestrictionsForMarkerCreation()) {
+            IWorldPacketHandler.registerHandler(this.packetHandler, 246, this::handleCreateUserMarker);
+        }
         IWorldPacketHandler.registerHandler(this.packetHandler, 243, this::handleUpdateWorldMapVisible);
     }
 

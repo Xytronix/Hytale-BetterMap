@@ -1,49 +1,5 @@
 package dev.ninesliced.ui;
 
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
-import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import com.hypixel.hytale.protocol.packets.interface_.Page;
-import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerDeathPositionData;
-import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
-import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
-import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
-import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
-import com.hypixel.hytale.server.core.ui.builder.EventData;
-import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
-import com.hypixel.hytale.server.core.ui.LocalizableString;
-import com.hypixel.hytale.server.core.command.system.CommandSender;
-import com.hypixel.hytale.server.core.util.NotificationUtil;
-import dev.ninesliced.configs.ModConfig;
-import dev.ninesliced.configs.ModConfig.MapQuality;
-import dev.ninesliced.configs.PlayerConfig;
-import dev.ninesliced.hud.HudPosition;
-import dev.ninesliced.integration.ExtendedTeleportIntegration;
-import dev.ninesliced.managers.MapPrivacyManager;
-import dev.ninesliced.managers.PoiPrivacyManager;
-import dev.ninesliced.managers.PlayerConfigManager;
-import dev.ninesliced.managers.UserMarkerProviderManager;
-import dev.ninesliced.managers.WarpPrivacyManager;
-import dev.ninesliced.managers.WorldBorderManager;
-import dev.ninesliced.managers.CaveModeManager;
-import dev.ninesliced.managers.ExplorationManager;
-import dev.ninesliced.utils.PermissionsUtil;
-import dev.ninesliced.utils.WorldMapHook;
-import dev.ninesliced.utils.WaypointLimitUtil;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -52,9 +8,54 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import javax.annotation.Nonnull;
+
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
+import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.protocol.packets.interface_.Page;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerDeathPositionData;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
+import com.hypixel.hytale.server.core.ui.LocalizableString;
+import com.hypixel.hytale.server.core.ui.builder.EventData;
+import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
+import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.NotificationUtil;
+
+import dev.ninesliced.configs.ModConfig;
+import dev.ninesliced.configs.ModConfig.MapQuality;
+import dev.ninesliced.configs.PlayerConfig;
+import dev.ninesliced.hud.HudPosition;
+import dev.ninesliced.integration.ExtendedTeleportIntegration;
+import dev.ninesliced.managers.CaveModeManager;
+import dev.ninesliced.managers.ExplorationManager;
+import dev.ninesliced.managers.MapPrivacyManager;
+import dev.ninesliced.managers.PlayerConfigManager;
+import dev.ninesliced.managers.PoiPrivacyManager;
+import dev.ninesliced.managers.UserMarkerProviderManager;
+import dev.ninesliced.managers.WarpPrivacyManager;
+import dev.ninesliced.managers.WorldBorderManager;
+import dev.ninesliced.utils.PermissionsUtil;
+import dev.ninesliced.utils.WaypointLimitUtil;
+import dev.ninesliced.utils.WorldMapHook;
 
 public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.ConfigEventData> {
 
@@ -211,6 +212,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              ui.set("#CaveModeThreshold.Value", gConfig.getCaveModeUndergroundThreshold());
              ui.set("#CaveModeRadius.Value", gConfig.getCaveModeRadius());
 
+             ui.set("#DisableMarkerCreationDistance.Value", gConfig.isDisableDistanceRestrictionsForMarkerCreation());
+             ui.set("#DisableMarkerDeletionDistance.Value", gConfig.isDisableDistanceRestrictionsForMarkerDeletion());
+
              applySavedPlayersDropdown(ui);
 
              bindChange(events, "#AdminExplorationRadius", "admin_exp_radius", BindingType.NUMBER);
@@ -260,6 +264,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
              bindChange(events, "#CaveModeLayerSize", "admin_cavemode_layer", BindingType.NUMBER);
              bindChange(events, "#CaveModeThreshold", "admin_cavemode_threshold", BindingType.NUMBER);
              bindChange(events, "#CaveModeRadius", "admin_cavemode_radius", BindingType.NUMBER);
+
+             bindChange(events, "#DisableMarkerCreationDistance", "admin_disable_marker_creation_distance", BindingType.BOOLEAN);
+             bindChange(events, "#DisableMarkerDeletionDistance", "admin_disable_marker_deletion_distance", BindingType.BOOLEAN);
 
              bindClick(events, "#AdminResetDefaultsBtn", "admin_reset_defaults");
              bindClick(events, "#AdminResetConfirmAllBtn", "admin_reset_confirm_all");
@@ -448,6 +455,9 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
         ui.set("#CaveModeLayerSize.Value", gConfig.getCaveModeLayerSize());
         ui.set("#CaveModeThreshold.Value", gConfig.getCaveModeUndergroundThreshold());
         ui.set("#CaveModeRadius.Value", gConfig.getCaveModeRadius());
+
+        ui.set("#DisableMarkerCreationDistance.Value", gConfig.isDisableDistanceRestrictionsForMarkerCreation());
+        ui.set("#DisableMarkerDeletionDistance.Value", gConfig.isDisableDistanceRestrictionsForMarkerDeletion());
     }
 
     private void updatePlayerCaveState(Player player, boolean enabled) {
@@ -1568,6 +1578,18 @@ public class ConfigMenuPage extends InteractiveCustomUIPage<ConfigMenuPage.Confi
                         radius = Math.max(1, Math.min(radius, 16));
                         gConfig.setCaveModeRadius(radius);
                         updateCaveRadiusForAllPlayers(radius);
+                    }
+                    break;
+                case "admin_disable_marker_creation_distance":
+                    if (val != null) {
+                        gConfig.setDisableDistanceRestrictionsForMarkerCreation(Boolean.parseBoolean(val));
+                        restartRequired = true;
+                    }
+                    break;
+                case "admin_disable_marker_deletion_distance":
+                    if (val != null) {
+                        gConfig.setDisableDistanceRestrictionsForMarkerDeletion(Boolean.parseBoolean(val));
+                        restartRequired = true;
                     }
                     break;
             }

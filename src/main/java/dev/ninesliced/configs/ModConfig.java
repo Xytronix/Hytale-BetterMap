@@ -80,6 +80,9 @@ public class ModConfig {
     private int worldBorderOffsetX = 0;
     private int worldBorderOffsetZ = 0;
 
+    private boolean disableDistanceRestrictionsForMarkerCreation = false;
+    private boolean disableDistanceRestrictionsForMarkerDeletion = false;
+
     private transient Path configPath;
     private transient Path configDir;
     private transient MapQuality activeMapQuality;
@@ -416,6 +419,18 @@ public class ModConfig {
 
                     if (jsonObject.has("worldBorderOffsetZ")) {
                         this.worldBorderOffsetZ = loaded.worldBorderOffsetZ;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("disableDistanceRestrictionsForMarkerCreation")) {
+                        this.disableDistanceRestrictionsForMarkerCreation = loaded.disableDistanceRestrictionsForMarkerCreation;
+                    } else {
+                        needsSave = true;
+                    }
+
+                    if (jsonObject.has("disableDistanceRestrictionsForMarkerDeletion")) {
+                        this.disableDistanceRestrictionsForMarkerDeletion = loaded.disableDistanceRestrictionsForMarkerDeletion;
                     } else {
                         needsSave = true;
                     }
@@ -1184,6 +1199,9 @@ public class ModConfig {
         this.worldBorderOffsetX = defaults.worldBorderOffsetX;
         this.worldBorderOffsetZ = defaults.worldBorderOffsetZ;
 
+        this.disableDistanceRestrictionsForMarkerCreation = defaults.disableDistanceRestrictionsForMarkerCreation;
+        this.disableDistanceRestrictionsForMarkerDeletion = defaults.disableDistanceRestrictionsForMarkerDeletion;
+
         updateLoggers();
         save();
     }
@@ -1443,6 +1461,45 @@ public class ModConfig {
      */
     public void setWorldBorderOffsetZ(int worldBorderOffsetZ) {
         this.worldBorderOffsetZ = worldBorderOffsetZ;
+        save();
+    }
+
+    /**
+     * Checks if the distance restriction override for marker creation is enabled.
+     *
+     * @return override enabled
+     */
+    public boolean isDisableDistanceRestrictionsForMarkerCreation() {
+        return disableDistanceRestrictionsForMarkerCreation;
+    }
+
+    /**
+     * Sets whether the distance restriction override for marker creation is enabled.
+     *
+     * @param disableDistanceRestrictionsForMarkerCreation override enabled
+     */
+    public void setDisableDistanceRestrictionsForMarkerCreation(boolean disableDistanceRestrictionsForMarkerCreation) {
+        this.disableDistanceRestrictionsForMarkerCreation = disableDistanceRestrictionsForMarkerCreation;
+        save();
+    }
+
+    /**
+     * Checks if the distance restriction override for marker deletion is enabled.
+     *
+     * @return override enabled
+     */
+    public boolean isDisableDistanceRestrictionsForMarkerDeletion() {
+        return disableDistanceRestrictionsForMarkerDeletion;
+    }
+
+    /**
+     * Sets whether the distance restriction override for marker deletion is enabled.
+     * Requires a server restart to take effect.
+     *
+     * @param disableDistanceRestrictionsForMarkerDeletion override enabled
+     */
+    public void setDisableDistanceRestrictionsForMarkerDeletion(boolean disableDistanceRestrictionsForMarkerDeletion) {
+        this.disableDistanceRestrictionsForMarkerDeletion = disableDistanceRestrictionsForMarkerDeletion;
         save();
     }
 
